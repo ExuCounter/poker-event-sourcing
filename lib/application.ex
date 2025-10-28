@@ -1,4 +1,5 @@
-defmodule Poker.Application do
+defmodule SystemApplication do
+  use Boundary, deps: [PokerWeb]
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false

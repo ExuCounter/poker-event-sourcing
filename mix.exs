@@ -10,7 +10,7 @@ defmodule Poker.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      compilers: [:phoenix_live_view] ++ Mix.compilers(),
+      compilers: [:phoenix_live_view, :boundary] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
   end
@@ -20,7 +20,7 @@ defmodule Poker.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Poker.Application, []},
+      mod: {SystemApplication, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -40,6 +40,7 @@ defmodule Poker.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:tidewave, "~> 0.5", only: [:dev]},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
@@ -65,7 +66,9 @@ defmodule Poker.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:boundary, "~> 0.10.4"},
     ]
   end
 
