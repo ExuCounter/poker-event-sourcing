@@ -1,5 +1,5 @@
 defmodule Poker do
-  use Boundary, deps: [], exports: [Accounts, Accounts.Schemas.User, Accounts.Scope, DataCase]
+  use Boundary, deps: [], exports: [Accounts, Accounts.Schemas.User, Accounts.Scope, Events, Events.Schemas.Event]
 
   def schema do
     quote do

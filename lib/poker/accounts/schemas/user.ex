@@ -1,5 +1,4 @@
 defmodule Poker.Accounts.Schemas.User do
-  use Boundary, deps: []
   use Ecto.Schema
   import Ecto.Changeset
 
