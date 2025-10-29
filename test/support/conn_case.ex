@@ -19,6 +19,7 @@ defmodule PokerWeb.ConnCase do
 
   using do
     quote do
+      use SeedFactory.Test, schema: PokerWeb.SeedFactorySchema
       # The default endpoint for testing
       @endpoint PokerWeb.Endpoint
 
@@ -33,7 +34,8 @@ defmodule PokerWeb.ConnCase do
 
   setup tags do
     Poker.DataCase.setup_sandbox(tags)
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+
+    SeedFactory.exec(tags, :build_conn)
   end
 
   @doc """
@@ -66,14 +68,25 @@ defmodule PokerWeb.ConnCase do
 
     maybe_set_token_authenticated_at(token, opts[:token_authenticated_at])
 
-    conn
-    |> Phoenix.ConnTest.init_test_session(%{})
-    |> Plug.Conn.put_session(:user_token, token)
+    conn |> Phoenix.ConnTest.init_test_session(%{user_token: token})
   end
 
   defp maybe_set_token_authenticated_at(_token, nil), do: nil
 
   defp maybe_set_token_authenticated_at(token, authenticated_at) do
     Poker.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
+  end
+
+  @doc """
+  Generates a magic link token for a user.
+
+  Returns a tuple of {encoded_token, hashed_token}.
+  """
+  def generate_user_magic_link_token(user) do
+    {encoded_token, user_token} =
+      Poker.Accounts.Schemas.UserToken.build_email_token(user, "login")
+
+    Poker.Repo.insert!(user_token)
+    {encoded_token, user_token.token}
   end
 end

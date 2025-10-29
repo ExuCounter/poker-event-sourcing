@@ -1,20 +1,17 @@
 defmodule PokerWeb.UserSessionControllerTest do
   use PokerWeb.ConnCase, async: true
 
-  import Poker.AccountsFixtures
   alias Poker.Accounts
 
-  setup do
-    %{unconfirmed_user: unconfirmed_user_fixture(), user: user_fixture()}
-  end
-
   describe "POST /users/log-in - email and password" do
-    test "logs the user in", %{conn: conn, user: user} do
-      user = set_password(user)
+    test "logs the user in", %{conn: conn} = ctx do
+      dbg(ctx.conn)
+      ctx = ctx |> produce(user: [:confirmed])
+      ctx = ctx |> exec(:set_user_password, password: "valid_user_password")
 
       conn =
         post(conn, ~p"/users/log-in", %{
-          "user" => %{"email" => user.email, "password" => valid_user_password()}
+          "user" => %{"email" => ctx.user.email, "password" => "valid_user_password"}
         })
 
       assert get_session(conn, :user_token)
@@ -23,19 +20,20 @@ defmodule PokerWeb.UserSessionControllerTest do
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
       response = html_response(conn, 200)
-      assert response =~ user.email
+      assert response =~ ctx.user.email
       assert response =~ ~p"/users/settings"
       assert response =~ ~p"/users/log-out"
     end
 
-    test "logs the user in with remember me", %{conn: conn, user: user} do
-      user = set_password(user)
+    test "logs the user in with remember me", %{conn: conn} = ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      ctx = ctx |> exec(:set_user_password, password: "valid_user_password")
 
       conn =
         post(conn, ~p"/users/log-in", %{
           "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password(),
+            "email" => ctx.user.email,
+            "password" => "valid_user_password",
             "remember_me" => "true"
           }
         })
@@ -44,16 +42,17 @@ defmodule PokerWeb.UserSessionControllerTest do
       assert redirected_to(conn) == ~p"/"
     end
 
-    test "logs the user in with return to", %{conn: conn, user: user} do
-      user = set_password(user)
+    test "logs the user in with return to", %{conn: conn} = ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      ctx = ctx |> exec(:set_user_password, password: "valid_user_password")
 
       conn =
         conn
         |> init_test_session(user_return_to: "/foo/bar")
         |> post(~p"/users/log-in", %{
           "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password()
+            "email" => ctx.user.email,
+            "password" => "valid_user_password"
           }
         })
 
@@ -61,10 +60,12 @@ defmodule PokerWeb.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Welcome back!"
     end
 
-    test "redirects to login page with invalid credentials", %{conn: conn, user: user} do
+    test "redirects to login page with invalid credentials", %{conn: conn} = ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+
       conn =
         post(conn, ~p"/users/log-in?mode=password", %{
-          "user" => %{"email" => user.email, "password" => "invalid_password"}
+          "user" => %{"email" => ctx.user.email, "password" => "invalid_password"}
         })
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid email or password"
@@ -73,8 +74,9 @@ defmodule PokerWeb.UserSessionControllerTest do
   end
 
   describe "POST /users/log-in - magic link" do
-    test "logs the user in", %{conn: conn, user: user} do
-      {token, _hashed_token} = generate_user_magic_link_token(user)
+    test "logs the user in", %{conn: conn} = ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      {token, _hashed_token} = generate_user_magic_link_token(ctx.user)
 
       conn =
         post(conn, ~p"/users/log-in", %{
@@ -87,14 +89,15 @@ defmodule PokerWeb.UserSessionControllerTest do
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
       response = html_response(conn, 200)
-      assert response =~ user.email
+      assert response =~ ctx.user.email
       assert response =~ ~p"/users/settings"
       assert response =~ ~p"/users/log-out"
     end
 
-    test "confirms unconfirmed user", %{conn: conn, unconfirmed_user: user} do
-      {token, _hashed_token} = generate_user_magic_link_token(user)
-      refute user.confirmed_at
+    test "confirms unconfirmed user", %{conn: conn} = ctx do
+      ctx = ctx |> produce(:user)
+      {token, _hashed_token} = generate_user_magic_link_token(ctx.user)
+      refute ctx.user.confirmed_at
 
       conn =
         post(conn, ~p"/users/log-in", %{
@@ -106,12 +109,12 @@ defmodule PokerWeb.UserSessionControllerTest do
       assert redirected_to(conn) == ~p"/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "User confirmed successfully."
 
-      assert Accounts.get_user!(user.id).confirmed_at
+      assert Accounts.get_user!(ctx.user.id).confirmed_at
 
       # Now do a logged in request and assert on the menu
       conn = get(conn, ~p"/")
       response = html_response(conn, 200)
-      assert response =~ user.email
+      assert response =~ ctx.user.email
       assert response =~ ~p"/users/settings"
       assert response =~ ~p"/users/log-out"
     end
@@ -130,8 +133,9 @@ defmodule PokerWeb.UserSessionControllerTest do
   end
 
   describe "DELETE /users/log-out" do
-    test "logs the user out", %{conn: conn, user: user} do
-      conn = conn |> log_in_user(user) |> delete(~p"/users/log-out")
+    test "logs the user out", %{conn: conn} = ctx do
+      ctx = ctx |> produce(user: [:confirmed], conn: [:user_session])
+      conn = conn |> delete(~p"/users/log-out")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"

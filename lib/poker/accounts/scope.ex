@@ -16,7 +16,7 @@ defmodule Poker.Accounts.Scope do
   growing application requirements.
   """
 
-  alias Poker.Accounts.User
+  alias Poker.Accounts.Schemas.User
 
   defstruct user: nil
 

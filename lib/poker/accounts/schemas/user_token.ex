@@ -1,7 +1,7 @@
-defmodule Poker.Accounts.UserToken do
+defmodule Poker.Accounts.Schemas.UserToken do
   use Ecto.Schema
   import Ecto.Query
-  alias Poker.Accounts.UserToken
+  alias Poker.Accounts.Schemas.UserToken
 
   @hash_algorithm :sha256
   @rand_size 32
@@ -17,7 +17,7 @@ defmodule Poker.Accounts.UserToken do
     field :context, :string
     field :sent_to, :string
     field :authenticated_at, :utc_datetime
-    belongs_to :user, Poker.Accounts.User
+    belongs_to :user, Poker.Accounts.Schemas.User
 
     timestamps(type: :utc_datetime, updated_at: false)
   end

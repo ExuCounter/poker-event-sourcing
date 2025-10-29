@@ -1,5 +1,6 @@
 defmodule Poker.Accounts do
-  use Boundary, deps: [Poker.Mailer, Poker.Repo], exports: [User, Scope]
+  use Boundary, deps: [Poker.Mailer, Poker.Repo], exports: [Schemas.User, Scope]
+
   @moduledoc """
   The Accounts context.
   """
@@ -7,7 +8,8 @@ defmodule Poker.Accounts do
   import Ecto.Query, warn: false
   alias Poker.Repo
 
-  alias Poker.Accounts.{User, UserToken, UserNotifier}
+  alias Poker.Accounts.{UserNotifier}
+  alias Poker.Accounts.Schemas.{User, UserToken}
 
   ## Database getters
 
@@ -100,7 +102,7 @@ defmodule Poker.Accounts do
   @doc """
   Returns an `%Ecto.Changeset{}` for changing the user email.
 
-  See `Poker.Accounts.User.email_changeset/3` for a list of supported options.
+  See `Poker.Accounts.Schemas.User.email_changeset/3` for a list of supported options.
 
   ## Examples
 
@@ -136,7 +138,7 @@ defmodule Poker.Accounts do
   @doc """
   Returns an `%Ecto.Changeset{}` for changing the user password.
 
-  See `Poker.Accounts.User.password_changeset/3` for a list of supported options.
+  See `Poker.Accounts.Schemas.User.password_changeset/3` for a list of supported options.
 
   ## Examples
 

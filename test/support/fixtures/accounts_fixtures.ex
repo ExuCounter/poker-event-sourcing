@@ -65,24 +65,18 @@ defmodule Poker.AccountsFixtures do
 
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
     Poker.Repo.update_all(
-      from(t in Accounts.UserToken,
+      from(t in Accounts.Schemas.UserToken,
         where: t.token == ^token
       ),
       set: [authenticated_at: authenticated_at]
     )
   end
 
-  def generate_user_magic_link_token(user) do
-    {encoded_token, user_token} = Accounts.UserToken.build_email_token(user, "login")
-    Poker.Repo.insert!(user_token)
-    {encoded_token, user_token.token}
-  end
-
   def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)
 
     Poker.Repo.update_all(
-      from(ut in Accounts.UserToken, where: ut.token == ^token),
+      from(ut in Accounts.Schemas.UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )
   end

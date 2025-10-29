@@ -69,6 +69,8 @@ defmodule Poker.MixProject do
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:boundary, "~> 0.10.4"},
+      {:seed_factory, "~> 0.6.0", only: :test},
+      {:faker, "~> 0.18.0", only: :test}
     ]
   end
 

@@ -2,7 +2,7 @@ defmodule Poker.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Poker.Mailer
-  alias Poker.Accounts.User
+  alias Poker.Accounts.Schemas.User
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

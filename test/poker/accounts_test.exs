@@ -2,18 +2,18 @@ defmodule Poker.AccountsTest do
   use Poker.DataCase
 
   alias Poker.Accounts
-
-  import Poker.AccountsFixtures
-  alias Poker.Accounts.{User, UserToken}
+  alias Poker.Accounts.Schemas.{User, UserToken}
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
     end
 
-    test "returns the user if the email exists" do
-      %{id: id} = user = user_fixture()
-      assert %User{id: ^id} = Accounts.get_user_by_email(user.email)
+    test "returns the user if the email exists", ctx do
+      ctx = ctx |> produce(:user)
+      user = Accounts.get_user_by_email(ctx.user.email)
+
+      assert user.id == ctx.user.id
     end
   end
 
@@ -22,16 +22,16 @@ defmodule Poker.AccountsTest do
       refute Accounts.get_user_by_email_and_password("unknown@example.com", "hello world!")
     end
 
-    test "does not return the user if the password is not valid" do
-      user = user_fixture() |> set_password()
-      refute Accounts.get_user_by_email_and_password(user.email, "invalid")
+    test "does not return the user if the password is not valid", ctx do
+      ctx = ctx |> produce(:user) |> exec(:set_user_password, password: "valid password")
+      refute Accounts.get_user_by_email_and_password(ctx.user.email, "invalid")
     end
 
-    test "returns the user if the email and password are valid" do
-      %{id: id} = user = user_fixture() |> set_password()
+    test "returns the user if the email and password are valid", ctx do
+      ctx = ctx |> produce(:user) |> exec(:set_user_password, password: "valid password")
 
-      assert %User{id: ^id} =
-               Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+      user = Accounts.get_user_by_email_and_password(ctx.user.email, "valid password")
+      assert user.id == ctx.user.id
     end
   end
 
@@ -42,9 +42,10 @@ defmodule Poker.AccountsTest do
       end
     end
 
-    test "returns the user with the given id" do
-      %{id: id} = user = user_fixture()
-      assert %User{id: ^id} = Accounts.get_user!(user.id)
+    test "returns the user with the given id", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      %{id: id} = ctx.user
+      assert %User{id: ^id} = Accounts.get_user!(ctx.user.id)
     end
   end
 
@@ -67,8 +68,10 @@ defmodule Poker.AccountsTest do
       assert "should be at most 160 character(s)" in errors_on(changeset).email
     end
 
-    test "validates email uniqueness" do
-      %{email: email} = user_fixture()
+    test "validates email uniqueness", ctx do
+      ctx = ctx |> produce(:user)
+      email = ctx.user.email
+
       {:error, changeset} = Accounts.register_user(%{email: email})
       assert "has already been taken" in errors_on(changeset).email
 
@@ -78,8 +81,8 @@ defmodule Poker.AccountsTest do
     end
 
     test "registers users without password" do
-      email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+      email = Faker.Internet.email()
+      {:ok, user} = Accounts.register_user(%{email: email})
       assert user.email == email
       assert is_nil(user.hashed_password)
       assert is_nil(user.confirmed_at)
@@ -114,35 +117,37 @@ defmodule Poker.AccountsTest do
   end
 
   describe "deliver_user_update_email_instructions/3" do
-    setup do
-      %{user: user_fixture()}
-    end
+    test "sends token through notification", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
 
-    test "sends token through notification", %{user: user} do
       token =
         extract_user_token(fn url ->
-          Accounts.deliver_user_update_email_instructions(user, "current@example.com", url)
+          Accounts.deliver_user_update_email_instructions(ctx.user, "current@example.com", url)
         end)
 
       {:ok, token} = Base.url_decode64(token, padding: false)
       assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
-      assert user_token.user_id == user.id
-      assert user_token.sent_to == user.email
+      assert user_token.user_id == ctx.user.id
+      assert user_token.sent_to == ctx.user.email
       assert user_token.context == "change:current@example.com"
     end
   end
 
   describe "update_user_email/2" do
-    setup do
-      user = unconfirmed_user_fixture()
-      email = unique_user_email()
+    setup ctx do
+      ctx = ctx |> produce(:user)
+      email = Faker.Internet.email()
 
       token =
         extract_user_token(fn url ->
-          Accounts.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
+          Accounts.deliver_user_update_email_instructions(
+            %{ctx.user | email: email},
+            ctx.user.email,
+            url
+          )
         end)
 
-      %{user: user, token: token, email: email}
+      Map.merge(ctx, %{token: token, email: email})
     end
 
     test "updates the email with a valid token", %{user: user, token: token, email: email} do
@@ -203,8 +208,8 @@ defmodule Poker.AccountsTest do
   end
 
   describe "update_user_password/2" do
-    setup do
-      %{user: user_fixture()}
+    setup ctx do
+      ctx |> produce(user: [:confirmed])
     end
 
     test "validates password", %{user: user} do
@@ -253,28 +258,28 @@ defmodule Poker.AccountsTest do
   end
 
   describe "generate_user_session_token/1" do
-    setup do
-      %{user: user_fixture()}
-    end
-
-    test "generates a token", %{user: user} do
-      token = Accounts.generate_user_session_token(user)
+    test "generates a token", ctx do
+      ctx1 = ctx |> produce(user: [:confirmed])
+      token = Accounts.generate_user_session_token(ctx1.user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.context == "session"
       assert user_token.authenticated_at != nil
 
       # Creating the same token for another user should fail
+      ctx2 = ctx |> produce(user: [:confirmed])
+
       assert_raise Ecto.ConstraintError, fn ->
         Repo.insert!(%UserToken{
           token: user_token.token,
-          user_id: user_fixture().id,
+          user_id: ctx2.user.id,
           context: "session"
         })
       end
     end
 
-    test "duplicates the authenticated_at of given user in new token", %{user: user} do
-      user = %{user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -3600)}
+    test "duplicates the authenticated_at of given user in new token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      user = %{ctx.user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -3600)}
       token = Accounts.generate_user_session_token(user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.authenticated_at == user.authenticated_at
@@ -283,15 +288,12 @@ defmodule Poker.AccountsTest do
   end
 
   describe "get_user_by_session_token/1" do
-    setup do
-      user = user_fixture()
-      token = Accounts.generate_user_session_token(user)
-      %{user: user, token: token}
-    end
+    test "returns user by token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      token = Accounts.generate_user_session_token(ctx.user)
 
-    test "returns user by token", %{user: user, token: token} do
       assert {session_user, token_inserted_at} = Accounts.get_user_by_session_token(token)
-      assert session_user.id == user.id
+      assert session_user.id == ctx.user.id
       assert session_user.authenticated_at != nil
       assert token_inserted_at != nil
     end
@@ -300,7 +302,10 @@ defmodule Poker.AccountsTest do
       refute Accounts.get_user_by_session_token("oops")
     end
 
-    test "does not return user for expired token", %{token: token} do
+    test "does not return user for expired token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      token = Accounts.generate_user_session_token(ctx.user)
+
       dt = ~N[2020-01-01 00:00:00]
       {1, nil} = Repo.update_all(UserToken, set: [inserted_at: dt, authenticated_at: dt])
       refute Accounts.get_user_by_session_token(token)
@@ -308,32 +313,32 @@ defmodule Poker.AccountsTest do
   end
 
   describe "get_user_by_magic_link_token/1" do
-    setup do
-      user = user_fixture()
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-      %{user: user, token: encoded_token}
-    end
+    test "returns user by token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      {encoded_token, _hashed_token} = generate_user_magic_link_token(ctx.user)
 
-    test "returns user by token", %{user: user, token: token} do
-      assert session_user = Accounts.get_user_by_magic_link_token(token)
-      assert session_user.id == user.id
+      assert session_user = Accounts.get_user_by_magic_link_token(encoded_token)
+      assert session_user.id == ctx.user.id
     end
 
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_magic_link_token("oops")
     end
 
-    test "does not return user for expired token", %{token: token} do
+    test "does not return user for expired token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      {encoded_token, _hashed_token} = generate_user_magic_link_token(ctx.user)
+
       {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
-      refute Accounts.get_user_by_magic_link_token(token)
+      refute Accounts.get_user_by_magic_link_token(encoded_token)
     end
   end
 
   describe "login_user_by_magic_link/1" do
-    test "confirms user and expires tokens" do
-      user = unconfirmed_user_fixture()
-      refute user.confirmed_at
-      {encoded_token, hashed_token} = generate_user_magic_link_token(user)
+    test "confirms user and expires tokens", ctx do
+      ctx = ctx |> produce(:user)
+      refute ctx.user.confirmed_at
+      {encoded_token, hashed_token} = generate_user_magic_link_token(ctx.user)
 
       assert {:ok, {user, [%{token: ^hashed_token}]}} =
                Accounts.login_user_by_magic_link(encoded_token)
@@ -341,19 +346,21 @@ defmodule Poker.AccountsTest do
       assert user.confirmed_at
     end
 
-    test "returns user and (deleted) token for confirmed user" do
-      user = user_fixture()
-      assert user.confirmed_at
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
-      assert {:ok, {^user, []}} = Accounts.login_user_by_magic_link(encoded_token)
+    test "returns user and (deleted) token for confirmed user", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      assert ctx.user.confirmed_at
+      {encoded_token, _hashed_token} = generate_user_magic_link_token(ctx.user)
+
+      assert {:ok, {user, []}} = Accounts.login_user_by_magic_link(encoded_token)
+      assert user.id == ctx.user.id
       # one time use only
       assert {:error, :not_found} = Accounts.login_user_by_magic_link(encoded_token)
     end
 
-    test "raises when unconfirmed user has password set" do
-      user = unconfirmed_user_fixture()
+    test "raises when unconfirmed user has password set", ctx do
+      ctx = ctx |> produce(:user)
+      {encoded_token, _hashed_token} = generate_user_magic_link_token(ctx.user)
       {1, nil} = Repo.update_all(User, set: [hashed_password: "hashed"])
-      {encoded_token, _hashed_token} = generate_user_magic_link_token(user)
 
       assert_raise RuntimeError, ~r/magic link log in is not allowed/, fn ->
         Accounts.login_user_by_magic_link(encoded_token)
@@ -362,29 +369,27 @@ defmodule Poker.AccountsTest do
   end
 
   describe "delete_user_session_token/1" do
-    test "deletes the token" do
-      user = user_fixture()
-      token = Accounts.generate_user_session_token(user)
+    test "deletes the token", ctx do
+      ctx = ctx |> produce(user: [:confirmed])
+      token = Accounts.generate_user_session_token(ctx.user)
       assert Accounts.delete_user_session_token(token) == :ok
       refute Accounts.get_user_by_session_token(token)
     end
   end
 
   describe "deliver_login_instructions/2" do
-    setup do
-      %{user: unconfirmed_user_fixture()}
-    end
+    test "sends token through notification", ctx do
+      ctx = ctx |> produce(:user)
 
-    test "sends token through notification", %{user: user} do
       token =
         extract_user_token(fn url ->
-          Accounts.deliver_login_instructions(user, url)
+          Accounts.deliver_login_instructions(ctx.user, url)
         end)
 
       {:ok, token} = Base.url_decode64(token, padding: false)
       assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
-      assert user_token.user_id == user.id
-      assert user_token.sent_to == user.email
+      assert user_token.user_id == ctx.user.id
+      assert user_token.sent_to == ctx.user.email
       assert user_token.context == "login"
     end
   end
@@ -393,5 +398,11 @@ defmodule Poker.AccountsTest do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
+  end
+
+  defp extract_user_token(fun) do
+    {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
+    [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
+    token
   end
 end

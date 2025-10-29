@@ -1,7 +1,7 @@
 ### Adding Ecto Schemas
 1. Create schema module in the appropriate context directory
-   - Name pattern: `Poker.<Context>.Schema.<ModelName>` (e.g., `Poker.Accounts.Schema.User`, `Poker.Events.Schema.Event`)
-   - Place in `poker/lib/<context>/schema/` directory
+   - Name pattern: `Poker.<Context>.Schema.<ModelName>` (e.g., `Poker.Accounts.Schemas.User`, `Poker.Events.Schemas.Event`)
+   - Place in `poker/lib/<context>/schemas/` directory
    - Use `use Poker, :schema` for common schema functionality
    - Define changesets within the schema file
    - Changeset function naming: `changeset` or `*_changeset` (e.g., `create_changeset`, `update_changeset`)

@@ -27,7 +27,7 @@ defmodule PokerWeb.UserLive.LoginTest do
 
       assert html =~ "If your email is in our system"
 
-      assert Poker.Repo.get_by!(Poker.Accounts.UserToken, user_id: user.id).context ==
+      assert Poker.Repo.get_by!(Poker.Accounts.Schemas.UserToken, user_id: user.id).context ==
                "login"
     end
 

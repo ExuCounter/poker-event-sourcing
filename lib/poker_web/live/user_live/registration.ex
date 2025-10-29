@@ -2,7 +2,7 @@ defmodule PokerWeb.UserLive.Registration do
   use PokerWeb, :live_view
 
   alias Poker.Accounts
-  alias Poker.Accounts.User
+  alias Poker.Accounts.Schemas.User
 
   @impl true
   def render(assigns) do

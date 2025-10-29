@@ -1,5 +1,6 @@
 defmodule PokerWeb do
-  use Boundary, deps: [Poker], exports: [Endpoint]
+  use Boundary, deps: [Poker], exports: [Endpoint, ConnCase]
+
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.

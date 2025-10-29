@@ -18,6 +18,7 @@ defmodule Poker.DataCase do
 
   using do
     quote do
+      use SeedFactory.Test, schema: Poker.SeedFactorySchema
       alias Poker.Repo
 
       import Ecto
@@ -54,5 +55,18 @@ defmodule Poker.DataCase do
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
+  end
+
+  @doc """
+  Generates a magic link token for a user.
+
+  Returns a tuple of {encoded_token, hashed_token}.
+  """
+  def generate_user_magic_link_token(user) do
+    {encoded_token, user_token} =
+      Poker.Accounts.Schemas.UserToken.build_email_token(user, "login")
+
+    Poker.Repo.insert!(user_token)
+    {encoded_token, user_token.token}
   end
 end
