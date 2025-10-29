@@ -1,6 +1,5 @@
 defmodule Poker.Accounts.Schemas.User do
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Poker, :schema
 
   schema "users" do
     field :email, :string

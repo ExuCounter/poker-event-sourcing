@@ -1,5 +1,5 @@
 defmodule Poker.Accounts.Schemas.UserToken do
-  use Ecto.Schema
+  use Poker, :schema
   import Ecto.Query
   alias Poker.Accounts.Schemas.UserToken
 
