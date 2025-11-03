@@ -65,7 +65,11 @@ defmodule Poker.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:commanded, "~> 1.4.9"},
+      {:commanded_ecto_projections, "~> 1.4"},
+      {:commanded_eventstore_adapter, "~> 1.1"},
+      {:eventstore, "~> 1.4.0"},
     ]
   end
 

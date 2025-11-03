@@ -2,12 +2,12 @@ defmodule Poker.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
-
   use Application
 
   @impl true
   def start(_type, _args) do
     children = [
+      Poker.App,
       PokerWeb.Telemetry,
       Poker.Repo,
       {DNSCluster, query: Application.get_env(:poker, :dns_cluster_query) || :ignore},
@@ -15,7 +15,8 @@ defmodule Poker.Application do
       # Start a worker by calling: Poker.Worker.start_link(arg)
       # {Poker.Worker, arg},
       # Start to serve requests, typically the last entry
-      PokerWeb.Endpoint
+      PokerWeb.Endpoint,
+      Poker.Accounts.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

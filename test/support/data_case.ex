@@ -24,11 +24,20 @@ defmodule Poker.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Poker.DataCase
+
+      import Commanded.Assertions.EventAssertions
     end
   end
 
   setup tags do
     Poker.DataCase.setup_sandbox(tags)
+
+    on_exit(fn ->
+      :ok = Application.stop(:poker)
+
+      Poker.Storage.reset!()
+    end)
+
     :ok
   end
 

@@ -10,6 +10,15 @@ config :poker, Poker.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Configures the event store database
+config :poker, Poker.EventStore,
+  serializer: Commanded.Serialization.JsonSerializer,
+  username: "postgres",
+  password: "postgres",
+  database: "poker_eventstore_dev",
+  hostname: "localhost",
+  pool_size: 10
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #
@@ -86,3 +95,5 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+

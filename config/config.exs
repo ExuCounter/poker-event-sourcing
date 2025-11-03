@@ -9,7 +9,16 @@ import Config
 
 config :poker,
   ecto_repos: [Poker.Repo],
+  event_stores: [Poker.EventStore],
   generators: [timestamp_type: :utc_datetime]
+
+config :poker, Poker.App,
+  event_store: [
+    adapter: Commanded.EventStore.Adapters.EventStore,
+    event_store: Poker.EventStore
+  ],
+  pub_sub: :local,
+  registry: :local
 
 # Configures the endpoint
 config :poker, PokerWeb.Endpoint,
