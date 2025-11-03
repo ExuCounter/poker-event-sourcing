@@ -26,6 +26,8 @@ defmodule Poker.DataCase do
       import Poker.DataCase
 
       import Commanded.Assertions.EventAssertions
+
+      use SeedFactory.Test, schema: Poker.SeedFactorySchema
     end
   end
 

@@ -6,7 +6,8 @@ defmodule Poker.Accounts do
     uuid = Ecto.UUID.generate()
     register_player = attrs |> Map.put(:player_uuid, uuid) |> RegisterPlayer.validate()
 
-    with :ok <- Poker.App.dispatch(register_player, consistency: :strong) do
+    with :ok <- is_email_available?(attrs.email),
+         :ok <- Poker.App.dispatch(register_player, consistency: :strong) do
       get(Player, uuid)
     end
   end
@@ -15,6 +16,13 @@ defmodule Poker.Accounts do
     case Poker.Repo.get(schema, uuid) do
       nil -> {:error, :not_found}
       projection -> {:ok, projection}
+    end
+  end
+
+  defp is_email_available?(email) do
+    case Poker.Repo.get_by(Player, email: email) do
+      nil -> :ok
+      _projection -> {:error, :email_already_registered}
     end
   end
 end

@@ -21,7 +21,7 @@ defmodule Poker.MixProject do
   def application do
     [
       mod: {Poker.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :observer, :wx]
     ]
   end
 
@@ -70,6 +70,8 @@ defmodule Poker.MixProject do
       {:commanded_ecto_projections, "~> 1.4"},
       {:commanded_eventstore_adapter, "~> 1.1"},
       {:eventstore, "~> 1.4.0"},
+      {:seed_factory, "~> 0.6.0", only: :test},
+      {:faker, "~> 0.18.0", only: :test}
     ]
   end
 

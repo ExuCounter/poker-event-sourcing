@@ -4,14 +4,14 @@ defmodule Poker.Accounts.Aggregates.PlayerTest do
   alias Poker.Accounts.Events.PlayerRegistered
 
   describe "register user" do
-    test "should succeed when valid" do
-      email = "email2222@gmail.com"
+    test "should succeed when valid", ctx do
+      email = Faker.Internet.email()
+
       {:ok, player} = Poker.Accounts.register_player(%{email: email})
 
-      dbg(player)
+      assert player.email == email
 
       assert_receive_event(Poker.App, PlayerRegistered, fn event ->
-        dbg(event)
         assert event.email == player.email
         assert event.id == player.id
       end)

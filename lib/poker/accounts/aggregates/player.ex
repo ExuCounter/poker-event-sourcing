@@ -10,8 +10,6 @@ defmodule Poker.Accounts.Aggregates.Player do
   alias Poker.Accounts.Events.{PlayerRegistered}
 
   def execute(%Player{}, %RegisterPlayer{} = register) do
-    dbg(register.player_uuid)
-
     %PlayerRegistered{
       id: register.player_uuid,
       email: register.email
