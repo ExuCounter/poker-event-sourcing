@@ -7,20 +7,10 @@ defmodule Poker.Tables.Commands.CreateTable do
     embeds_one :settings, Poker.Tables.Commands.CreateTableSettings
   end
 
-  def create_changeset(attrs) do
+  def changeset(attrs) do
     %__MODULE__{}
     |> Ecto.Changeset.cast(attrs, [:table_uuid, :creator_id])
     |> Ecto.Changeset.validate_required([:table_uuid, :creator_id])
     |> Ecto.Changeset.cast_embed(:settings, required: true)
-  end
-
-  def validate(attrs) do
-    changeset = create_changeset(attrs)
-
-    if changeset.valid? do
-      Ecto.Changeset.apply_changes(changeset)
-    else
-      {:error, changeset}
-    end
   end
 end

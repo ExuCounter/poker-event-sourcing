@@ -1,7 +1,6 @@
-defmodule Poker.Accounts.Aggregates.PlayerTest do
+defmodule Poker.Accounts.Aggregates.TablesTest do
   use Poker.DataCase
 
-  alias Poker.Accounts.Events.PlayerRegistered
   alias Poker.Tables.Events.{TableCreated, TableSettingsCreated}
 
   describe "create table" do
@@ -26,12 +25,12 @@ defmodule Poker.Accounts.Aggregates.PlayerTest do
       assert table_settings.starting_stack == table_settings_params.starting_stack
       assert table_settings.timeout_seconds == table_settings_params.timeout_seconds
 
-      assert_receive_event(Poker.App, TableSettingsCreated, fn settings ->
-        dbg(settings)
+      assert_receive_event(Poker.App, TableSettingsCreated, fn _settings ->
+        :ok
       end)
 
-      assert_receive_event(Poker.App, TableCreated, fn table ->
-        dbg(table)
+      assert_receive_event(Poker.App, TableCreated, fn _table ->
+        :ok
       end)
     end
   end

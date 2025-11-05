@@ -3,26 +3,13 @@ defmodule Poker.Accounts do
   alias Poker.Accounts.Projections.{Player}
 
   def register_player(attrs) do
-    uuid = Ecto.UUID.generate()
-    register_player = attrs |> Map.put(:player_uuid, uuid) |> RegisterPlayer.validate()
+    player_uuid = Ecto.UUID.generate()
+    command_attrs = Map.put(attrs, :player_uuid, player_uuid)
 
-    with :ok <- is_email_available?(attrs.email),
-         :ok <- Poker.App.dispatch(register_player, consistency: :strong) do
-      get(Player, uuid)
-    end
-  end
-
-  defp get(schema, uuid) do
-    case Poker.Repo.get(schema, uuid) do
-      nil -> {:error, :not_found}
-      projection -> {:ok, projection}
-    end
-  end
-
-  defp is_email_available?(email) do
-    case Poker.Repo.get_by(Player, email: email) do
-      nil -> :ok
-      _projection -> {:error, :email_already_registered}
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      Poker.Repo.find_by_id(Player, player_uuid)
     end
   end
 end

@@ -1,10 +1,10 @@
 defmodule Poker.Accounts.Aggregates.PlayerTest do
   use Poker.DataCase
 
-  alias Poker.Accounts.Events.PlayerRegistered
+  alias Poker.Accounts.Events.{PlayerRegistered}
 
   describe "register user" do
-    test "should succeed when valid", ctx do
+    test "should succeed when valid" do
       email = Faker.Internet.email()
 
       {:ok, player} = Poker.Accounts.register_player(%{email: email})

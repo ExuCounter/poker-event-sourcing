@@ -6,9 +6,15 @@ defmodule Poker.Accounts.Projectors.Player do
     consistency: :strong
 
   project(%Poker.Accounts.Events.PlayerRegistered{} = registered, fn multi ->
-    Ecto.Multi.insert(multi, :player, %Poker.Accounts.Projections.Player{
-      id: registered.id,
-      email: registered.email
-    })
+    Ecto.Multi.insert(
+      multi,
+      :player,
+      %Poker.Accounts.Projections.Player{
+        id: registered.id,
+        email: registered.email
+      },
+      on_conflict: :nothing,
+      conflict_target: :email
+    )
   end)
 end

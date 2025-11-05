@@ -10,13 +10,13 @@ defmodule Poker.Tables.ProcessManager do
   @derive Jason.Encoder
   defstruct []
 
-  def interested?(%TableCreated{id: table_id} = event, _metadata) do
+  def interested?(%TableCreated{id: table_id} = _event, _metadata) do
     {:start, table_id}
   end
 
   def interested?(_event, _metadata), do: false
 
-  def handle(%Poker.Tables.ProcessManager{}, %TableCreated{settings: settings} = event) do
+  def handle(%Poker.Tables.ProcessManager{}, %TableCreated{settings: settings} = _event) do
     struct(CreateTableSettings, settings)
   end
 end

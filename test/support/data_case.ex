@@ -38,6 +38,8 @@ defmodule Poker.DataCase do
       :ok = Application.stop(:poker)
 
       Poker.Storage.reset!()
+
+      {:ok, _} = Application.ensure_all_started(:poker)
     end)
 
     :ok
