@@ -1,13 +1,9 @@
 defmodule Poker.Accounts.Aggregates.Player do
-  use Poker, :schema
   alias Poker.Accounts.Aggregates.Player
-
-  embedded_schema do
-    field :email, :string
-  end
-
   alias Poker.Accounts.Commands.{RegisterPlayer}
   alias Poker.Accounts.Events.{PlayerRegistered}
+
+  defstruct [:id, :email]
 
   def execute(%Player{}, %RegisterPlayer{} = register) do
     %PlayerRegistered{

@@ -2,7 +2,7 @@ defmodule Poker.Accounts.Commands.RegisterPlayer do
   use Poker, :schema
 
   embedded_schema do
-    field :player_uuid, :string
+    field :player_uuid, :binary_id
     field :email, :string
   end
 

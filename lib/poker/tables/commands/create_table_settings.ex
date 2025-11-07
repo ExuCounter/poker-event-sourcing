@@ -3,8 +3,8 @@ defmodule Poker.Tables.Commands.CreateTableSettings do
   use Poker, :schema
 
   embedded_schema do
-    field :settings_uuid, :string
-    field :table_uuid, :string
+    field :settings_uuid, :binary_id
+    field :table_uuid, :binary_id
     field :small_blind, :integer
     field :big_blind, :integer
     field :starting_stack, :integer

@@ -3,6 +3,7 @@ defmodule Poker.Accounts.Projections.Player do
 
   schema "players" do
     field(:email, :string)
+    has_many(:table_participants, Poker.Tables.Projections.TableParticipant, foreign_key: :player_id)
 
     timestamps()
   end

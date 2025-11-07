@@ -34,4 +34,27 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       end)
     end
   end
+
+  describe "create table participant" do
+    test "should succeed", ctx do
+      %{player: player1, table: table} = ctx |> produce(:table)
+      %{player: player2} = ctx |> produce(:player)
+
+      {:ok, _participant} = Poker.Tables.join_participant(table, player2)
+
+      table = table |> Poker.Repo.preload(:participants)
+
+      player1_id = player1.id
+      player2_id = player2.id
+
+      assert [
+               %{
+                 player_id: ^player1_id
+               },
+               %{
+                 player_id: ^player2_id
+               }
+             ] = table.participants
+    end
+  end
 end

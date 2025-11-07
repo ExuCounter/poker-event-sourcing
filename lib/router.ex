@@ -1,13 +1,12 @@
 defmodule Poker.Router do
   use Commanded.Commands.Router
   alias Poker.Accounts.Commands.{RegisterPlayer}
-  alias Poker.Tables.Commands.{CreateTable, CreateTableSettings}
+  alias Poker.Tables.Commands.{CreateTable, CreateTableSettings, JoinTableParticipant}
   alias Poker.Accounts.Aggregates.{Player}
-  alias Poker.Tables.Aggregates.{Table, TableSettings}
+  alias Poker.Tables.Aggregates.{Table}
 
   identify(Player, by: :player_uuid)
   identify(Table, by: :table_uuid)
-  identify(TableSettings, by: :settings_uuid)
 
   dispatch(
     [
@@ -18,15 +17,10 @@ defmodule Poker.Router do
 
   dispatch(
     [
-      CreateTable
+      CreateTable,
+      CreateTableSettings,
+      JoinTableParticipant
     ],
     to: Table
-  )
-
-  dispatch(
-    [
-      CreateTableSettings
-    ],
-    to: TableSettings
   )
 end
