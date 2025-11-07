@@ -18,6 +18,7 @@ defmodule Poker.Application do
       PokerWeb.Endpoint,
       Poker.Accounts.Supervisor,
       Poker.Tables.Supervisor
+      # Poker.Subscription
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

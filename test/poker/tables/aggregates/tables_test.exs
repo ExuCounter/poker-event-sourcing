@@ -38,6 +38,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
   describe "create table participant" do
     test "should succeed", ctx do
       %{player: player1, table: table} = ctx |> produce(:table)
+
       %{player: player2} = ctx |> produce(:player)
 
       {:ok, _participant} = Poker.Tables.join_participant(table, player2)

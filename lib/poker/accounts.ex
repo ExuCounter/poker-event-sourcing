@@ -3,13 +3,13 @@ defmodule Poker.Accounts do
   alias Poker.Accounts.Projections.{Player}
 
   def register_player(attrs) do
-    player_uuid = Ecto.UUID.generate()
-    command_attrs = Map.put(attrs, :player_uuid, player_uuid)
+    player_id = Ecto.UUID.generate()
+    command_attrs = Map.put(attrs, :player_id, player_id)
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(Player, player_uuid)
+      Poker.Repo.find_by_id(Player, player_id)
     end
   end
 end

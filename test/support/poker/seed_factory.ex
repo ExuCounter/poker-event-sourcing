@@ -31,4 +31,16 @@ defmodule Poker.SeedFactorySchema do
 
     produce(:table)
   end
+
+  command :join_participant do
+    param(:player, entity: :player)
+    param(:table, entity: :table)
+
+    resolve(fn args ->
+      {:ok, participant} = Poker.Tables.join_participant(args.table, args.player)
+      {:ok, %{participant: participant}}
+    end)
+
+    produce(:participant)
+  end
 end

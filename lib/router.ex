@@ -5,8 +5,8 @@ defmodule Poker.Router do
   alias Poker.Accounts.Aggregates.{Player}
   alias Poker.Tables.Aggregates.{Table}
 
-  identify(Player, by: :player_uuid)
-  identify(Table, by: :table_uuid)
+  identify(Player, by: :player_id, prefix: "player-")
+  identify(Table, by: :table_id, prefix: "table-")
 
   dispatch(
     [

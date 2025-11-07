@@ -29,13 +29,13 @@ defmodule Poker.Tables.ProcessManager do
   # end
 
   # def handle(
-  #       %Poker.Tables.ProcessManager{id: table_uuid, creator_id: player_uuid} = state,
+  #       %Poker.Tables.ProcessManager{id: table_id, creator_id: player_id} = state,
   #       %TableSettingsCreated{starting_stack: starting_stack} = event
   #     ) do
   #   struct(JoinTableParticipant, %{
-  #     participant_uuid: Ecto.UUID.generate(),
-  #     table_uuid: table_uuid,
-  #     player_uuid: player_uuid,
+  #     participant_id: Ecto.UUID.generate(),
+  #     table_id: table_id,
+  #     player_id: player_id,
   #     chips: starting_stack
   #   })
   # end

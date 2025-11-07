@@ -7,7 +7,7 @@ defmodule Poker.Accounts.Aggregates.Player do
 
   def execute(%Player{}, %RegisterPlayer{} = register) do
     %PlayerRegistered{
-      id: register.player_uuid,
+      id: register.player_id,
       email: register.email
     }
   end

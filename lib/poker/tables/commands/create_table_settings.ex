@@ -3,8 +3,8 @@ defmodule Poker.Tables.Commands.CreateTableSettings do
   use Poker, :schema
 
   embedded_schema do
-    field :settings_uuid, :binary_id
-    field :table_uuid, :binary_id
+    field :settings_id, :binary_id
+    field :table_id, :binary_id
     field :small_blind, :integer
     field :big_blind, :integer
     field :starting_stack, :integer
@@ -14,16 +14,16 @@ defmodule Poker.Tables.Commands.CreateTableSettings do
   def changeset(_settings, attrs) do
     %__MODULE__{}
     |> Ecto.Changeset.cast(attrs, [
-      :settings_uuid,
-      :table_uuid,
+      :settings_id,
+      :table_id,
       :small_blind,
       :big_blind,
       :starting_stack,
       :timeout_seconds
     ])
     |> Ecto.Changeset.validate_required([
-      :settings_uuid,
-      :table_uuid,
+      :settings_id,
+      :table_id,
       :small_blind,
       :big_blind,
       :starting_stack,
