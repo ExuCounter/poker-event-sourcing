@@ -11,8 +11,8 @@ defmodule Poker.Tables.Supervisor do
     Supervisor.init(
       [
         Tables.Projectors.Table,
-        Tables.Projectors.TableSettings,
-        Tables.Projectors.TableParticipant,
+        Tables.Projectors.Settings,
+        Tables.Projectors.Participant,
         # Tables.ProcessManager
       ],
       strategy: :one_for_one

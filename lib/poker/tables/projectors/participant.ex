@@ -1,6 +1,6 @@
-defmodule Poker.Tables.Projectors.TableParticipant do
+defmodule Poker.Tables.Projectors.Participant do
   use Commanded.Projections.Ecto,
-    name: "Tables.Projectors.TableParticipant",
+    name: "Tables.Projectors.Participant",
     repo: Poker.Repo,
     application: Poker.App,
     consistency: :strong
@@ -9,7 +9,7 @@ defmodule Poker.Tables.Projectors.TableParticipant do
     Ecto.Multi.insert(
       multi,
       :table_participant,
-      %Poker.Tables.Projections.TableParticipant{
+      %Poker.Tables.Projections.Participant{
         id: joined.id,
         player_id: joined.player_id,
         table_id: joined.table_id,

@@ -1,4 +1,4 @@
-defmodule Poker.Tables.Projections.TableParticipant do
+defmodule Poker.Tables.Projections.Participant do
   use Poker, :schema
 
   schema "table_participants" do

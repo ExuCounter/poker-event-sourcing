@@ -1,6 +1,6 @@
 defmodule Poker.Tables do
   alias Poker.Tables.Commands.{CreateTable, JoinTableParticipant}
-  alias Poker.Tables.Projections.{Table, TableParticipant}
+  alias Poker.Tables.Projections.{Table, Participant}
 
   def create_table(creator, settings_attrs \\ %{}) do
     table_id = Ecto.UUID.generate()
@@ -39,7 +39,7 @@ defmodule Poker.Tables do
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &JoinTableParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(TableParticipant, participant_id)
+      Poker.Repo.find_by_id(Participant, participant_id)
     end
   end
 end

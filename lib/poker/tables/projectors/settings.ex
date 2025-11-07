@@ -1,12 +1,12 @@
-defmodule Poker.Tables.Projectors.TableSettings do
+defmodule Poker.Tables.Projectors.Settings do
   use Commanded.Projections.Ecto,
-    name: "Tables.Projectors.TableSettings",
+    name: "Tables.Projectors.Settings",
     repo: Poker.Repo,
     application: Poker.App,
     consistency: :strong
 
   project(%Poker.Tables.Events.TableSettingsCreated{} = created, fn multi ->
-    Ecto.Multi.insert(multi, :table_settings, %Poker.Tables.Projections.TableSettings{
+    Ecto.Multi.insert(multi, :table_settings, %Poker.Tables.Projections.Settings{
       id: created.id,
       table_id: created.table_id,
       small_blind: created.small_blind,

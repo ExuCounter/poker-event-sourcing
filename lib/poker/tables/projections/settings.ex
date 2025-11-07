@@ -1,4 +1,4 @@
-defmodule Poker.Tables.Projections.TableSettings do
+defmodule Poker.Tables.Projections.Settings do
   use Poker, :schema
 
   schema "table_settings" do
