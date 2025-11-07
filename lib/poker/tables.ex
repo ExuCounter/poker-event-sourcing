@@ -1,5 +1,5 @@
 defmodule Poker.Tables do
-  alias Poker.Tables.Commands.{CreateTable, JoinTableParticipant}
+  alias Poker.Tables.Commands.{CreateTable, JoinTableParticipant, StartTable}
   alias Poker.Tables.Projections.{Table, Participant}
 
   def create_table(creator, settings_attrs \\ %{}) do
@@ -40,6 +40,49 @@ defmodule Poker.Tables do
            Poker.Repo.validate_changeset(command_attrs, &JoinTableParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       Poker.Repo.find_by_id(Participant, participant_id)
+    end
+  end
+
+  def start_table(table) do
+    table = Poker.Repo.preload(table, [:settings, :participants])
+
+    # Generate IDs
+    hand_id = Ecto.UUID.generate()
+    dealer_button_id = hd(table.participants).id
+
+    # Generate and shuffle deck
+    deck = generate_deck() |> Enum.shuffle()
+
+    # Deal 2 cards to each participant
+    dealt_cards =
+      table.participants
+      |> Enum.with_index()
+      |> Enum.map(fn {_participant, index} ->
+        %{
+          participant_hand_id: Ecto.UUID.generate(),
+          hole_cards: Enum.slice(deck, index * 2, 2)
+        }
+      end)
+
+    command_attrs = %{
+      table_id: table.id,
+      hand_id: hand_id,
+      dealer_button_id: dealer_button_id,
+      dealt_cards: dealt_cards
+    }
+
+    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &StartTable.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      Poker.Repo.find_by_id(Table, table.id)
+    end
+  end
+
+  defp generate_deck do
+    ranks = ~w(2 3 4 5 6 7 8 9 10 J Q K A)
+    suits = ~w(hearts diamonds clubs spades)
+
+    for rank <- ranks, suit <- suits do
+      %{rank: rank, suit: suit}
     end
   end
 end

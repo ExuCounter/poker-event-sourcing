@@ -12,4 +12,13 @@ defmodule Poker.Tables.Projectors.Table do
       status: created.status |> String.to_existing_atom()
     })
   end)
+
+  project(%Poker.Tables.Events.TableStarted{} = started, fn multi ->
+    Ecto.Multi.update_all(
+      multi,
+      :table,
+      from(table in Poker.Tables.Projections.Table, where: table.id == ^started.id),
+      set: [status: String.to_existing_atom(started.status)]
+    )
+  end)
 end

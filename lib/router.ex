@@ -1,7 +1,7 @@
 defmodule Poker.Router do
   use Commanded.Commands.Router
   alias Poker.Accounts.Commands.{RegisterPlayer}
-  alias Poker.Tables.Commands.{CreateTable, CreateTableSettings, JoinTableParticipant}
+  alias Poker.Tables.Commands.{CreateTable, CreateTableSettings, JoinTableParticipant, StartHand, GiveParticipantHand, StartTable}
   alias Poker.Accounts.Aggregates.{Player}
   alias Poker.Tables.Aggregates.{Table}
 
@@ -19,7 +19,10 @@ defmodule Poker.Router do
     [
       CreateTable,
       CreateTableSettings,
-      JoinTableParticipant
+      JoinTableParticipant,
+      StartTable,
+      StartHand,
+      GiveParticipantHand
     ],
     to: Table
   )

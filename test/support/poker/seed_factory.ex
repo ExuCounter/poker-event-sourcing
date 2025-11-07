@@ -43,4 +43,26 @@ defmodule Poker.SeedFactorySchema do
 
     produce(:participant)
   end
+
+  command :start_table do
+    param(:player, entity: :player)
+    param(:table, entity: :table, with_traits: [:not_started])
+
+    resolve(fn args ->
+      {:ok, table} = Poker.Tables.start_table(args.table)
+
+      {:ok, %{table: table}}
+    end)
+
+    update(:table)
+  end
+
+  trait :not_started, :table do
+    exec(:create_table)
+  end
+
+  trait :live, :table do
+    from(:not_started)
+    exec(:start_table)
+  end
 end

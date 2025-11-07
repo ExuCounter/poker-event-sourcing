@@ -6,6 +6,7 @@ defmodule Poker.Tables.Projections.Table do
     belongs_to(:creator, Poker.Accounts.Projections.Player)
     has_one(:settings, Poker.Tables.Projections.Settings, foreign_key: :table_id)
     has_many(:participants, Poker.Tables.Projections.Participant, foreign_key: :table_id)
+    has_many(:hands, Poker.Tables.Projections.Hand, foreign_key: :table_id)
 
     timestamps()
   end
