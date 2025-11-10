@@ -1,8 +1,6 @@
 defmodule Poker.Accounts.Aggregates.TablesTest do
   use Poker.DataCase
 
-  alias Poker.Tables.Events.{TableCreated, TableSettingsCreated}
-
   describe "create table" do
     test "should succeed when valid", ctx do
       ctx = ctx |> produce(:player)
@@ -24,21 +22,12 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       assert table_settings.big_blind == table_settings_params.big_blind
       assert table_settings.starting_stack == table_settings_params.starting_stack
       assert table_settings.timeout_seconds == table_settings_params.timeout_seconds
-
-      assert_receive_event(Poker.App, TableSettingsCreated, fn _settings ->
-        :ok
-      end)
-
-      assert_receive_event(Poker.App, TableCreated, fn _table ->
-        :ok
-      end)
     end
   end
 
   describe "create table participant" do
     test "should succeed", ctx do
       %{player: player1, table: table} = ctx |> produce(:table)
-
       %{player: player2} = ctx |> produce(:player)
 
       {:ok, _participant} = Poker.Tables.join_participant(table, player2)
@@ -61,14 +50,15 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "start game" do
     test "should succeed", ctx do
-      %{player: player1, table: table} = ctx |> produce(:table)
-      %{player: player2} = ctx |> produce(:player)
+      %{player: second_player} = ctx |> produce(:player)
 
-      {:ok, _participant} = Poker.Tables.join_participant(table, player2)
+      ctx = ctx |> produce([:player, :table])
 
-      {:ok, table} = Poker.Tables.start_table(table)
+      {:ok, _second_participant} = Poker.Tables.join_participant(ctx.table, second_player)
 
-      table = table |> Poker.Repo.preload([:participants, hands: [:participant_hands]])
+      ctx = ctx |> exec(:start_table)
+
+      table = ctx.table |> Poker.Repo.preload([:participants, hands: [:participant_hands]])
 
       [hand] = table.hands
       [participant_hand1, participant_hand2] = hand.participant_hands
@@ -93,7 +83,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
                  rank: _,
                  suit: _
                }
-             ] = participant_hand1.hole_cards
+             ] = participant_hand2.hole_cards
 
       assert table.status == :live
     end

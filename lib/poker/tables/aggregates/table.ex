@@ -75,15 +75,6 @@ defmodule Poker.Tables.Aggregates.Table do
     }
   end
 
-  def execute(%Table{} = _table, %StartHand{} = start) do
-    %HandStarted{
-      id: start.hand_id,
-      table_id: start.table_id,
-      dealer_button_id: start.dealer_button_id,
-      community_cards: []
-    }
-  end
-
   def execute(%Table{} = _table, %GiveParticipantHand{} = give) do
     %ParticipantHandGiven{
       id: give.participant_hand_id,
@@ -96,13 +87,37 @@ defmodule Poker.Tables.Aggregates.Table do
 
   def execute(
         %Table{status: :not_started, id: table_id, participants: participants} = _table,
-        %StartTable{
-          hand_id: hand_id,
-          dealer_button_id: dealer_button_id,
-          dealt_cards: dealt_cards
-        }
+        %StartTable{}
       ) do
-    # Create participant hand events from dealt cards
+    dealer_button_id = hd(participants).id
+
+    %TableStarted{
+      id: table_id,
+      status: :live,
+      dealer_button_id: dealer_button_id
+    }
+  end
+
+  def execute(%Table{status: status} = _table, %StartTable{}) when status != :not_started do
+    {:error, :table_already_started}
+  end
+
+  def execute(%Table{participants: participants, id: table_id} = _table, %StartHand{
+        dealer_button_id: dealer_button_id,
+        hand_id: hand_id
+      }) do
+    deck = generate_deck() |> Enum.shuffle()
+
+    dealt_cards =
+      participants
+      |> Enum.with_index()
+      |> Enum.map(fn {_participant, index} ->
+        %{
+          participant_hand_id: Ecto.UUID.generate(),
+          hole_cards: Enum.slice(deck, index * 2, 2)
+        }
+      end)
+
     participant_hand_events =
       participants
       |> Enum.zip(dealt_cards)
@@ -117,10 +132,6 @@ defmodule Poker.Tables.Aggregates.Table do
       end)
 
     [
-      %TableStarted{
-        id: table_id,
-        status: :live
-      },
       %HandStarted{
         id: hand_id,
         table_id: table_id,
@@ -128,10 +139,6 @@ defmodule Poker.Tables.Aggregates.Table do
         community_cards: []
       }
     ] ++ participant_hand_events
-  end
-
-  def execute(%Table{status: status} = _table, %StartTable{}) when status != :not_started do
-    {:error, :table_already_started}
   end
 
   # State mutators
@@ -203,5 +210,14 @@ defmodule Poker.Tables.Aggregates.Table do
 
   def apply(%Table{} = table, %TableStarted{} = started) do
     %Table{table | status: started.status}
+  end
+
+  defp generate_deck do
+    ranks = ~w(2 3 4 5 6 7 8 9 10 J Q K A)
+    suits = ~w(hearts diamonds clubs spades)
+
+    for rank <- ranks, suit <- suits do
+      %{rank: rank, suit: suit}
+    end
   end
 end

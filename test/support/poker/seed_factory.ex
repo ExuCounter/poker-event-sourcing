@@ -1,5 +1,6 @@
 defmodule Poker.SeedFactorySchema do
   use SeedFactory.Schema
+  import Commanded.Assertions.EventAssertions
 
   command :create_player do
     param(:email, generate: &Faker.Internet.email/0)
@@ -26,6 +27,9 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       {:ok, table} = Poker.Tables.create_table(args.player, args.settings)
+
+      :ok = Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table.id}")
+
       {:ok, %{table: table}}
     end)
 
@@ -50,6 +54,11 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       {:ok, table} = Poker.Tables.start_table(args.table)
+
+      wait_for_event(
+        Poker.App,
+        Poker.Tables.Events.HandStarted
+      )
 
       {:ok, %{table: table}}
     end)

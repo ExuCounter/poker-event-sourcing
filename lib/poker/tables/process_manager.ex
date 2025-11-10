@@ -4,15 +4,15 @@ defmodule Poker.Tables.ProcessManager do
     name: "Poker.Tables.ProcessManager",
     consistency: :strong
 
-  # alias Poker.Tables.Events.{TableCreated, TableSettingsCreated, TableParticipantJoined}
-  # alias Poker.Tables.Commands.{CreateTableSettings, JoinTableParticipant}
+  alias Poker.Tables.Events.{TableStarted}
+  alias Poker.Tables.Commands.{StartHand}
 
-  # @derive Jason.Encoder
-  # defstruct [:id, :creator_id, :settings]
+  @derive Jason.Encoder
+  defstruct [:id]
 
-  # def interested?(%TableCreated{id: table_id} = _event, _metadata) do
-  #   {:start, table_id}
-  # end
+  def interested?(%TableStarted{id: table_id} = _event, _metadata) do
+    {:start, table_id}
+  end
 
   # def interested?(%TableSettingsCreated{table_id: table_id} = _event, _metadata) do
   #   {:continue, table_id}
@@ -24,9 +24,16 @@ defmodule Poker.Tables.ProcessManager do
 
   # def interested?(_event, _metadata), do: false
 
-  # def handle(%Poker.Tables.ProcessManager{}, %TableCreated{settings: settings} = _event) do
-  #   struct(CreateTableSettings, settings)
-  # end
+  def handle(
+        %Poker.Tables.ProcessManager{},
+        %TableStarted{id: table_id, dealer_button_id: dealer_button_id} = _event
+      ) do
+    struct(StartHand, %{
+      table_id: table_id,
+      hand_id: Ecto.UUID.generate(),
+      dealer_button_id: dealer_button_id
+    })
+  end
 
   # def handle(
   #       %Poker.Tables.ProcessManager{id: table_id, creator_id: player_id} = state,
@@ -40,9 +47,9 @@ defmodule Poker.Tables.ProcessManager do
   #   })
   # end
 
-  # def apply(%__MODULE__{} = state, %TableCreated{id: table_id, creator_id: creator_id} = event) do
-  #   %__MODULE__{state | id: table_id, creator_id: creator_id}
-  # end
+  def apply(%__MODULE__{} = state, %TableStarted{id: id} = _event) do
+    %__MODULE__{state | id: id}
+  end
 
   # def apply(%__MODULE__{} = state, %TableSettingsCreated{} = settings) do
   #   %__MODULE__{state | settings: settings}

@@ -14,7 +14,7 @@ defmodule Poker.Tables.Supervisor do
         Tables.Projectors.Settings,
         Tables.Projectors.Participant,
         Tables.Projectors.Hand,
-        Tables.Projectors.ParticipantHand,
+        Tables.Projectors.ParticipantHand
         # Tables.ProcessManager
       ],
       strategy: :one_for_one

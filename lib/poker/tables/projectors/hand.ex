@@ -29,4 +29,16 @@ defmodule Poker.Tables.Projectors.Hand do
       }
     )
   end)
+
+  def after_update(
+        %Poker.Tables.Events.HandStarted{table_id: table_id} = event,
+        _metadata,
+        _changes
+      ) do
+    {:ok, table} = Poker.Repo.find_by_id(Poker.Tables.Projections.Table, table_id)
+
+    Phoenix.PubSub.broadcast(Poker.PubSub, "table:#{table.id}", {:hand_started, event})
+
+    :ok
+  end
 end
