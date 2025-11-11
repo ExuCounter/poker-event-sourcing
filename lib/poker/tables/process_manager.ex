@@ -36,6 +36,12 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   # def handle(
+  #       %Poker.Tables.ProcessManager{},
+  #       %HandStarted{id: table_id, dealer_button_id: dealer_button_id} = _event
+  #     ) do
+  # end
+
+  # def handle(
   #       %Poker.Tables.ProcessManager{id: table_id, creator_id: player_id} = state,
   #       %TableSettingsCreated{starting_stack: starting_stack} = event
   #     ) do

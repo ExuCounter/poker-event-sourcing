@@ -3,7 +3,7 @@ defmodule Poker.Repo.Migrations.CreateTableParticipants do
 
   def change do
     execute(
-      "CREATE TYPE participant_status AS ENUM ('active', 'sitting_out')",
+      "CREATE TYPE participant_status AS ENUM ('active', 'folded')",
       "DROP TYPE participant_status"
     )
 

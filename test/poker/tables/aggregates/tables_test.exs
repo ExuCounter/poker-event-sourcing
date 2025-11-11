@@ -48,8 +48,8 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     end
   end
 
-  describe "start game" do
-    test "should succeed", ctx do
+  describe "start table" do
+    test "should give players initial cards and start the hand", ctx do
       %{player: second_player} = ctx |> produce(:player)
 
       ctx = ctx |> produce([:player, :table])
@@ -58,10 +58,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       ctx = ctx |> exec(:start_table)
 
-      table = ctx.table |> Poker.Repo.preload([:participants, hands: [:participant_hands]])
-
-      [hand] = table.hands
-      [participant_hand1, participant_hand2] = hand.participant_hands
+      [participant_hand1, participant_hand2] = ctx.table_hand.participant_hands
 
       assert [
                %{
@@ -85,13 +82,23 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
                }
              ] = participant_hand2.hole_cards
 
-      assert table.status == :live
+      assert ctx.table.status == :live
     end
 
-    test "should fail if table already started", ctx do
+    test "should fail if table is already started", ctx do
       ctx = ctx |> produce(table: [:live])
 
       assert {:error, :table_already_started} = Poker.Tables.start_table(ctx.table)
+    end
+  end
+
+  describe "participant actions" do
+    test "raise", ctx do
+      ctx = ctx |> produce(table: [:live])
+      ctx = ctx |> exec(:raise_hand, amount: 100)
+      ctx = ctx |> exec(:sit_out)
+
+      dbg(ctx)
     end
   end
 end

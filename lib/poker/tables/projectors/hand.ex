@@ -5,7 +5,7 @@ defmodule Poker.Tables.Projectors.Hand do
     application: Poker.App,
     consistency: :strong
 
-  def split_community_cards_by_rounds(community_cards) when is_list(community_cards) do
+  def split_community_cards_by_rounds(community_cards) do
     [first_flop_card, second_flop_card, third_flop_card, turn_card, river_card] = community_cards
 
     %{

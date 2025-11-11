@@ -5,6 +5,7 @@ defmodule Poker.Tables.Projections.ParticipantHand do
     belongs_to(:table, Poker.Tables.Projections.Table)
     belongs_to(:participant, Poker.Tables.Projections.Participant)
     belongs_to(:table_hand, Poker.Tables.Projections.Hand)
+
     field(:hole_cards, {:array, Poker.Ecto.Card}, default: [])
 
     timestamps()
