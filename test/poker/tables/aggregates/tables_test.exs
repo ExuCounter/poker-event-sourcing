@@ -12,11 +12,9 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
         timeout_seconds: 90
       }
 
-      {:ok, table} = Poker.Tables.create_table(ctx.player, table_settings_params)
+      ctx = ctx |> exec(:create_table, settings: table_settings_params)
 
-      table = table |> Poker.Repo.preload([:settings, :creator])
-
-      table_settings = table.settings
+      table_settings = ctx.table_settings
 
       assert table_settings.small_blind == table_settings_params.small_blind
       assert table_settings.big_blind == table_settings_params.big_blind
@@ -25,17 +23,17 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     end
   end
 
-  describe "create table participant" do
+  describe "add table participants" do
     test "should succeed", ctx do
-      %{player: player1, table: table} = ctx |> produce(:table)
-      %{player: player2} = ctx |> produce(:player)
+      ctx =
+        ctx
+        |> rebind([player: :player1], &produce(&1, :table))
+        |> rebind([player: :player2], &produce(&1, :player))
 
-      {:ok, _participant} = Poker.Tables.join_participant(table, player2)
+      ctx = ctx |> exec(:add_participants, players: [ctx.player2])
 
-      table = table |> Poker.Repo.preload(:participants)
-
-      player1_id = player1.id
-      player2_id = player2.id
+      player1_id = ctx.player1.id
+      player2_id = ctx.player2.id
 
       assert [
                %{
@@ -44,21 +42,21 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
                %{
                  player_id: ^player2_id
                }
-             ] = table.participants
+             ] = ctx.participants
     end
   end
 
   describe "start table" do
     test "should give players initial cards and start the hand", ctx do
-      %{player: second_player} = ctx |> produce(:player)
+      ctx =
+        ctx
+        |> rebind([player: :player1], &produce(&1, :player))
+        |> rebind([player: :player2], &produce(&1, :player))
 
-      ctx = ctx |> produce([:player, :table])
+      ctx =
+        ctx |> exec(:add_participants, players: [ctx.player1, ctx.player2]) |> exec(:start_table)
 
-      {:ok, _second_participant} = Poker.Tables.join_participant(ctx.table, second_player)
-
-      ctx = ctx |> exec(:start_table)
-
-      [participant_hand1, participant_hand2] = ctx.table_hand.participant_hands
+      [participant_hand1, participant_hand2, participant_hand3] = ctx.participant_hands
 
       assert [
                %{
@@ -82,6 +80,17 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
                }
              ] = participant_hand2.hole_cards
 
+      assert [
+               %{
+                 rank: _,
+                 suit: _
+               },
+               %{
+                 rank: _,
+                 suit: _
+               }
+             ] = participant_hand3.hole_cards
+
       assert ctx.table.status == :live
     end
 
@@ -94,9 +103,22 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "participant actions" do
     test "raise", ctx do
-      ctx = ctx |> produce(table: [:live])
+      ctx =
+        ctx
+        |> rebind([player: :player1], &produce(&1, :player))
+        |> rebind([player: :player2], &produce(&1, :player))
+        |> rebind([player: :player3], &produce(&1, :player))
+
+      ctx =
+        ctx
+        |> exec(:create_table)
+        |> exec(:add_participants, players: [ctx.player1, ctx.player2, ctx.player3])
+        |> exec(:start_table)
+
       ctx = ctx |> exec(:raise_hand, amount: 100)
-      ctx = ctx |> exec(:sit_out)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
 
       dbg(ctx)
     end

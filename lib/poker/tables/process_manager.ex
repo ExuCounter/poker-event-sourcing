@@ -26,20 +26,24 @@ defmodule Poker.Tables.ProcessManager do
 
   def handle(
         %Poker.Tables.ProcessManager{},
-        %TableStarted{id: table_id, dealer_button_id: dealer_button_id} = _event
+        %TableStarted{id: table_id, dealer_button_id: dealer_button_id, hand_id: hand_id} = _event
       ) do
     struct(StartHand, %{
       table_id: table_id,
-      hand_id: Ecto.UUID.generate(),
+      hand_id: hand_id,
       dealer_button_id: dealer_button_id
     })
   end
 
-  # def handle(
-  #       %Poker.Tables.ProcessManager{},
-  #       %HandStarted{id: table_id, dealer_button_id: dealer_button_id} = _event
-  #     ) do
-  # end
+  def handle(
+        %Poker.Tables.ProcessManager{},
+        %RoundCompleted{id: round_id, round: round} = _event
+      ) do
+    struct(StartRound, %{
+      round_id: Ecto.UUID.generate(),
+      round: next_round(round)
+    })
+  end
 
   # def handle(
   #       %Poker.Tables.ProcessManager{id: table_id, creator_id: player_id} = state,
@@ -60,4 +64,12 @@ defmodule Poker.Tables.ProcessManager do
   # def apply(%__MODULE__{} = state, %TableSettingsCreated{} = settings) do
   #   %__MODULE__{state | settings: settings}
   # end
+
+  def next_round(round) do
+    case round do
+      :pre_flop -> :flop
+      :flop -> :turn
+      :turn -> :river
+    end
+  end
 end

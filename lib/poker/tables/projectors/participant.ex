@@ -16,9 +16,7 @@ defmodule Poker.Tables.Projectors.Participant do
         chips: joined.chips,
         seat_number: joined.seat_number,
         status: joined.status |> String.to_existing_atom()
-      },
-      on_conflict: :nothing,
-      conflict_target: [:table_id, :player_id]
+      }
     )
   end)
 
@@ -31,7 +29,7 @@ defmodule Poker.Tables.Projectors.Participant do
           where: p.id == ^event.participant_id
         )
       end,
-      set: [is_sitting_out: true]
+      set: [is_sitting_out: true, status: :folded]
     )
   end)
 
@@ -44,7 +42,7 @@ defmodule Poker.Tables.Projectors.Participant do
           where: p.id == ^event.participant_id
         )
       end,
-      set: [is_sitting_out: false]
+      set: [is_sitting_out: false, status: :active]
     )
   end)
 
@@ -65,6 +63,32 @@ defmodule Poker.Tables.Projectors.Participant do
     Ecto.Multi.update_all(
       multi,
       :big_blind_posted,
+      fn _ ->
+        from(p in Poker.Tables.Projections.Participant,
+          where: p.id == ^event.participant_id
+        )
+      end,
+      inc: [chips: -event.amount]
+    )
+  end)
+
+  project(%Poker.Tables.Events.ParticipantActedInHand{action: "raise"} = event, fn multi ->
+    Ecto.Multi.update_all(
+      multi,
+      :raise,
+      fn _ ->
+        from(p in Poker.Tables.Projections.Participant,
+          where: p.id == ^event.participant_id
+        )
+      end,
+      inc: [chips: -event.amount]
+    )
+  end)
+
+  project(%Poker.Tables.Events.ParticipantActedInHand{action: "call"} = event, fn multi ->
+    Ecto.Multi.update_all(
+      multi,
+      :call,
       fn _ ->
         from(p in Poker.Tables.Projections.Participant,
           where: p.id == ^event.participant_id

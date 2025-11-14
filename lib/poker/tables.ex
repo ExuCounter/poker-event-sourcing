@@ -8,20 +8,27 @@ defmodule Poker.Tables do
     SitInParticipant
   }
 
-  alias Poker.Tables.Projections.{Table, Participant}
-
   def create_table(creator, settings_attrs \\ %{}) do
     table_id = Ecto.UUID.generate()
+    creator_participant_id = Ecto.UUID.generate()
+    settings_id = Ecto.UUID.generate()
 
     command_attrs = %{
       table_id: table_id,
       creator_id: creator.id,
+      creator_participant_id: creator_participant_id,
+      settings_id: settings_id,
       settings: settings_attrs
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateTable.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(Table, table_id)
+      {:ok,
+       %{
+         table_id: table_id,
+         creator_participant_id: creator_participant_id,
+         settings_id: settings_id
+       }}
     end
   end
 
@@ -37,18 +44,21 @@ defmodule Poker.Tables do
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &JoinTableParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(Participant, participant_id)
+      {:ok, participant_id}
     end
   end
 
   def start_table(table) do
+    hand_id = Ecto.UUID.generate()
+
     command_attrs = %{
-      table_id: table.id
+      table_id: table.id,
+      hand_id: hand_id
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &StartTable.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(Table, table.id)
+      {:ok, hand_id}
     end
   end
 

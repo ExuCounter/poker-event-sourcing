@@ -17,8 +17,7 @@ defmodule Poker.Application do
       # Start to serve requests, typically the last entry
       PokerWeb.Endpoint,
       Poker.Accounts.Supervisor,
-      Poker.Tables.Supervisor,
-      Poker.Tables.ProcessManager
+      Poker.Tables.Supervisor
       # Poker.Subscription
     ]
 
