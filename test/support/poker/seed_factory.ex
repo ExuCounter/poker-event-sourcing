@@ -236,8 +236,6 @@ defmodule Poker.SeedFactorySchema do
     param(:amount)
 
     resolve(fn args ->
-      dbg(args.table_hand.participant_to_act_id)
-
       participant_to_act =
         Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
 
@@ -272,8 +270,6 @@ defmodule Poker.SeedFactorySchema do
     resolve(fn args ->
       participant_to_act =
         Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
-
-      dbg(participant_to_act.id)
 
       :ok = Poker.Tables.call_hand(participant_to_act)
 

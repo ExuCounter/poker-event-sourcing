@@ -115,12 +115,23 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
         |> exec(:add_participants, players: [ctx.player1, ctx.player2, ctx.player3])
         |> exec(:start_table)
 
+      assert ctx.table_hand.current_round == :pre_flop
+
       ctx = ctx |> exec(:raise_hand, amount: 100)
       ctx = ctx |> exec(:call_hand)
       ctx = ctx |> exec(:call_hand)
       ctx = ctx |> exec(:call_hand)
 
-      dbg(ctx)
+      ctx.participants |> Enum.all?(fn participant -> assert participant.chips == 900 end)
+
+      assert ctx.table_hand.current_round == :flop
+
+      ctx = ctx |> exec(:raise_hand, amount: 200)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+
+      assert ctx.table_hand.current_round == :turn
     end
   end
 end

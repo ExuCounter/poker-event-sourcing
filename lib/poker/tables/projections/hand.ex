@@ -6,6 +6,11 @@ defmodule Poker.Tables.Projections.Hand do
     belongs_to(:dealer_button, Poker.Tables.Projections.Participant)
     belongs_to(:participant_to_act, Poker.Tables.Projections.Participant)
 
+    field(:current_round, Ecto.Enum,
+      values: [:not_started, :pre_flop, :flop, :turn, :river],
+      default: :not_started
+    )
+
     field(:flop_cards, {:array, Poker.Ecto.Card})
     field(:turn_card, Poker.Ecto.Card)
     field(:river_card, Poker.Ecto.Card)

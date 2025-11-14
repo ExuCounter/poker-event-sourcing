@@ -4,8 +4,8 @@ defmodule Poker.Tables.ProcessManager do
     name: "Poker.Tables.ProcessManager",
     consistency: :strong
 
-  alias Poker.Tables.Events.{TableStarted}
-  alias Poker.Tables.Commands.{StartHand}
+  alias Poker.Tables.Events.{TableStarted, RoundCompleted}
+  alias Poker.Tables.Commands.{StartHand, StartRound}
 
   @derive Jason.Encoder
   defstruct [:id]
@@ -14,9 +14,9 @@ defmodule Poker.Tables.ProcessManager do
     {:start, table_id}
   end
 
-  # def interested?(%TableSettingsCreated{table_id: table_id} = _event, _metadata) do
-  #   {:continue, table_id}
-  # end
+  def interested?(%RoundCompleted{table_id: table_id} = _event, _metadata) do
+    {:continue, table_id}
+  end
 
   # def interested?(%TableParticipantJoined{table_id: table_id} = _event, _metadata) do
   #   {:continue, table_id}
@@ -37,11 +37,15 @@ defmodule Poker.Tables.ProcessManager do
 
   def handle(
         %Poker.Tables.ProcessManager{},
-        %RoundCompleted{id: round_id, round: round} = _event
+        %RoundCompleted{} = event
       ) do
+    dbg(event)
+
     struct(StartRound, %{
       round_id: Ecto.UUID.generate(),
-      round: next_round(round)
+      round: next_round(event.round |> String.to_existing_atom()),
+      table_id: event.table_id,
+      hand_id: event.hand_id
     })
   end
 
