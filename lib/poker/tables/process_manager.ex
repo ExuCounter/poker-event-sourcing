@@ -39,8 +39,6 @@ defmodule Poker.Tables.ProcessManager do
         %Poker.Tables.ProcessManager{},
         %RoundCompleted{} = event
       ) do
-    dbg(event)
-
     struct(StartRound, %{
       round_id: Ecto.UUID.generate(),
       round: next_round(event.round |> String.to_existing_atom()),

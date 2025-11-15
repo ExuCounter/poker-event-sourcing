@@ -5,35 +5,6 @@ defmodule Poker.Tables.Projectors.Hand do
     application: Poker.App,
     consistency: :strong
 
-  def split_community_cards_by_rounds(community_cards) do
-    [first_flop_card, second_flop_card, third_flop_card, turn_card, river_card] = community_cards
-
-    %{
-      flop_cards: [first_flop_card, second_flop_card, third_flop_card],
-      turn_card: turn_card,
-      river_card: river_card
-    }
-  end
-
-  def split_community_cards_by_rounds(community_cards, "flop") do
-    [first_flop_card, second_flop_card, third_flop_card | _rest] = community_cards
-
-    [first_flop_card, second_flop_card, third_flop_card]
-  end
-
-  def split_community_cards_by_rounds(community_cards, "turn") do
-    [_first_flop_card, _second_flop_card, _third_flop_card, turn_card] = community_cards
-
-    turn_card
-  end
-
-  def split_community_cards_by_rounds(community_cards, "river") do
-    [_first_flop_card, _second_flop_card, _third_flop_card, _turn_card, river_card] =
-      community_cards
-
-    river_card
-  end
-
   project(%Poker.Tables.Events.HandStarted{} = started, fn multi ->
     Ecto.Multi.insert(
       multi,
@@ -66,56 +37,65 @@ defmodule Poker.Tables.Projectors.Hand do
     )
   end)
 
-  project(%Poker.Tables.Events.RoundStarted{round: "flop"} = started, fn multi ->
-    Ecto.Multi.update_all(
-      multi,
-      :update_round,
-      fn _ ->
-        from(h in Poker.Tables.Projections.Hand,
-          where: h.id == ^started.hand_id
-        )
-      end,
-      set: [
-        flop_cards: split_community_cards_by_rounds(started.community_cards, started.round),
-        participant_to_act_id: started.participant_to_act_id,
-        current_round: :flop
-      ]
-    )
-  end)
+  project(
+    %Poker.Tables.Events.RoundStarted{round: "flop", community_cards: community_cards} = started,
+    fn multi ->
+      Ecto.Multi.update_all(
+        multi,
+        :update_round,
+        fn _ ->
+          from(h in Poker.Tables.Projections.Hand,
+            where: h.id == ^started.hand_id
+          )
+        end,
+        set: [
+          flop_cards: community_cards,
+          participant_to_act_id: started.participant_to_act_id,
+          current_round: :flop
+        ]
+      )
+    end
+  )
 
-  project(%Poker.Tables.Events.RoundStarted{round: "turn"} = started, fn multi ->
-    Ecto.Multi.update_all(
-      multi,
-      :update_round,
-      fn _ ->
-        from(h in Poker.Tables.Projections.Hand,
-          where: h.id == ^started.hand_id
-        )
-      end,
-      set: [
-        turn_card: split_community_cards_by_rounds(started.community_cards, started.round),
-        participant_to_act_id: started.participant_to_act_id,
-        current_round: :turn
-      ]
-    )
-  end)
+  project(
+    %Poker.Tables.Events.RoundStarted{round: "turn", community_cards: [turn_card]} = started,
+    fn multi ->
+      Ecto.Multi.update_all(
+        multi,
+        :update_round,
+        fn _ ->
+          from(h in Poker.Tables.Projections.Hand,
+            where: h.id == ^started.hand_id
+          )
+        end,
+        set: [
+          turn_card: turn_card,
+          participant_to_act_id: started.participant_to_act_id,
+          current_round: :turn
+        ]
+      )
+    end
+  )
 
-  project(%Poker.Tables.Events.RoundStarted{round: "river"} = started, fn multi ->
-    Ecto.Multi.update_all(
-      multi,
-      :update_round,
-      fn _ ->
-        from(h in Poker.Tables.Projections.Hand,
-          where: h.id == ^started.hand_id
-        )
-      end,
-      set: [
-        river_card: split_community_cards_by_rounds(started.community_cards, started.round),
-        participant_to_act_id: started.participant_to_act_id,
-        current_round: :river
-      ]
-    )
-  end)
+  project(
+    %Poker.Tables.Events.RoundStarted{round: "river", community_cards: [river_card]} = started,
+    fn multi ->
+      Ecto.Multi.update_all(
+        multi,
+        :update_round,
+        fn _ ->
+          from(h in Poker.Tables.Projections.Hand,
+            where: h.id == ^started.hand_id
+          )
+        end,
+        set: [
+          river_card: river_card,
+          participant_to_act_id: started.participant_to_act_id,
+          current_round: :river
+        ]
+      )
+    end
+  )
 
   project(%Poker.Tables.Events.ParticipantActedInHand{} = acted, fn multi ->
     Ecto.Multi.update_all(

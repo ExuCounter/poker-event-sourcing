@@ -1,6 +1,14 @@
 defmodule Poker.Accounts.Aggregates.TablesTest do
   use Poker.DataCase
 
+  def aggregate_table(table_id) do
+    Commanded.Aggregates.Aggregate.aggregate_state(
+      Poker.App,
+      Poker.Tables.Aggregates.Table,
+      "table-" <> table_id
+    )
+  end
+
   describe "create table" do
     test "should succeed when valid", ctx do
       ctx = ctx |> produce(:player)
@@ -132,6 +140,11 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       ctx = ctx |> exec(:call_hand)
 
       assert ctx.table_hand.current_round == :turn
+
+      ctx = ctx |> exec(:raise_hand, amount: 700)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      _ctx = ctx |> exec(:call_hand)
     end
   end
 end
