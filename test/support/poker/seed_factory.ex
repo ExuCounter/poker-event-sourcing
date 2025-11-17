@@ -9,12 +9,43 @@ defmodule Poker.SeedFactorySchema do
     end)
   end
 
+  def aggregate_state(:player, player_id) do
+    Commanded.Aggregates.Aggregate.aggregate_state(
+      Poker.App,
+      Poker.Accounts.Aggregates.Player,
+      "player-" <> player_id
+    )
+  end
+
+  def aggregate_state(:table, table_id) do
+    Commanded.Aggregates.Aggregate.aggregate_state(
+      Poker.App,
+      Poker.Tables.Aggregates.Table,
+      "table-" <> table_id
+    )
+  end
+
+  def get_table_positions(table) do
+    table.participant_hands
+    |> Enum.map(fn hand ->
+      {hand.position,
+       %{
+         hand: hand,
+         participant: Enum.find(table.participants, &(&1.id == hand.participant_id))
+       }}
+    end)
+    |> Enum.into(%{})
+  end
+
   command :create_player do
     param(:email, generate: &Faker.Internet.email/0)
 
     resolve(fn args ->
-      {:ok, player} = Poker.Accounts.register_player(%{email: args.email})
-      {:ok, %{player: player}}
+      {:ok, player_id} = Poker.Accounts.register_player(%{email: args.email})
+
+      aggregate_state = aggregate_state(:player, player_id)
+
+      {:ok, %{player: aggregate_state}}
     end)
 
     produce(:player)
@@ -22,6 +53,7 @@ defmodule Poker.SeedFactorySchema do
 
   command :create_table do
     param(:player, entity: :player)
+    param(:type, value: :six_max)
 
     param(:settings,
       value: %{
@@ -33,291 +65,248 @@ defmodule Poker.SeedFactorySchema do
     )
 
     resolve(fn args ->
-      {:ok,
-       %{table_id: table_id, settings_id: settings_id, creator_participant_id: participant_id}} =
-        Poker.Tables.create_table(args.player, args.settings)
+      settings = args.settings |> Map.put(:table_type, args.type)
 
-      {:ok, table} = Poker.Repo.find_by_id(Table, table_id)
-      {:ok, settings} = Poker.Repo.find_by_id(Settings, settings_id)
-      {:ok, participant} = Poker.Repo.find_by_id(Participant, participant_id)
+      {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
 
-      {:ok,
-       %{
-         table: table,
-         table_settings: settings,
-         participants: [participant]
-       }}
+      aggregate_state = aggregate_state(:table, table_id)
+
+      {:ok, %{table: aggregate_state}}
     end)
 
     produce(:table)
-    produce(:participants)
-    produce(:table_settings)
   end
 
   command :add_participants do
     param(:table, entity: :table)
     param(:players, value: [])
-    param(:participants, entity: :participants)
 
     resolve(fn args ->
       participants =
-        Enum.map(args.players, fn player ->
-          {:ok, participant_id} = Poker.Tables.join_participant(args.table, player)
-          {:ok, participant} = Poker.Repo.find_by_id(Participant, participant_id)
-
-          participant
+        args.players
+        |> Enum.map(fn
+          {player, attrs} -> {player, attrs}
+          player -> {player, %{}}
+        end)
+        |> Enum.map(fn {player, attrs} ->
+          {:ok, _participant_id} = Poker.Tables.join_participant(args.table, player, attrs)
         end)
 
-      {:ok, %{participants: args.participants ++ participants}}
-    end)
+      table = aggregate_state(:table, args.table.id)
 
-    update(:participants)
-  end
-
-  command :start_table do
-    param(:table, entity: :table, with_traits: [:not_started])
-    param(:participants, entity: :participants)
-
-    resolve(fn args ->
-      {:ok, hand_id} = Poker.Tables.start_table(args.table)
-
-      wait_for_events([
-        Poker.Tables.Events.TableStarted,
-        Poker.Tables.Events.HandStarted,
-        Poker.Tables.Events.SmallBlindPosted,
-        Poker.Tables.Events.BigBlindPosted,
-        Poker.Tables.Events.RoundStarted
-      ])
-
-      {:ok, table} = Poker.Repo.find_by_id(Table, args.table.id)
-      {:ok, hand} = Poker.Repo.find_by_id(Hand, hand_id)
-
-      participant_hands =
-        Enum.map(
-          args.participants,
-          fn participant ->
-            {:ok, hand} =
-              Poker.Repo.find_by(ParticipantHand,
-                table_hand_id: hand.id,
-                participant_id: participant.id
-              )
-
-            hand
-          end
-        )
-
-      participants = Enum.map(args.participants, &Poker.Repo.reload!/1)
-
-      {:ok,
-       %{
-         table: table,
-         table_hand: hand,
-         participants: participants,
-         participant_hands: participant_hands
-       }}
+      {:ok, %{table: table}}
     end)
 
     update(:table)
-    produce(:table_hand)
-    update(:participants)
-    produce(:participant_hands)
   end
 
-  command :sit_out do
-    param(:table, entity: :table, with_traits: [:live])
-    param(:participants, entity: :participants)
-    param(:participant)
+  command :start_table do
+    param(:table, entity: :table, with_traits: [:not_ready])
 
     resolve(fn args ->
-      :ok = Poker.Tables.sit_out(args.participant)
+      {:ok, _hand_id} = Poker.Tables.start_table(args.table)
 
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.ParticipantSatOut
-      )
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
 
-      participants =
-        Enum.map(args.participants, fn participant ->
-          if args.participant.id == participant.id,
-            do: Poker.Repo.reload(participant),
-            else: participant
-        end)
-
-      {:ok, %{participants: participants}}
+      {:ok, %{table: table, positions: positions}}
     end)
 
-    update(:participants)
+    update(:table)
+    produce(:positions)
   end
 
-  command :sit_in do
+  command :call_hand do
     param(:table, entity: :table, with_traits: [:live])
-    param(:participants, entity: :participants)
-    param(:participant)
 
     resolve(fn args ->
-      :ok = Poker.Tables.sit_in(args.participant)
+      :ok = Poker.Tables.call_hand(args.table.id, args.table.round.participant_to_act_id)
 
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.ParticipantSatIn
-      )
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
 
-      participants =
-        Enum.map(args.participants, fn participant ->
-          if args.participant.id == participant.id,
-            do: Poker.Repo.reload(participant),
-            else: participant
-        end)
-
-      participant_hands =
-        Enum.map(
-          args.participants,
-          fn participant ->
-            {:ok, hand} =
-              Poker.Repo.find_by(ParticipantHand,
-                table_hand_id: args.table_hand.id,
-                participant_id: participant.id
-              )
-
-            hand
-          end
-        )
-
-      {:ok, %{participants: participants}}
+      {:ok, %{table: table, positions: positions}}
     end)
 
-    update(:participants)
+    update(:table)
+    update(:positions)
   end
 
-  # command :fold_hand do
-  #   param(:table, entity: :table, with_traits: [:live])
+  command :advance_round do
+    param(:table, entity: :table, with_traits: [:live])
+
+    resolve(fn args ->
+      args.table.participants
+      |> Enum.each(fn _participant ->
+        %{
+          round: %{
+            participant_to_act_id: participant_to_act_id
+          }
+        } = aggregate_state(:table, args.table.id)
+
+        :ok = Poker.Tables.call_hand(args.table.id, participant_to_act_id)
+      end)
+
+      table = aggregate_state(:table, args.table.id)
+
+      {:ok, %{table: table}}
+    end)
+
+    update(:table)
+  end
+
+  # command :sit_out do
   #   param(:table_hand, entity: :table_hand)
-  #   param(:participant, entity: :participant)
+  #   param(:participants, entity: :participants)
+  #   param(:participant)
 
   #   resolve(fn args ->
-  #     :ok = Poker.Tables.fold_hand(args.participant)
+  #     :ok = Poker.Tables.sit_out(args.participant)
+
+  #     wait_for_event(
+  #       Poker.App,
+  #       Poker.Tables.Events.ParticipantSatOut
+  #     )
+
+  #     participants =
+  #       Enum.map(args.participants, fn participant ->
+  #         if args.participant.id == participant.id,
+  #           do: Poker.Repo.reload(participant),
+  #           else: participant
+  #       end)
+
+  #     {:ok, %{participants: participants}}
+  #   end)
+
+  #   update(:participants)
+  # end
+
+  # command :sit_in do
+  #   param(:table, entity: :table, with_traits: [:live])
+  #   param(:participants, entity: :participants)
+  #   param(:participant)
+
+  #   resolve(fn args ->
+  #     :ok = Poker.Tables.sit_in(args.participant)
+
+  #     wait_for_event(
+  #       Poker.App,
+  #       Poker.Tables.Events.ParticipantSatIn
+  #     )
+
+  #     participants =
+  #       Enum.map(args.participants, fn participant ->
+  #         if args.participant.id == participant.id,
+  #           do: Poker.Repo.reload(participant),
+  #           else: participant
+  #       end)
+
+  #     participant_hands =
+  #       Enum.map(
+  #         args.participants,
+  #         fn participant ->
+  #           {:ok, hand} =
+  #             Poker.Repo.find_by(ParticipantHand,
+  #               table_hand_id: args.table_hand.id,
+  #               participant_id: participant.id
+  #             )
+
+  #           hand
+  #         end
+  #       )
+
+  #     {:ok, %{participants: participants}}
+  #   end)
+
+  #   update(:participants)
+  # end
+
+  # command :raise_hand do
+  #   param(:table, entity: :table, with_traits: [:live])
+  #   param(:table_hand, entity: :table_hand)
+  #   param(:participants, entity: :participants)
+  #   param(:amount)
+
+  #   resolve(fn args ->
+  #     participant_to_act =
+  #       Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
+
+  #     :ok = Poker.Tables.raise_hand(participant_to_act, args.amount)
 
   #     wait_for_event(
   #       Poker.App,
   #       Poker.Tables.Events.ParticipantActedInHand
   #     )
+
+  #     participants =
+  #       Enum.map(args.participants, fn participant ->
+  #         if participant.id == participant_to_act.id,
+  #           do: Poker.Repo.reload(participant),
+  #           else: participant
+  #       end)
+
+  #     table_hand = Poker.Repo.reload!(args.table_hand)
+
+  #     participant_to_act = Enum.find(participants, &(&1.id == table_hand.participant_to_act_id))
+
+  #     {:ok,
+  #      %{
+  #        participants: participants,
+  #        table_hand: table_hand,
+  #        participant_to_act: participant_to_act
+  #      }}
   #   end)
 
+  #   update(:participants)
   #   update(:table_hand)
+  #   update(:participant_to_act)
   # end
 
-  # command :check_hand do
+  # command :fold_hand do
   #   param(:table, entity: :table, with_traits: [:live])
   #   param(:table_hand, entity: :table_hand)
-  #   param(:participant, entity: :participant)
+  #   param(:participants, entity: :participants)
 
   #   resolve(fn args ->
-  #     :ok = Poker.Tables.check_hand(args.participant)
+  #     participant_to_act =
+  #       Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
 
-  #     {:ok, %{table: args.table}}
+  #     :ok = Poker.Tables.fold_hand(participant_to_act)
+
+  #     wait_for_event(
+  #       Poker.App,
+  #       Poker.Tables.Events.ParticipantActedInHand
+  #     )
+
+  #     participants =
+  #       Enum.map(args.participants, fn participant ->
+  #         if participant.id == participant_to_act.id,
+  #           do: Poker.Repo.reload(participant),
+  #           else: participant
+  #       end)
+
+  #     table_hand = Poker.Repo.reload!(args.table_hand)
+
+  #     participant_to_act = Enum.find(participants, &(&1.id == table_hand.participant_to_act_id))
+
+  #     {:ok,
+  #      %{
+  #        participants: participants,
+  #        table_hand: table_hand,
+  #        participant_to_act: participant_to_act
+  #      }}
   #   end)
+
+  #   update(:participants)
+  #   update(:table_hand)
+  #   update(:participant_to_act)
   # end
 
-  # command :call_hand do
-  #   param(:table, entity: :table, with_traits: [:live])
-  #   param(:table_hand, entity: :table_hand)
-  #   param(:participant, entity: :participant)
-
-  #   resolve(fn args ->
-  #     :ok = Poker.Tables.call_hand(args.participant)
-  #     {:ok, %{}}
-  #   end)
-  # end
-
-  command :raise_hand do
-    param(:table, entity: :table, with_traits: [:live])
-    param(:table_hand, entity: :table_hand)
-    param(:participants, entity: :participants)
-    param(:amount)
-
-    resolve(fn args ->
-      participant_to_act =
-        Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
-
-      :ok = Poker.Tables.raise_hand(participant_to_act, args.amount)
-
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.ParticipantActedInHand
-      )
-
-      participants =
-        Enum.map(args.participants, fn participant ->
-          if participant.id == participant_to_act.id,
-            do: Poker.Repo.reload(participant),
-            else: participant
-        end)
-
-      table_hand = Poker.Repo.reload!(args.table_hand)
-
-      {:ok, %{participants: participants, table_hand: table_hand}}
-    end)
-
-    update(:participants)
-    update(:table_hand)
-  end
-
-  command :call_hand do
-    param(:table, entity: :table, with_traits: [:live])
-    param(:table_hand, entity: :table_hand)
-    param(:participants, entity: :participants)
-
-    resolve(fn args ->
-      participant_to_act =
-        Enum.find(args.participants, &(&1.id == args.table_hand.participant_to_act_id))
-
-      :ok = Poker.Tables.call_hand(participant_to_act)
-
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.ParticipantActedInHand
-      )
-
-      participants =
-        Enum.map(args.participants, fn participant ->
-          if participant.id == participant_to_act.id,
-            do: Poker.Repo.reload(participant),
-            else: participant
-        end)
-
-      table_hand = Poker.Repo.reload!(args.table_hand)
-
-      {:ok, %{participants: participants, table_hand: table_hand}}
-    end)
-
-    update(:participants)
-    update(:table_hand)
-  end
-
-  # command :all_in_hand do
-  #   param(:participant, entity: :participant)
-
-  #   resolve(fn args ->
-  #     :ok = Poker.Tables.all_in_hand(args.participant)
-  #     {:ok, %{}}
-  #   end)
-  # end
-
-  # command :sit_out_participant do
-  #   param(:participant, entity: :participant)
-
-  #   resolve(fn args ->
-  #     :ok = Poker.Tables.sit_out_participant(args.participant)
-  #     {:ok, %{}}
-  #   end)
-  # end
-
-  trait :not_started, :table do
+  trait :not_ready, :table do
     exec(:create_table)
   end
 
   trait :live, :table do
-    from(:not_started)
     exec(:start_table)
   end
 end

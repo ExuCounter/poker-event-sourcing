@@ -21,7 +21,7 @@ defmodule Poker.Tables.Projectors.Hand do
     )
   end)
 
-  project(%Poker.Tables.Events.RoundStarted{round: "pre_flop"} = started, fn multi ->
+  project(%Poker.Tables.Events.RoundStarted{type: "pre_flop"} = started, fn multi ->
     Ecto.Multi.update_all(
       multi,
       :update_round,
@@ -38,7 +38,7 @@ defmodule Poker.Tables.Projectors.Hand do
   end)
 
   project(
-    %Poker.Tables.Events.RoundStarted{round: "flop", community_cards: community_cards} = started,
+    %Poker.Tables.Events.RoundStarted{type: "flop", community_cards: community_cards} = started,
     fn multi ->
       Ecto.Multi.update_all(
         multi,
@@ -58,7 +58,7 @@ defmodule Poker.Tables.Projectors.Hand do
   )
 
   project(
-    %Poker.Tables.Events.RoundStarted{round: "turn", community_cards: [turn_card]} = started,
+    %Poker.Tables.Events.RoundStarted{type: "turn", community_cards: [turn_card]} = started,
     fn multi ->
       Ecto.Multi.update_all(
         multi,
@@ -78,7 +78,7 @@ defmodule Poker.Tables.Projectors.Hand do
   )
 
   project(
-    %Poker.Tables.Events.RoundStarted{round: "river", community_cards: [river_card]} = started,
+    %Poker.Tables.Events.RoundStarted{type: "river", community_cards: [river_card]} = started,
     fn multi ->
       Ecto.Multi.update_all(
         multi,

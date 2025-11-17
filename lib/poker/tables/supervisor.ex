@@ -10,12 +10,12 @@ defmodule Poker.Tables.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
-        Tables.Projectors.Table,
-        Tables.Projectors.Settings,
-        Tables.Projectors.Participant,
-        Tables.Projectors.Hand,
-        Tables.Projectors.ParticipantHand,
-        Tables.Projectors.ParticipantHandAction,
+        # Tables.Projectors.Table,
+        # Tables.Projectors.Settings,
+        # Tables.Projectors.Participant,
+        # Tables.Projectors.Hand,
+        # Tables.Projectors.ParticipantHand,
+        # Tables.Projectors.ParticipantHandAction,
         Tables.ProcessManager
       ],
       strategy: :one_for_one

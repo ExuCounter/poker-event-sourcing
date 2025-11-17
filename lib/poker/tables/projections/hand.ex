@@ -19,6 +19,8 @@ defmodule Poker.Tables.Projections.Hand do
       foreign_key: :table_hand_id
     )
 
+    has_many(:pots, Poker.Tables.Projections.Pot, foreign_key: :hand_id)
+
     timestamps()
   end
 end

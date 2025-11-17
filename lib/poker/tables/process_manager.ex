@@ -41,7 +41,7 @@ defmodule Poker.Tables.ProcessManager do
       ) do
     struct(StartRound, %{
       round_id: Ecto.UUID.generate(),
-      round: next_round(event.round |> String.to_existing_atom()),
+      round: next_round(event.type |> String.to_existing_atom()),
       table_id: event.table_id,
       hand_id: event.hand_id
     })

@@ -8,14 +8,14 @@ defmodule Poker.Tables do
     SitInParticipant
   }
 
-  def create_table(creator, settings_attrs \\ %{}) do
+  def create_table(creator_id, settings_attrs \\ %{}) do
     table_id = Ecto.UUID.generate()
     creator_participant_id = Ecto.UUID.generate()
     settings_id = Ecto.UUID.generate()
 
     command_attrs = %{
       table_id: table_id,
-      creator_id: creator.id,
+      creator_id: creator_id,
       creator_participant_id: creator_participant_id,
       settings_id: settings_id,
       settings: settings_attrs
@@ -32,13 +32,15 @@ defmodule Poker.Tables do
     end
   end
 
-  def join_participant(table, player) do
+  def join_participant(table, player, attrs \\ %{}) do
     participant_id = Ecto.UUID.generate()
+    starting_stack = Map.get(attrs, :starting_stack)
 
     command_attrs = %{
       participant_id: participant_id,
       player_id: player.id,
-      table_id: table.id
+      table_id: table.id,
+      starting_stack: starting_stack
     }
 
     with {:ok, command} <-
@@ -62,24 +64,24 @@ defmodule Poker.Tables do
     end
   end
 
-  def fold_hand(participant) do
-    act_in_hand(participant, %{action: :fold})
+  def fold_hand(table_id, participant_id) do
+    act_in_hand(table_id, participant_id, %{action: :fold})
   end
 
-  def check_hand(participant) do
-    act_in_hand(participant, %{action: :check})
+  def check_hand(table_id, participant_id) do
+    act_in_hand(table_id, participant_id, %{action: :check})
   end
 
-  def call_hand(participant) do
-    act_in_hand(participant, %{action: :call})
+  def call_hand(table_id, participant_id) do
+    act_in_hand(table_id, participant_id, %{action: :call})
   end
 
-  def raise_hand(participant, amount) do
-    act_in_hand(participant, %{action: :raise, amount: amount})
+  def raise_hand(table_id, participant_id, amount) do
+    act_in_hand(table_id, participant_id, %{action: :raise, amount: amount})
   end
 
-  def all_in_hand(participant) do
-    act_in_hand(participant, %{action: :all_in})
+  def all_in_hand(table_id, participant_id) do
+    act_in_hand(table_id, participant_id, %{action: :all_in})
   end
 
   def sit_out(participant) do
@@ -108,14 +110,14 @@ defmodule Poker.Tables do
     end
   end
 
-  defp act_in_hand(participant, action_attrs) do
+  defp act_in_hand(table_id, participant_id, action_attrs) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs =
       Map.merge(action_attrs, %{
         hand_action_id: hand_action_id,
-        participant_id: participant.id,
-        table_id: participant.table_id
+        participant_id: participant_id,
+        table_id: table_id
       })
 
     with {:ok, command} <-

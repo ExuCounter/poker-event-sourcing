@@ -9,7 +9,7 @@ defmodule Poker.Accounts do
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      Poker.Repo.find_by_id(Player, player_id)
+      {:ok, player_id}
     end
   end
 end

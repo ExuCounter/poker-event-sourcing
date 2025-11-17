@@ -1,15 +1,15 @@
-defmodule Poker.Tables.Events.RoundCompleted do
+defmodule Poker.Tables.Events.PotsRecalculated do
   @derive {Jason.Encoder,
            only: [
              :id,
-             :hand_id,
              :table_id,
-             :type
+             :hand_id,
+             :pots
            ]}
   defstruct [
     :id,
-    :hand_id,
     :table_id,
-    :type
+    :hand_id,
+    :pots
   ]
 end

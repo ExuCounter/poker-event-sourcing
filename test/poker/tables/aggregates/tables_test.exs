@@ -9,142 +9,199 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     )
   end
 
-  describe "create table" do
-    test "should succeed when valid", ctx do
-      ctx = ctx |> produce(:player)
+  describe "create table aggregate" do
+    test "should have not_started status when created", ctx do
+      ctx = ctx |> produce(:table)
 
-      table_settings_params = %{
-        small_blind: 10,
-        big_blind: 20,
-        starting_stack: 1000,
-        timeout_seconds: 90
-      }
+      assert ctx.table.status == :not_started
+    end
 
-      ctx = ctx |> exec(:create_table, settings: table_settings_params)
+    test "should belong to creator player", ctx do
+      ctx = ctx |> produce(:table)
 
-      table_settings = ctx.table_settings
+      assert ctx.table.creator_id == ctx.player.id
+    end
 
-      assert table_settings.small_blind == table_settings_params.small_blind
-      assert table_settings.big_blind == table_settings_params.big_blind
-      assert table_settings.starting_stack == table_settings_params.starting_stack
-      assert table_settings.timeout_seconds == table_settings_params.timeout_seconds
+    test "should have settings associated", ctx do
+      ctx =
+        ctx
+        |> exec(:create_table,
+          settings: %{
+            small_blind: 10,
+            big_blind: 20,
+            starting_stack: 1000,
+            timeout_seconds: 90
+          }
+        )
+
+      assert ctx.table.settings.small_blind == 10
+      assert ctx.table.settings.big_blind == 20
+      assert ctx.table.settings.starting_stack == 1000
+      assert ctx.table.settings.timeout_seconds == 90
     end
   end
 
   describe "add table participants" do
-    test "should succeed", ctx do
+    test "successfully", ctx do
+      [player1, player2] =
+        for i <- 1..2 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
       ctx =
         ctx
-        |> rebind([player: :player1], &produce(&1, :table))
-        |> rebind([player: :player2], &produce(&1, :player))
+        |> exec(:create_table, type: :six_max)
+        |> exec(:add_participants, players: [player1, player2])
 
-      ctx = ctx |> exec(:add_participants, players: [ctx.player2])
+      assert length(ctx.table.participants) == 2
 
-      player1_id = ctx.player1.id
-      player2_id = ctx.player2.id
+      [participant1, participant2] = ctx.table.participants
 
-      assert [
-               %{
-                 player_id: ^player1_id
-               },
-               %{
-                 player_id: ^player2_id
-               }
-             ] = ctx.participants
+      assert participant1.player_id == player1.id
+      assert participant1.chips == ctx.table.settings.starting_stack
+      assert participant1.seat_number == 1
+      assert participant1.status == :active
+      assert participant1.is_sitting_out == false
+
+      assert participant2.player_id == player2.id
+      assert participant2.chips == ctx.table.settings.starting_stack
+      assert participant2.seat_number == 2
+      assert participant2.status == :active
+      assert participant2.is_sitting_out == false
+    end
+
+    test "should fail if table already started", ctx do
+      players =
+        for i <- 1..6 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
+      ctx = ctx |> exec(:add_participants, players: players)
+      ctx = ctx |> exec(:start_table)
+
+      %{player: player} = produce(ctx, :player)
+
+      assert {:error, :table_already_started} = Poker.Tables.join_participant(ctx.table, player)
+    end
+
+    test "should not allow to join table if full", ctx do
+      players =
+        for i <- 1..6 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
+      ctx =
+        ctx
+        |> exec(:create_table, type: :six_max)
+        |> exec(:add_participants, players: players)
+
+      %{player: player} = produce(ctx, :player)
+
+      assert {:error, :table_full} =
+               Poker.Tables.join_participant(ctx.table, player)
+    end
+
+    test "should not allow to start table with less than 2 players", ctx do
+      ctx = ctx |> exec(:create_table, type: :six_max)
+
+      assert {:error, :not_enough_participants} =
+               Poker.Tables.start_table(ctx.table)
     end
   end
 
-  describe "start table" do
+  describe "6max table" do
+    setup ctx do
+      players =
+        for i <- 1..6 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
+      ctx
+      |> exec(:create_table, type: :six_max)
+      |> exec(:add_participants, players: players)
+    end
+
     test "should give players initial cards and start the hand", ctx do
-      ctx =
-        ctx
-        |> rebind([player: :player1], &produce(&1, :player))
-        |> rebind([player: :player2], &produce(&1, :player))
+      ctx = ctx |> exec(:start_table)
 
-      ctx =
-        ctx |> exec(:add_participants, players: [ctx.player1, ctx.player2]) |> exec(:start_table)
+      assert ctx.table.hand.id != nil
+      assert ctx.table.round.type == :pre_flop
 
-      [participant_hand1, participant_hand2, participant_hand3] = ctx.participant_hands
+      assert length(ctx.table.community_cards) == 0
+      assert length(ctx.table.participant_hands) == 6
 
-      assert [
-               %{
-                 rank: _,
-                 suit: _
-               },
-               %{
-                 rank: _,
-                 suit: _
-               }
-             ] = participant_hand1.hole_cards
+      Enum.each(ctx.table.participant_hands, fn hand ->
+        assert length(hand.hole_cards) == 2
 
-      assert [
-               %{
-                 rank: _,
-                 suit: _
-               },
-               %{
-                 rank: _,
-                 suit: _
-               }
-             ] = participant_hand2.hole_cards
+        assert hand.position in [
+                 :dealer,
+                 :small_blind,
+                 :big_blind,
+                 :cutoff,
+                 :utg,
+                 :hijack
+               ]
 
-      assert [
-               %{
-                 rank: _,
-                 suit: _
-               },
-               %{
-                 rank: _,
-                 suit: _
-               }
-             ] = participant_hand3.hole_cards
+        assert Enum.all?(hand.hole_cards, fn card ->
+                 Map.has_key?(card, :rank) and Map.has_key?(card, :suit)
+               end)
+      end)
 
       assert ctx.table.status == :live
     end
 
-    test "should fail if table is already started", ctx do
-      ctx = ctx |> produce(table: [:live])
+    test "should have blinds posted on start", ctx do
+      ctx = ctx |> exec(:start_table)
 
-      assert {:error, :table_already_started} = Poker.Tables.start_table(ctx.table)
+      assert ctx.positions.small_blind.participant.chips ==
+               ctx.table.settings.starting_stack - ctx.table.settings.small_blind
+
+      assert ctx.positions.big_blind.participant.chips ==
+               ctx.table.settings.starting_stack - ctx.table.settings.big_blind
+
+      assert ctx.positions.dealer.participant.chips == ctx.table.settings.starting_stack
+      assert ctx.positions.cutoff.participant.chips == ctx.table.settings.starting_stack
+      assert ctx.positions.hijack.participant.chips == ctx.table.settings.starting_stack
+
+      assert ctx.positions.utg.participant.chips == ctx.table.settings.starting_stack
     end
-  end
 
-  describe "participant actions" do
-    test "raise", ctx do
-      ctx =
-        ctx
-        |> rebind([player: :player1], &produce(&1, :player))
-        |> rebind([player: :player2], &produce(&1, :player))
-        |> rebind([player: :player3], &produce(&1, :player))
+    test "should calculate pot correctly after first move", ctx do
+      ctx = ctx |> exec(:start_table)
+      ctx = ctx |> exec(:call_hand)
 
-      ctx =
-        ctx
-        |> exec(:create_table)
-        |> exec(:add_participants, players: [ctx.player1, ctx.player2, ctx.player3])
-        |> exec(:start_table)
+      [pot1, pot2] = ctx.table.pots
 
-      assert ctx.table_hand.current_round == :pre_flop
+      assert pot1.amount == ctx.table.settings.small_blind * 2
+      assert pot1.bet_amount == ctx.table.settings.small_blind
 
-      ctx = ctx |> exec(:raise_hand, amount: 100)
+      assert pot1.contributing_participant_ids == [
+               ctx.positions.small_blind.participant.id,
+               ctx.positions.big_blind.participant.id
+             ]
+
+      assert pot2.amount == ctx.table.settings.big_blind - ctx.table.settings.small_blind
+      assert pot2.bet_amount == ctx.table.settings.big_blind
+      assert pot2.contributing_participant_ids == [ctx.positions.big_blind.participant.id]
+    end
+
+    test "should deal flop after betting round", ctx do
+      ctx = ctx |> exec(:start_table)
+
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
       ctx = ctx |> exec(:call_hand)
       ctx = ctx |> exec(:call_hand)
       ctx = ctx |> exec(:call_hand)
 
-      ctx.participants |> Enum.all?(fn participant -> assert participant.chips == 900 end)
+      assert ctx.table.round.type == :flop
 
-      assert ctx.table_hand.current_round == :flop
-
-      ctx = ctx |> exec(:raise_hand, amount: 200)
-      ctx = ctx |> exec(:call_hand)
-      ctx = ctx |> exec(:call_hand)
-      ctx = ctx |> exec(:call_hand)
-
-      assert ctx.table_hand.current_round == :turn
-
-      ctx = ctx |> exec(:raise_hand, amount: 700)
-      ctx = ctx |> exec(:call_hand)
-      ctx = ctx |> exec(:call_hand)
-      _ctx = ctx |> exec(:call_hand)
+      assert length(ctx.table.community_cards) == 3
     end
   end
 end
