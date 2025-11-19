@@ -4,7 +4,6 @@ defmodule Poker.Tables.Events.RoundStarted do
              :id,
              :hand_id,
              :type,
-             :participant_to_act_id,
              :last_bet_amount,
              :community_cards
            ]}
@@ -12,7 +11,6 @@ defmodule Poker.Tables.Events.RoundStarted do
     :id,
     :hand_id,
     :type,
-    :participant_to_act_id,
     :last_bet_amount,
     :community_cards
   ]

@@ -27,7 +27,11 @@ defmodule Poker.Tables.Aggregates.Table do
     BigBlindPosted,
     RoundStarted,
     RoundCompleted,
-    PotsRecalculated
+    PotsRecalculated,
+    DeckGenerated,
+    DeckUpdated,
+    ParticipantToActSelected,
+    DealerButtonMoved
   }
 
   defstruct [
@@ -41,8 +45,11 @@ defmodule Poker.Tables.Aggregates.Table do
     :community_cards,
     :pots,
     :participant_hands,
-    positions: %{}
+    :remaining_deck,
+    :dealer_button_id
   ]
+
+  # COMMAND HANDLERS
 
   def execute(
         %Table{} = _table,
@@ -70,17 +77,6 @@ defmodule Poker.Tables.Aggregates.Table do
         timeout_seconds: settings.timeout_seconds,
         table_type: settings.table_type
       }
-      # %TableParticipantJoined{
-      #   id: creator_participant_id,
-      #   player_id: creator_id,
-      #   table_id: table_id,
-      #   chips: settings.starting_stack,
-      #   seat_number: 1,
-      #   bet_this_round: 0,
-      #   status: :active,
-      #   is_sitting_out: false,
-      #   total_bet_this_hand: 0
-      # }
     ]
   end
 
@@ -91,36 +87,19 @@ defmodule Poker.Tables.Aggregates.Table do
     {:error, :table_already_started}
   end
 
-  def can_join?(%Table{participants: participants, settings: settings}) do
+  def execute(
+        %Table{participants: participants, settings: settings} = table,
+        %JoinTableParticipant{starting_stack: starting_stack} = join
+      ) do
     max_players =
       case settings.table_type do
         :six_max -> 6
       end
 
-    length(participants) < max_players
-  end
-
-  def can_start_table?(%Table{participants: participants, settings: settings}) do
-    length(participants) >= 2
-  end
-
-  def execute(
-        %Table{participants: participants, settings: settings} = table,
-        %JoinTableParticipant{starting_stack: starting_stack} = join
-      ) do
-    table
-    |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      if can_join?(_table) do
-        :ok
-      else
-        {:error, :table_full}
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
+    if length(participants) < max_players do
       seat_number = length(participants) + 1
 
-      starting_stack =
+      initial_chips =
         if is_nil(starting_stack) do
           starting_stack = settings.starting_stack
         else
@@ -131,40 +110,31 @@ defmodule Poker.Tables.Aggregates.Table do
         id: join.participant_id,
         player_id: join.player_id,
         table_id: join.table_id,
-        chips: starting_stack,
-        initial_chips: starting_stack,
+        chips: initial_chips,
+        initial_chips: initial_chips,
         seat_number: seat_number,
         is_sitting_out: false,
         bet_this_round: 0,
         total_bet_this_hand: 0,
         status: :active
       }
-    end)
+    else
+      {:error, :table_full}
+    end
   end
 
   def execute(
         %Table{status: :not_started, id: table_id, participants: participants} = table,
-        %StartTable{hand_id: hand_id} = _command
+        %StartTable{} = _command
       ) do
-    table
-    |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      if can_start_table?(_table) do
-        :ok
-      else
-        {:error, :not_enough_participants}
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      dealer_button_id = hd(participants).id
-
+    if length(participants) >= 2 do
       %TableStarted{
-        id: table_id,
-        status: :live,
-        hand_id: hand_id,
-        dealer_button_id: dealer_button_id
+        id: table.id,
+        status: :live
       }
-    end)
+    else
+      {:error, :not_enough_participants}
+    end
   end
 
   def execute(%Table{status: status} = _table, %StartTable{}) when status != :not_started do
@@ -172,88 +142,105 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def execute(
-        %Table{id: table_id, settings: settings} = table,
-        %StartHand{
-          dealer_button_id: dealer_button_id,
-          hand_id: hand_id
-        }
+        %Table{id: table_id, settings: settings, participants: participants} = table,
+        %StartHand{hand_id: hand_id}
       ) do
-    dealer_button_participant = find_participant_by_id(table, dealer_button_id)
-    active_participants = table.participants
-
-    deck = generate_deck()
-
-    participants_with_hole_cards_and_positions =
-      active_participants
-      |> Enum.with_index()
-      |> Enum.map(fn {participant, index} ->
-        cards = Enum.slice(deck, index * 2, 2)
-
-        position =
-          calculate_position(
-            table.participants,
-            dealer_button_participant.seat_number,
-            participant.seat_number
-          )
-
-        {participant, cards, position}
-      end)
-
-    {small_blind_seat, big_blind_seat, utg_seat} =
-      calculate_seats(active_participants, dealer_button_participant.seat_number)
-
-    participant_with_small_blind = find_participant_by_seat(table, small_blind_seat)
-    participant_with_big_blind = find_participant_by_seat(table, big_blind_seat)
-    participant_to_act = find_participant_by_seat(table, utg_seat)
+    active_participants = filter_active_participants(participants)
 
     table
     |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      %HandStarted{
-        id: hand_id,
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      shuffled_deck = Poker.Services.Deck.generate_deck() |> Poker.Services.Deck.shuffle_deck()
+
+      %DeckGenerated{
+        hand_id: hand_id,
         table_id: table_id,
-        dealer_button_id: dealer_button_id
+        cards: shuffled_deck
       }
     end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      dealer_button_participant = find_dealer_button_participant(table)
+
+      %DealerButtonMoved{
+        table_id: table_id,
+        hand_id: hand_id,
+        participant_id: dealer_button_participant.id
+      }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      %HandStarted{
+        id: hand_id,
+        table_id: table_id
+      }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
       %RoundStarted{
         id: Ecto.UUID.generate(),
         hand_id: hand_id,
         type: :pre_flop,
-        participant_to_act_id: participant_to_act.id,
         last_bet_amount: settings.big_blind,
         community_cards: []
       }
     end)
-    |> Commanded.Aggregate.Multi.reduce(participants_with_hole_cards_and_positions, fn _table,
-                                                                                       {participant,
-                                                                                        hole_cards,
-                                                                                        position} ->
-      %ParticipantHandGiven{
-        id: Ecto.UUID.generate(),
-        table_id: table_id,
-        participant_id: participant.id,
-        table_hand_id: hand_id,
-        hole_cards: hole_cards,
-        position: position
-      }
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      %BigBlindPosted{
-        id: Ecto.UUID.generate(),
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      participant_to_act = find_participant_to_act(table)
+
+      %ParticipantToActSelected{
         table_id: table_id,
         hand_id: hand_id,
-        participant_id: participant_with_big_blind.id,
+        participant_id: participant_to_act.id
+      }
+    end)
+    |> Commanded.Aggregate.Multi.reduce(active_participants, fn table, participant ->
+      {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(table.remaining_deck, 2)
+
+      position = calculate_position(table, participant)
+
+      [
+        %ParticipantHandGiven{
+          id: Ecto.UUID.generate(),
+          table_id: table_id,
+          participant_id: participant.id,
+          table_hand_id: hand_id,
+          hole_cards: hole_cards,
+          position: position
+        },
+        %DeckUpdated{
+          hand_id: hand_id,
+          table_id: table_id,
+          cards: remaining_deck
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      participant = find_small_blind_participant(table)
+
+      %SmallBlindPosted{
+        id: Ecto.UUID.generate(),
+        table_id: table.id,
+        hand_id: hand_id,
+        participant_id: participant.id,
+        amount: settings.small_blind
+      }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      participant = find_big_blind_participant(table)
+
+      %BigBlindPosted{
+        id: Ecto.UUID.generate(),
+        table_id: table.id,
+        hand_id: hand_id,
+        participant_id: participant.id,
         amount: settings.big_blind
       }
     end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      %SmallBlindPosted{
-        id: Ecto.UUID.generate(),
-        table_id: table_id,
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      recalculated_pots = recalculate_pots(table)
+
+      %PotsRecalculated{
+        table_id: table.id,
         hand_id: hand_id,
-        participant_id: participant_with_small_blind.id,
-        amount: settings.small_blind
+        pots: recalculate_pots(table)
       }
     end)
   end
@@ -270,43 +257,59 @@ defmodule Poker.Tables.Aggregates.Table do
      }}
   end
 
-  def recalculate_pots(table) do
-    unique_bet_amounts =
-      table.participants
-      |> Enum.map(& &1.total_bet_this_hand)
-      |> Enum.filter(&(&1 > 0))
-      |> Enum.uniq()
-      |> Enum.sort()
+  def act(table, %{action: :raise} = command) do
+    participant = find_participant_to_act(table)
+    raise_amount = command.amount - participant.bet_this_round
 
-    unique_bet_amounts
-    |> Enum.reduce([], fn bet_amount, pots ->
-      contributing_participants =
-        table.participants |> Enum.filter(&(&1.total_bet_this_hand >= bet_amount))
-
-      previous_bet_amount =
-        case pots do
-          [] -> 0
-          _ -> pots |> List.last() |> Map.get(:bet_amount)
-        end
-
-      pot_amount =
-        (bet_amount - previous_bet_amount) * length(contributing_participants)
-
-      pots ++
-        [
-          %{
-            bet_amount: bet_amount,
-            amount: pot_amount,
-            contributing_participant_ids: Enum.map(contributing_participants, & &1.id)
-          }
-        ]
-    end)
-    |> Enum.with_index()
-    |> Enum.map(fn {pot, index} ->
-      type = if index == 0, do: :main, else: :side
-      Map.put(pot, :type, type)
-    end)
+    if participant.chips < raise_amount do
+      {:error, :insufficient_chips}
+    else
+      %ParticipantActedInHand{
+        id: command.hand_action_id,
+        participant_id: command.participant_id,
+        table_hand_id: table.hand.id,
+        action: command.action,
+        amount: raise_amount,
+        round: table.round.type
+      }
+    end
   end
+
+  def act(table, %{action: :call} = command) do
+    participant = find_participant_to_act(table)
+    last_bet_amount = table.round.last_bet_amount
+
+    call_amount =
+      [last_bet_amount - participant.bet_this_round, participant.chips]
+      |> Enum.filter(&(&1 >= 0))
+      |> Enum.min()
+
+    if participant.chips < call_amount do
+      {:error, :insufficient_chips}
+    else
+      %ParticipantActedInHand{
+        id: command.hand_action_id,
+        participant_id: command.participant_id,
+        table_hand_id: table.hand.id,
+        action: command.action,
+        amount: call_amount,
+        round: table.round.type
+      }
+    end
+  end
+
+  def act(table, %{action: :fold} = command) do
+    %ParticipantActedInHand{
+      id: command.hand_action_id,
+      participant_id: command.participant_id,
+      table_hand_id: table.hand.id,
+      action: command.action,
+      amount: 0,
+      round: table.round.type
+    }
+  end
+
+  def act(_table, _command), do: :ok
 
   def execute(
         %Table{
@@ -322,95 +325,33 @@ defmodule Poker.Tables.Aggregates.Table do
         } = table,
         %ParticipantActInHand{} = command
       ) do
-    participant = find_participant_by_id(table, command.participant_id)
-    next_participant = find_next_participant(table)
-    all_acted? = all_acted_before_current_participant?(table)
-
     table
     |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      case command.action do
-        :raise ->
-          if participant.chips < command.amount - participant.bet_this_round do
-            {:error, :insufficient_chips}
-          else
-            :ok
-          end
+    |> Commanded.Aggregate.Multi.execute(&act(&1, command))
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      next_participant = find_next_participant_to_act(table)
 
-        :call ->
-          call_amount =
-            [last_bet_amount - participant.bet_this_round, participant.chips]
-            |> Enum.filter(&(&1 >= 0))
-            |> Enum.min()
-
-          if participant.chips < call_amount do
-            {:error, :insufficient_chips}
-          else
-            :ok
-          end
-
-        _ ->
-          :ok
-      end
+      %ParticipantToActSelected{
+        table_id: table.id,
+        hand_id: table_hand_id,
+        participant_id: next_participant.id
+      }
     end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      case command.action do
-        :raise ->
-          raise_amount = command.amount - participant.bet_this_round
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      all_acted? = all_acted?(table)
 
-          %ParticipantActedInHand{
-            id: command.hand_action_id,
-            participant_id: command.participant_id,
-            table_hand_id: table_hand_id,
-            action: command.action,
-            amount: raise_amount,
-            round: round_type,
-            next_participant_to_act_id: next_participant.id
-          }
-
-        :call ->
-          call_amount =
-            [last_bet_amount - participant.bet_this_round, participant.chips]
-            |> Enum.filter(&(&1 >= 0))
-            |> Enum.min()
-
-          %ParticipantActedInHand{
-            id: command.hand_action_id,
-            participant_id: command.participant_id,
-            table_hand_id: table_hand_id,
-            action: command.action,
-            amount: call_amount,
-            round: round_type,
-            next_participant_to_act_id: next_participant.id
-          }
-
-        :fold ->
-          %ParticipantActedInHand{
-            id: command.hand_action_id,
-            participant_id: command.participant_id,
-            table_hand_id: table_hand_id,
-            action: command.action,
-            amount: 0,
-            round: round_type,
-            next_participant_to_act_id: next_participant.id
-          }
+      if all_acted? do
+        %RoundCompleted{
+          id: round_id,
+          hand_id: table_hand_id,
+          type: round_type,
+          table_id: table.id
+        }
+      else
+        :ok
       end
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      if all_acted? do
-        [
-          %RoundCompleted{
-            id: round_id,
-            hand_id: table_hand_id,
-            type: round_type,
-            table_id: table.id
-          }
-        ]
-      else
-        nil
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
       recalculated_pots = recalculate_pots(table)
 
       %PotsRecalculated{
@@ -418,6 +359,24 @@ defmodule Poker.Tables.Aggregates.Table do
         hand_id: table_hand_id,
         pots: recalculate_pots(table)
       }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn %{
+                                              round: round,
+                                              community_cards: community_cards,
+                                              participant_hands: participant_hands
+                                            } ->
+      if round.type == :river do
+        dbg(participant_hands)
+        [hand1, hand2] = participant_hands |> Enum.take(2)
+        dbg(hand1.hole_cards)
+        dbg(hand2.hole_cards)
+        dbg(community_cards)
+        dbg(get_pot_winners(participant_hands, community_cards))
+        dbg(compare_hands(hand1.hole_cards, hand2.hole_cards, community_cards))
+        nil
+      else
+        nil
+      end
     end)
   end
 
@@ -448,10 +407,7 @@ defmodule Poker.Tables.Aggregates.Table do
     participant = Enum.find(participants, &(&1.id == participant_id))
 
     if participant.is_sitting_out do
-      %ParticipantSatIn{
-        participant_id: command.participant_id,
-        table_id: command.table_id
-      }
+      %ParticipantSatIn{participant_id: command.participant_id, table_id: command.table_id}
     else
       {:error, :already_sat_in}
     end
@@ -465,39 +421,42 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def execute(
-        %Table{hand: %{id: hand_id}} = table,
+        %Table{hand: %{id: hand_id}, remaining_deck: remaining_deck, participants: participants} =
+          table,
         %StartRound{} = command
       )
       when hand_id == command.hand_id do
-    active_participants = find_active_participants(table)
-    dealer_button_participant = find_participant_by_id(table, table.hand.dealer_button_id)
+    participant_to_act = find_participant_to_act(table)
 
-    {_small_blind_seat, _big_blind_seat, utg_seat} =
-      calculate_seats(active_participants, dealer_button_participant.seat_number)
-
-    participant_to_act = find_participant_by_seat(table, utg_seat)
-    deck = generate_deck()
-
-    round_community_cards =
+    community_cards_count =
       case command.round do
-        :flop ->
-          Enum.slice(deck, 0, 3)
-
-        :turn ->
-          Enum.slice(deck, 3, 1)
-
-        :river ->
-          Enum.slice(deck, 4, 1)
+        :flop -> 3
+        :turn -> 1
+        :river -> 1
       end
 
-    %RoundStarted{
-      id: command.round_id,
-      hand_id: command.hand_id,
-      type: command.round,
-      participant_to_act_id: participant_to_act.id,
-      last_bet_amount: 0,
-      community_cards: round_community_cards
-    }
+    {community_cards, remaining_deck} =
+      Poker.Services.Deck.pick_cards(remaining_deck, community_cards_count)
+
+    [
+      %RoundStarted{
+        id: command.round_id,
+        hand_id: command.hand_id,
+        type: command.round,
+        last_bet_amount: 0,
+        community_cards: community_cards
+      },
+      %DeckUpdated{
+        hand_id: command.hand_id,
+        table_id: table.id,
+        cards: remaining_deck
+      },
+      %ParticipantToActSelected{
+        table_id: table.id,
+        hand_id: command.hand_id,
+        participant_id: participant_to_act.id
+      }
+    ]
   end
 
   def execute(%Table{hand: nil} = _table, %StartRound{}) do
@@ -509,7 +468,7 @@ defmodule Poker.Tables.Aggregates.Table do
     {:error, :hand_id_mismatch}
   end
 
-  # State mutators
+  # STATE MUTATORS
 
   def apply(%Table{} = table, %TableSettingsCreated{} = created) do
     settings = %{
@@ -566,10 +525,7 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def apply(%Table{} = table, %HandStarted{} = event) do
-    hand = %{
-      id: event.id,
-      dealer_button_id: event.dealer_button_id
-    }
+    hand = %{id: event.id}
 
     %Table{table | hand: hand, community_cards: [], participant_hands: []}
   end
@@ -599,12 +555,11 @@ defmodule Poker.Tables.Aggregates.Table do
     updated_round =
       round
       |> update_acted_participant_ids(event)
-      |> update_participant_to_act_id(event)
       |> maybe_update_last_bet_amount(event)
 
     updated_participants =
       update_participant(
-        table.participants,
+        table,
         event.participant_id,
         &%{
           &1
@@ -618,24 +573,24 @@ defmodule Poker.Tables.Aggregates.Table do
     %Table{table | round: updated_round, participants: updated_participants}
   end
 
-  def apply(%Table{participants: participants} = table, %ParticipantSatOut{} = event) do
+  def apply(%Table{} = table, %ParticipantSatOut{} = event) do
     updated_participants =
-      update_participant(participants, event.participant_id, &%{&1 | is_sitting_out: true})
+      update_participant(table, event.participant_id, &%{&1 | is_sitting_out: true})
 
     %Table{table | participants: updated_participants}
   end
 
-  def apply(%Table{participants: participants} = table, %ParticipantSatIn{} = event) do
+  def apply(%Table{} = table, %ParticipantSatIn{} = event) do
     updated_participants =
-      update_participant(participants, event.participant_id, &%{&1 | is_sitting_out: false})
+      update_participant(table, event.participant_id, &%{&1 | is_sitting_out: false})
 
     %Table{table | participants: updated_participants}
   end
 
-  def apply(%Table{participants: participants} = table, %SmallBlindPosted{} = event) do
+  def apply(%Table{} = table, %SmallBlindPosted{} = event) do
     updated_participants =
       update_participant(
-        participants,
+        table,
         event.participant_id,
         &%{
           &1
@@ -648,10 +603,10 @@ defmodule Poker.Tables.Aggregates.Table do
     %Table{table | participants: updated_participants}
   end
 
-  def apply(%Table{participants: participants} = table, %BigBlindPosted{} = event) do
+  def apply(%Table{} = table, %BigBlindPosted{} = event) do
     updated_participants =
       update_participant(
-        participants,
+        table,
         event.participant_id,
         &%{
           &1
@@ -664,8 +619,8 @@ defmodule Poker.Tables.Aggregates.Table do
     %Table{table | participants: updated_participants}
   end
 
-  def apply(%Table{} = table, %RoundCompleted{} = _event) do
-    %Table{table | round: nil}
+  def apply(%Table{} = table, %RoundCompleted{} = event) do
+    table
   end
 
   def apply(
@@ -675,9 +630,9 @@ defmodule Poker.Tables.Aggregates.Table do
     round = %{
       id: event.id,
       type: event.type,
-      participant_to_act_id: event.participant_to_act_id,
       last_bet_amount: event.last_bet_amount,
-      acted_participant_ids: []
+      acted_participant_ids: [],
+      participant_to_act_id: nil
     }
 
     updated_community_cards = community_cards ++ event.community_cards
@@ -691,6 +646,22 @@ defmodule Poker.Tables.Aggregates.Table do
     }
   end
 
+  def apply(%Table{} = table, %DeckGenerated{} = event) do
+    %Table{table | remaining_deck: event.cards}
+  end
+
+  def apply(%Table{} = table, %DeckUpdated{} = event) do
+    %Table{table | remaining_deck: event.cards}
+  end
+
+  def apply(%Table{round: round} = table, %ParticipantToActSelected{} = event) do
+    %Table{table | round: %{round | participant_to_act_id: event.participant_id}}
+  end
+
+  def apply(%Table{} = table, %DealerButtonMoved{} = event) do
+    %Table{table | dealer_button_id: event.participant_id}
+  end
+
   def apply(
         %Table{} = table,
         %PotsRecalculated{
@@ -700,21 +671,7 @@ defmodule Poker.Tables.Aggregates.Table do
     %Table{table | pots: pots}
   end
 
-  defp generate_deck do
-    ranks = ~w(2 3 4 5 6 7 8 9 10 J Q K A)
-    suits = ~w(hearts diamonds clubs spades)
-
-    deck =
-      for rank <- ranks, suit <- suits do
-        %{rank: rank, suit: suit}
-      end
-
-    Enum.shuffle(deck)
-  end
-
-  defp update_participant_to_act_id(round, %ParticipantActedInHand{} = command) do
-    %{round | participant_to_act_id: command.next_participant_to_act_id}
-  end
+  # HELPER FUNCTIONS
 
   defp maybe_update_last_bet_amount(round, %ParticipantActedInHand{action: :raise} = command) do
     %{round | last_bet_amount: command.amount}
@@ -730,19 +687,8 @@ defmodule Poker.Tables.Aggregates.Table do
     %{round | acted_participant_ids: round.acted_participant_ids ++ [participant_id]}
   end
 
-  defp update_acted_participant_ids(
-         round,
-         %ParticipantActedInHand{action: :fold, participant_id: participant_id} = _command
-       ) do
-    %{
-      round
-      | acted_participant_ids:
-          Enum.reject(round.acted_participant_ids, fn id -> id == participant_id end)
-    }
-  end
-
-  defp update_participant(participants, participant_id, fun) when is_function(fun, 1) do
-    Enum.map(participants, fn
+  defp update_participant(table, participant_id, fun) when is_function(fun, 1) do
+    Enum.map(table.participants, fn
       %{id: ^participant_id} = participant ->
         fun.(participant)
 
@@ -755,32 +701,49 @@ defmodule Poker.Tables.Aggregates.Table do
     rem(current_seat, total_seats) + 1
   end
 
-  defp calculate_seats(participants, dealer_seat) do
-    total = length(participants)
-    next_seat = &next_seat(&1, total)
+  defp find_dealer_button_participant(table) do
+    if is_nil(table.dealer_button_id) do
+      hd(table.participants)
+    else
+      dealer_button_participant =
+        find_participant_by_id(table, table.dealer_button_id)
 
-    case total do
-      2 ->
-        big_blind_seat = dealer_seat
-        small_blind_seat = next_seat.(dealer_seat)
-        utg_seat = next_seat.(small_blind_seat)
+      seat_number = next_seat(dealer_button_participant.seat_number, length(table.participants))
 
-        {small_blind_seat, big_blind_seat, utg_seat}
-
-      _ ->
-        small_blind_seat = next_seat.(dealer_seat)
-        big_blind_seat = next_seat.(small_blind_seat)
-        utg_seat = next_seat.(big_blind_seat)
-
-        {small_blind_seat, big_blind_seat, utg_seat}
+      find_participant_by_seat(table, seat_number)
     end
   end
 
-  defp find_active_participants(%Table{participants: participants}) do
+  defp find_small_blind_participant(table) do
+    dealer_button_participant = find_participant_by_id(table, table.dealer_button_id)
+    seat_number = next_seat(dealer_button_participant.seat_number, length(table.participants))
+
+    find_participant_by_seat(table, seat_number)
+  end
+
+  defp find_big_blind_participant(table) do
+    small_blind_participant = find_small_blind_participant(table)
+    seat_number = next_seat(small_blind_participant.seat_number, length(table.participants))
+
+    find_participant_by_seat(table, seat_number)
+  end
+
+  defp filter_active_participants(participants) do
     Enum.filter(participants, &(&1.status == :active))
   end
 
-  defp find_current_participant(%Table{
+  defp find_participant_to_act(
+         %Table{round: %{type: :pre_flop, acted_participant_ids: []}} = table
+       ) do
+    big_blind_participant = find_big_blind_participant(table)
+    active_participants = filter_active_participants(table.participants)
+
+    seat_number = next_seat(big_blind_participant.seat_number, length(table.participants))
+
+    find_participant_by_seat(table, seat_number)
+  end
+
+  defp find_participant_to_act(%Table{
          participants: participants,
          round: %{participant_to_act_id: participant_to_act_id}
        }) do
@@ -795,30 +758,33 @@ defmodule Poker.Tables.Aggregates.Table do
     Enum.find(participants, &(&1.seat_number == seat_number))
   end
 
-  defp find_next_participant(table) do
-    current_participant = find_current_participant(table)
-    active_participants = find_active_participants(table)
+  defp find_next_participant_to_act(table) do
+    participant_to_act = find_participant_to_act(table)
+    active_participants = filter_active_participants(table.participants)
 
-    next_seat_number = next_seat(current_participant.seat_number, length(active_participants))
+    next_participant_to_act_seat_number =
+      next_seat(participant_to_act.seat_number, length(active_participants))
 
-    find_participant_by_seat(table, next_seat_number)
+    find_participant_by_seat(table, next_participant_to_act_seat_number)
   end
 
-  defp all_acted_before_current_participant?(table) do
-    current_participant = find_current_participant(table)
-    active_participants = find_active_participants(table)
+  defp all_acted?(table) do
     acted_participant_ids = table.round.acted_participant_ids
 
-    active_participants
-    |> Enum.reject(fn participant -> participant.id == current_participant.id end)
-    |> Enum.all?(fn participant -> participant.id in acted_participant_ids end)
+    table.participants |> Enum.all?(fn participant -> participant.id in acted_participant_ids end)
   end
 
-  defp calculate_position(participants, dealer_seat, participant_seat) do
-    total_players = length(participants)
+  defp calculate_position(table, participant) do
+    total_players = length(table.participants)
+    dealer_participant = find_participant_by_id(table, table.dealer_button_id)
 
     # Find relative position from dealer (0 = dealer, 1 = next, etc.)
-    relative_position = calculate_relative_position(dealer_seat, participant_seat, total_players)
+    relative_position =
+      calculate_relative_position(
+        dealer_participant.seat_number,
+        participant.seat_number,
+        total_players
+      )
 
     case total_players do
       2 -> calculate_heads_up_position(relative_position)
@@ -862,4 +828,111 @@ defmodule Poker.Tables.Aggregates.Table do
   defp calculate_six_handed_position(3), do: :utg
   defp calculate_six_handed_position(4), do: :hijack
   defp calculate_six_handed_position(5), do: :cutoff
+
+  defp suit_abbreviation(suit) do
+    %{hearts: :h, diamonds: :d, clubs: :c, spades: :s} |> Map.get(suit)
+  end
+
+  defp get_pot_winners(participant_hands, community_cards) do
+    community_cards =
+      community_cards
+      |> Enum.map(fn card -> {card.rank, suit_abbreviation(card.suit)} end)
+      |> List.to_tuple()
+
+    values =
+      participant_hands
+      |> Enum.map(fn hand ->
+        {_, best_hand} =
+          hand
+          |> Map.get(:hole_cards)
+          |> Enum.map(&{&1.rank, suit_abbreviation(&1.suit)})
+          |> List.to_tuple()
+          |> Poker.Comparison.best_hand(community_cards)
+
+        {hand.participant_id, best_hand}
+      end)
+      |> Enum.map(&{elem(&1, 0), Poker.Comparison.hand_value(elem(&1, 1))})
+      |> Enum.sort_by(&elem(&1, 1), :desc)
+
+    max_value = hd(values)
+
+    Enum.take_while(values, &(&1 == max_value))
+  end
+
+  defp compare_hands(cards1, cards2, community_cards) do
+    cards1 =
+      cards1
+      |> Enum.map(fn card -> {card.rank, suit_abbreviation(card.suit)} end)
+      |> List.to_tuple()
+
+    cards2 =
+      cards2
+      |> Enum.map(fn card -> {card.rank, suit_abbreviation(card.suit)} end)
+      |> List.to_tuple()
+
+    community_cards =
+      community_cards
+      |> Enum.map(fn card -> {card.rank, suit_abbreviation(card.suit)} end)
+      |> List.to_tuple()
+
+    {combination1, best_hand_1} = Poker.Comparison.best_hand(cards1, community_cards)
+    {combination2, best_hand_2} = Poker.Comparison.best_hand(cards2, community_cards)
+
+    Poker.Comparison.hand_compare(best_hand_1, best_hand_2)
+  end
+
+  defp recalculate_pots(table) do
+    unique_bet_amounts =
+      table.participants
+      |> Enum.map(& &1.total_bet_this_hand)
+      |> Enum.filter(&(&1 > 0))
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    unique_bet_amounts
+    |> Enum.reduce([], fn bet_amount, pots ->
+      contributing_participants =
+        table.participants
+        |> Enum.filter(&(&1.total_bet_this_hand >= bet_amount))
+        |> filter_active_participants()
+
+      previous_bet_amount =
+        if pots == [] do
+          0
+        else
+          pots |> List.last() |> Map.get(:bet_amount)
+        end
+
+      pot_amount =
+        (bet_amount - previous_bet_amount) * length(contributing_participants)
+
+      pots ++
+        [
+          %{
+            bet_amount: bet_amount,
+            amount: pot_amount,
+            contributing_participant_ids: Enum.map(contributing_participants, & &1.id)
+          }
+        ]
+    end)
+    |> Enum.with_index()
+    |> Enum.map(fn {pot, index} ->
+      type = if index == 0, do: :main, else: :side
+      Map.put(pot, :type, type)
+    end)
+  end
+
+  defp calculate_winners(%Table{pots: pots}) do
+    Enum.reduce(pots, [], fn pot, acc ->
+      winner_id = Enum.random(pot.contributing_participant_ids)
+
+      acc ++
+        [
+          %{
+            participant_id: winner_id,
+            amount_won: pot.amount
+          }
+        ]
+    end)
+  end
 end

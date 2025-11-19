@@ -26,13 +26,9 @@ defmodule Poker.Tables.ProcessManager do
 
   def handle(
         %Poker.Tables.ProcessManager{},
-        %TableStarted{id: table_id, dealer_button_id: dealer_button_id, hand_id: hand_id} = _event
+        %TableStarted{id: table_id} = _event
       ) do
-    struct(StartHand, %{
-      table_id: table_id,
-      hand_id: hand_id,
-      dealer_button_id: dealer_button_id
-    })
+    struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
   end
 
   def handle(

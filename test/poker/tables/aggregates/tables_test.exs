@@ -44,7 +44,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
   describe "add table participants" do
     test "successfully", ctx do
       [player1, player2] =
-        for i <- 1..2 do
+        for _ <- 1..2 do
           %{player: player} = produce(ctx, :player)
           player
         end
@@ -73,7 +73,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
     test "should fail if table already started", ctx do
       players =
-        for i <- 1..6 do
+        for _ <- 1..6 do
           %{player: player} = produce(ctx, :player)
           player
         end
@@ -88,7 +88,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
     test "should not allow to join table if full", ctx do
       players =
-        for i <- 1..6 do
+        for _ <- 1..6 do
           %{player: player} = produce(ctx, :player)
           player
         end
@@ -115,7 +115,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
   describe "6max table" do
     setup ctx do
       players =
-        for i <- 1..6 do
+        for _ <- 1..6 do
           %{player: player} = produce(ctx, :player)
           player
         end
@@ -172,7 +172,6 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
     test "should calculate pot correctly after first move", ctx do
       ctx = ctx |> exec(:start_table)
-      ctx = ctx |> exec(:call_hand)
 
       [pot1, pot2] = ctx.table.pots
 
@@ -202,6 +201,40 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       assert ctx.table.round.type == :flop
 
       assert length(ctx.table.community_cards) == 3
+    end
+
+    test "should deal turn after betting round", ctx do
+      ctx = ctx |> exec(:start_table) |> exec(:advance_round)
+
+      assert ctx.table.round.type == :flop
+
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+
+      assert ctx.table.round.type == :turn
+      assert length(ctx.table.community_cards) == 4
+    end
+
+    test "should deal river after betting round", ctx do
+      ctx = ctx |> exec(:start_table) |> exec(:advance_round) |> exec(:advance_round)
+
+      assert ctx.table.round.type == :turn
+
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+      ctx = ctx |> exec(:call_hand)
+
+      assert ctx.table.round.type == :river
+      assert length(ctx.table.community_cards) == 5
+
+      ctx = ctx |> exec(:call_hand)
     end
   end
 end

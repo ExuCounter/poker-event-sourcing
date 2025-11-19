@@ -6,8 +6,7 @@ defmodule Poker.Tables.Events.ParticipantActedInHand do
              :table_hand_id,
              :action,
              :amount,
-             :round,
-             :next_participant_to_act_id
+             :round
            ]}
   defstruct [
     :id,
@@ -15,7 +14,6 @@ defmodule Poker.Tables.Events.ParticipantActedInHand do
     :table_hand_id,
     :action,
     :amount,
-    :round,
-    :next_participant_to_act_id
+    :round
   ]
 end
