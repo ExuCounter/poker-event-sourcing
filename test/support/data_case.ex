@@ -25,13 +25,21 @@ defmodule Poker.DataCase do
       import Ecto.Query
       import Poker.DataCase
 
+      import Mox
+
       import Commanded.Assertions.EventAssertions
 
       use SeedFactory.Test, schema: Poker.SeedFactorySchema
+
+      setup :verify_on_exit!
     end
   end
 
+  # Make sure mocks are verified when the test exits
+
   setup tags do
+    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+
     Poker.DataCase.setup_sandbox(tags)
 
     on_exit(fn ->

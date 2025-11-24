@@ -46,4 +46,4 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Mock
+config :poker, Poker.Services.Deck, dispatcher: Poker.Services.DeckMock

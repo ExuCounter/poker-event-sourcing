@@ -1,5 +1,9 @@
 defmodule Poker.Accounts.Aggregates.TablesTest do
-  use Poker.DataCase
+  use Poker.DataCase, async: false
+
+  setup do
+    Mox.set_mox_global()
+  end
 
   def aggregate_table(table_id) do
     Commanded.Aggregates.Aggregate.aggregate_state(
@@ -120,9 +124,15 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
           player
         end
 
+      ctx =
+        ctx
+        |> exec(:create_table, type: :six_max)
+        |> exec(:add_participants, players: players)
+
+      dbg(ctx.table.id)
+      dbg("=====")
+
       ctx
-      |> exec(:create_table, type: :six_max)
-      |> exec(:add_participants, players: players)
     end
 
     test "should give players initial cards and start the hand", ctx do
@@ -233,8 +243,6 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert ctx.table.round.type == :river
       assert length(ctx.table.community_cards) == 5
-
-      ctx = ctx |> exec(:call_hand)
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule Poker.SeedFactorySchema do
   use SeedFactory.Schema
   import Commanded.Assertions.EventAssertions
-  alias Poker.Tables.Projections.{Hand, Table, Settings, Participant, ParticipantHand}
+  # alias Poker.Tables.Projections.{Hand, Table, Settings, Participant, ParticipantHand}
 
   def wait_for_events(events) when is_list(events) do
     Enum.each(events, fn event ->

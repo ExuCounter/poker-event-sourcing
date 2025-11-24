@@ -71,7 +71,8 @@ defmodule Poker.MixProject do
       {:commanded_eventstore_adapter, "~> 1.1"},
       {:eventstore, "~> 1.4.0"},
       {:seed_factory, "~> 0.6.0", only: :test},
-      {:faker, "~> 0.18.0", only: :test}
+      {:faker, "~> 0.18.0", only: :test},
+      {:mox, "~> 1.2", only: :test}
     ]
   end
 

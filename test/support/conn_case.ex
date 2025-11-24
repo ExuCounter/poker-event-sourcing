@@ -28,11 +28,18 @@ defmodule PokerWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import PokerWeb.ConnCase
+
+      import Mox
+
+      setup :verify_on_exit!
     end
   end
 
   setup tags do
     Poker.DataCase.setup_sandbox(tags)
+
+    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
