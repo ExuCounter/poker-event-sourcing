@@ -254,6 +254,10 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     end
 
     test "finish hand with straight flash on showdown", ctx do
+      # Community: K♠ Q♠ J♠ T♠ T♥
+      # Player 1: A♠ + K♠ Q♠ J♠ T♠ = Straight Flush (A high)
+      # Player 2: 9♠ + K♠ Q♠ J♠ T♠ = Straight Flush (K high)
+
       Poker.Services.DeckMock
       |> expect(:pick_cards, fn _deck, 2 ->
         {[%{rank: :A, suit: :spades}, %{rank: 2, suit: :hearts}], []}
@@ -315,10 +319,56 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
           assert event.finish_reason == :showdown
         end
       )
+    end
 
+    test "bust participant", ctx do
       # Community: K♠ Q♠ J♠ T♠ T♥
       # Player 1: A♠ + K♠ Q♠ J♠ T♠ = Straight Flush (A high)
       # Player 2: 9♠ + K♠ Q♠ J♠ T♠ = Straight Flush (K high)
+
+      Poker.Services.DeckMock
+      |> expect(:pick_cards, fn _deck, 2 ->
+        {[%{rank: :A, suit: :spades}, %{rank: 2, suit: :hearts}], []}
+      end)
+      |> expect(:pick_cards, fn _deck, 2 ->
+        {[%{rank: 9, suit: :spades}, %{rank: 2, suit: :clubs}], []}
+      end)
+      |> expect(:pick_cards, fn _deck, 3 ->
+        {[%{rank: :K, suit: :spades}, %{rank: :Q, suit: :spades}, %{rank: :J, suit: :spades}], []}
+      end)
+      |> expect(:pick_cards, fn _deck, 1 ->
+        {[%{rank: :T, suit: :spades}], []}
+      end)
+      |> expect(:pick_cards, fn _deck, 1 ->
+        {[%{rank: :T, suit: :hearts}], []}
+      end)
+
+      ctx = ctx |> exec(:start_table)
+
+      winner_participant_id = ctx.positions.dealer.participant.id
+      loser_participant_id = ctx.positions.big_blind.participant.id
+
+      ctx = ctx |> exec(:start_runout)
+
+      winner_participant =
+        Enum.find(ctx.table.participants, fn participant ->
+          participant.id == winner_participant_id
+        end)
+
+      loser_participant =
+        Enum.find(ctx.table.participants, fn participant ->
+          participant.id == loser_participant_id
+        end)
+
+      assert winner_participant.chips ==
+               winner_participant.initial_chips + loser_participant.initial_chips
+
+      assert winner_participant.status == :active
+
+      assert loser_participant.chips == 0
+      assert loser_participant.status == :busted
+
+      assert ctx.table.status == :finished
     end
   end
 end

@@ -155,6 +155,34 @@ defmodule Poker.SeedFactorySchema do
     update(:table)
   end
 
+  command :start_runout do
+    param(:table, entity: :table, with_traits: [:live])
+
+    resolve(fn args ->
+      args.table.participants
+      |> Enum.each(fn _participant ->
+        %{
+          round: %{
+            participant_to_act_id: participant_to_act_id
+          }
+        } = aggregate_state(:table, args.table.id)
+
+        :ok = Poker.Tables.all_in_hand(args.table.id, participant_to_act_id)
+      end)
+
+      wait_for_event(
+        Poker.App,
+        Poker.Tables.Events.HandFinished
+      )
+
+      table = aggregate_state(:table, args.table.id)
+
+      {:ok, %{table: table}}
+    end)
+
+    update(:table)
+  end
+
   # command :sit_out do
   #   param(:table_hand, entity: :table_hand)
   #   param(:participants, entity: :participants)

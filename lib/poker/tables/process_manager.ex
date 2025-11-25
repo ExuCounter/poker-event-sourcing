@@ -14,11 +14,15 @@ defmodule Poker.Tables.ProcessManager do
     {:start, table_id}
   end
 
-  def interested?(%RoundCompleted{table_id: table_id} = _event, _metadata) do
+  def interested?(%RoundCompleted{table_id: table_id} = event, _metadata) do
     {:continue, table_id}
   end
 
-  def interested?(%TableFinished{table_id: table_id} = _event, _metadata) do
+  def interested?(%HandFinished{table_id: table_id} = event, _metadata) do
+    {:continue, table_id}
+  end
+
+  def interested?(%TableFinished{table_id: table_id} = event, _metadata) do
     {:stop, table_id}
   end
 
@@ -33,11 +37,12 @@ defmodule Poker.Tables.ProcessManager do
         %Poker.Tables.ProcessManager{},
         %HandFinished{table_id: table_id} = _event
       ) do
+    dbg("HELLO")
     struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
   end
 
   def handle(
-        %Poker.Tables.ProcessManager{id: table_id},
+        %Poker.Tables.ProcessManager{},
         %RoundCompleted{} = event
       ) do
     round_type = event.type |> String.to_existing_atom()
