@@ -4,8 +4,8 @@ defmodule Poker.Tables.ProcessManager do
     name: "Poker.Tables.ProcessManager",
     consistency: :strong
 
-  alias Poker.Tables.Events.{TableStarted, RoundCompleted}
-  alias Poker.Tables.Commands.{StartHand, StartRound}
+  alias Poker.Tables.Events.{TableStarted, RoundCompleted, TableFinished, HandFinished}
+  alias Poker.Tables.Commands.{StartHand, StartRound, FinishHand}
 
   @derive Jason.Encoder
   defstruct [:id]
@@ -18,11 +18,9 @@ defmodule Poker.Tables.ProcessManager do
     {:continue, table_id}
   end
 
-  # def interested?(%TableParticipantJoined{table_id: table_id} = _event, _metadata) do
-  #   {:continue, table_id}
-  # end
-
-  # def interested?(_event, _metadata), do: false
+  def interested?(%TableFinished{table_id: table_id} = _event, _metadata) do
+    {:stop, table_id}
+  end
 
   def handle(
         %Poker.Tables.ProcessManager{},
@@ -33,35 +31,36 @@ defmodule Poker.Tables.ProcessManager do
 
   def handle(
         %Poker.Tables.ProcessManager{},
-        %RoundCompleted{} = event
+        %HandFinished{table_id: table_id} = _event
       ) do
-    struct(StartRound, %{
-      round_id: Ecto.UUID.generate(),
-      round: next_round(event.type |> String.to_existing_atom()),
-      table_id: event.table_id,
-      hand_id: event.hand_id
-    })
+    struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
   end
 
-  # def handle(
-  #       %Poker.Tables.ProcessManager{id: table_id, creator_id: player_id} = state,
-  #       %TableSettingsCreated{starting_stack: starting_stack} = event
-  #     ) do
-  #   struct(JoinTableParticipant, %{
-  #     participant_id: Ecto.UUID.generate(),
-  #     table_id: table_id,
-  #     player_id: player_id,
-  #     chips: starting_stack
-  #   })
-  # end
+  def handle(
+        %Poker.Tables.ProcessManager{id: table_id},
+        %RoundCompleted{} = event
+      ) do
+    round_type = event.type |> String.to_existing_atom()
+
+    if round_type == :river do
+      struct(FinishHand, %{
+        table_id: event.table_id,
+        hand_id: event.hand_id,
+        finish_reason: :showdown
+      })
+    else
+      struct(StartRound, %{
+        round_id: Ecto.UUID.generate(),
+        round: next_round(round_type),
+        table_id: event.table_id,
+        hand_id: event.hand_id
+      })
+    end
+  end
 
   def apply(%__MODULE__{} = state, %TableStarted{id: id} = _event) do
     %__MODULE__{state | id: id}
   end
-
-  # def apply(%__MODULE__{} = state, %TableSettingsCreated{} = settings) do
-  #   %__MODULE__{state | settings: settings}
-  # end
 
   def next_round(round) do
     case round do

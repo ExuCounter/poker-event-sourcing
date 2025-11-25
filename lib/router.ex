@@ -12,7 +12,8 @@ defmodule Poker.Router do
     ParticipantActInHand,
     SitInParticipant,
     SitOutParticipant,
-    StartRound
+    StartRound,
+    FinishHand
   }
 
   alias Poker.Accounts.Aggregates.{Player}
@@ -39,7 +40,8 @@ defmodule Poker.Router do
       ParticipantActInHand,
       SitInParticipant,
       SitOutParticipant,
-      StartRound
+      StartRound,
+      FinishHand
     ],
     to: Table
   )

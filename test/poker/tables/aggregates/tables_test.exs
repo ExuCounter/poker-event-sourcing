@@ -116,7 +116,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     end
   end
 
-  describe "6max table" do
+  describe "6max table - 6 players left" do
     setup ctx do
       players =
         for _ <- 1..6 do
@@ -124,15 +124,9 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
           player
         end
 
-      ctx =
-        ctx
-        |> exec(:create_table, type: :six_max)
-        |> exec(:add_participants, players: players)
-
-      dbg(ctx.table.id)
-      dbg("=====")
-
       ctx
+      |> exec(:create_table, type: :six_max)
+      |> exec(:add_participants, players: players)
     end
 
     test "should give players initial cards and start the hand", ctx do
@@ -194,7 +188,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
              ]
 
       assert pot2.amount == ctx.table.settings.big_blind - ctx.table.settings.small_blind
-      assert pot2.bet_amount == ctx.table.settings.big_blind
+      assert pot2.bet_amount == ctx.table.settings.big_blind - ctx.table.settings.small_blind
       assert pot2.contributing_participant_ids == [ctx.positions.big_blind.participant.id]
     end
 
@@ -243,6 +237,88 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert ctx.table.round.type == :river
       assert length(ctx.table.community_cards) == 5
+    end
+  end
+
+  describe "6max table - two players left" do
+    setup ctx do
+      players =
+        for _ <- 1..2 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
+      ctx
+      |> exec(:create_table, type: :six_max)
+      |> exec(:add_participants, players: players)
+    end
+
+    test "finish hand with straight flash on showdown", ctx do
+      Poker.Services.DeckMock
+      |> expect(:pick_cards, fn _deck, 2 ->
+        {[%{rank: :A, suit: :spades}, %{rank: 2, suit: :hearts}], []}
+      end)
+      |> expect(:pick_cards, fn _deck, 2 ->
+        {[%{rank: 9, suit: :spades}, %{rank: 2, suit: :clubs}], []}
+      end)
+
+      ctx = ctx |> exec(:start_table)
+
+      expected_winner_participant = ctx.positions.dealer.participant
+
+      expected_winner_participant_hand =
+        Enum.find(ctx.table.participant_hands, fn hand ->
+          hand.participant_id == expected_winner_participant.id
+        end)
+
+      assert [
+               %{rank: :A, suit: :spades},
+               %{rank: 2, suit: :hearts}
+             ] = expected_winner_participant_hand.hole_cards
+
+      Poker.Services.DeckMock
+      |> expect(:pick_cards, fn _deck, 3 ->
+        {[%{rank: :K, suit: :spades}, %{rank: :Q, suit: :spades}, %{rank: :J, suit: :spades}], []}
+      end)
+
+      ctx = ctx |> exec(:advance_round)
+
+      Poker.Services.DeckMock
+      |> expect(:pick_cards, fn _deck, 1 ->
+        {[%{rank: :T, suit: :spades}], []}
+      end)
+
+      ctx = ctx |> exec(:advance_round)
+
+      Poker.Services.DeckMock
+      |> expect(:pick_cards, fn _deck, 1 ->
+        {[%{rank: :T, suit: :hearts}], []}
+      end)
+
+      ctx = ctx |> exec(:advance_round)
+
+      stub(Poker.Services.DeckMock, :pick_cards, &Poker.Services.DeckStub.pick_cards/2)
+
+      ctx = ctx |> exec(:advance_round)
+
+      assert_receive_event(
+        Poker.App,
+        Poker.Tables.Events.HandFinished,
+        fn event ->
+          assert length(event.payouts) == 1
+
+          [payout] = event.payouts
+
+          assert payout.participant_id == expected_winner_participant.id
+          assert payout.amount == ctx.table.settings.big_blind * 2
+          assert payout.hand_rank == [:straight_flush, :A]
+          assert event.finish_reason == :showdown
+        end
+      )
+
+      # Community: K♠ Q♠ J♠ T♠ T♥
+      # Player 1: A♠ + K♠ Q♠ J♠ T♠ = Straight Flush (A high)
+      # Player 2: 9♠ + K♠ Q♠ J♠ T♠ = Straight Flush (K high)
     end
   end
 end

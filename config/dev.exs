@@ -97,3 +97,4 @@ config :phoenix_live_view,
 config :swoosh, :api_client, false
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Mock
+config :poker, Poker.Services.HandEvaluator, dispatcher: Poker.Services.HandEvaluator.Implementation
