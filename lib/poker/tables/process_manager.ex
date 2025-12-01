@@ -37,7 +37,6 @@ defmodule Poker.Tables.ProcessManager do
         %Poker.Tables.ProcessManager{},
         %HandFinished{table_id: table_id} = _event
       ) do
-    dbg("HELLO")
     struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
   end
 

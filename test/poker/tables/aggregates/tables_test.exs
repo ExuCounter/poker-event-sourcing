@@ -370,5 +370,24 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert ctx.table.status == :finished
     end
+
+    test "fold participant hand should start a new table hand", ctx do
+      ctx = ctx |> exec(:start_table)
+      ctx = ctx |> exec(:fold_hand)
+
+      assert_receive_event(
+        Poker.App,
+        Poker.Tables.Events.HandFinished,
+        fn event ->
+          assert event.finish_reason == :all_folded
+        end
+      )
+
+      assert_receive_event(
+        Poker.App,
+        Poker.Tables.Events.HandStarted,
+        fn _event -> :ok end
+      )
+    end
   end
 end

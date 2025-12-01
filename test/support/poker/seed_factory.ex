@@ -132,6 +132,22 @@ defmodule Poker.SeedFactorySchema do
     update(:positions)
   end
 
+  command :fold_hand do
+    param(:table, entity: :table, with_traits: [:live])
+
+    resolve(fn args ->
+      :ok = Poker.Tables.fold_hand(args.table.id, args.table.round.participant_to_act_id)
+
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
+
+      {:ok, %{table: table, positions: positions}}
+    end)
+
+    update(:table)
+    update(:positions)
+  end
+
   command :advance_round do
     param(:table, entity: :table, with_traits: [:live])
 
