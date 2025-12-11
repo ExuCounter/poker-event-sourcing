@@ -328,8 +328,6 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
       pots = Pot.recalculate_pots(participant_hands)
 
-      dbg(pots)
-
       assert length(pots) == 3
 
       assert Enum.at(pots, 0).amount == 3

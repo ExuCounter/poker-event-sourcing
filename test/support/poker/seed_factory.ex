@@ -41,11 +41,9 @@ defmodule Poker.SeedFactorySchema do
     param(:email, generate: &Faker.Internet.email/0)
 
     resolve(fn args ->
-      {:ok, player_id} = Poker.Accounts.register_player(%{email: args.email})
+      {:ok, player} = Poker.Accounts.register_player(%{email: args.email})
 
-      aggregate_state = aggregate_state(:player, player_id)
-
-      {:ok, %{player: aggregate_state}}
+      {:ok, %{player: player}}
     end)
 
     produce(:player)

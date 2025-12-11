@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :poker, :scopes,
+  player: [
+    default: true,
+    module: Poker.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:player, :id],
+    schema_key: :player_id,
+    schema_type: :id,
+    schema_table: :players,
+    test_data_fixture: Poker.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_player
+  ]
+
 config :poker,
   ecto_repos: [Poker.Repo],
   event_stores: [Poker.EventStore],

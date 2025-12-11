@@ -42,4 +42,45 @@ defmodule PokerWeb.ConnCase do
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc """
+  Setup helper that registers and logs in players.
+
+      setup :register_and_log_in_player
+
+  It stores an updated connection and a registered player in the
+  test context.
+  """
+  def register_and_log_in_player(%{conn: conn} = context) do
+    player = Poker.AccountsFixtures.player_fixture()
+    scope = Poker.Accounts.Scope.for_player(player)
+
+    opts =
+      context
+      |> Map.take([:token_authenticated_at])
+      |> Enum.into([])
+
+    %{conn: log_in_player(conn, player, opts), player: player, scope: scope}
+  end
+
+  @doc """
+  Logs the given `player` into the `conn`.
+
+  It returns an updated `conn`.
+  """
+  def log_in_player(conn, player, opts \\ []) do
+    token = Poker.Accounts.generate_player_session_token(player)
+
+    maybe_set_token_authenticated_at(token, opts[:token_authenticated_at])
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:player_token, token)
+  end
+
+  defp maybe_set_token_authenticated_at(_token, nil), do: nil
+
+  defp maybe_set_token_authenticated_at(token, authenticated_at) do
+    Poker.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
+  end
 end
