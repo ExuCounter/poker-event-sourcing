@@ -13,44 +13,25 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Actions do
       |> update_acted_participant_ids(event)
       |> maybe_update_last_bet_amount(event)
 
-    updated_participants =
-      Helpers.update_participant(
-        table,
-        event.participant_id,
-        &%{
-          &1
-          | chips: &1.chips - event.amount,
-            bet_this_round: &1.bet_this_round + event.amount,
-            total_bet_this_hand: &1.total_bet_this_hand + event.amount
-        }
-      )
+    table
+    |> Helpers.update_participant(event.participant_id, &%{&1 | chips: &1.chips - event.amount})
+    |> Helpers.update_participant_hand(event.participant_id, fn hand ->
+      participant = Helpers.find_participant_by_id(table.participants, event.participant_id)
 
-    updated_participant_hands =
-      Helpers.update_participant_hand(
-        table,
-        event.participant_id,
-        fn hand ->
-          participant = Helpers.find_participant_by_id(table, event.participant_id)
-
-          %{
-            hand
-            | status:
-                cond do
-                  participant.chips == 0 -> :all_in
-                  event.action == :all_in -> :all_in
-                  event.action == :fold -> :folded
-                  true -> :playing
-                end
-          }
-        end
-      )
-
-    %Table{
-      table
-      | round: updated_round,
-        participants: updated_participants,
-        participant_hands: updated_participant_hands
-    }
+      %{
+        hand
+        | bet_this_round: hand.bet_this_round + event.amount,
+          total_bet_this_hand: hand.total_bet_this_hand + event.amount,
+          status:
+            cond do
+              participant.chips - event.amount == 0 -> :all_in
+              event.action == :all_in -> :all_in
+              event.action == :fold -> :folded
+              true -> :playing
+            end
+      }
+    end)
+    |> Map.put(:round, updated_round)
   end
 
   def apply(%Table{round: round} = table, %ParticipantToActSelected{} = event) do

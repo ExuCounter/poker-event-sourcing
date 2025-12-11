@@ -103,7 +103,9 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           table_hand_id: hand_id,
           hole_cards: hole_cards,
           position: position,
-          status: :playing
+          status: :playing,
+          bet_this_round: 0,
+          total_bet_this_hand: 0
         },
         %DeckUpdated{
           hand_id: hand_id,
@@ -114,7 +116,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       if Helpers.heads_up?(table) do
-        hand = Helpers.find_participant_hand_by_position(table, :dealer)
+        hand = Helpers.find_participant_hand_by_position(table.participant_hands, :dealer)
 
         %SmallBlindPosted{
           id: Ecto.UUID.generate(),
@@ -124,7 +126,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           amount: table.settings.small_blind
         }
       else
-        hand = Helpers.find_participant_hand_by_position(table, :small_blind)
+        hand = Helpers.find_participant_hand_by_position(table.participant_hands, :small_blind)
 
         %SmallBlindPosted{
           id: Ecto.UUID.generate(),
@@ -136,7 +138,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       end
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      hand = Helpers.find_participant_hand_by_position(table, :big_blind)
+      hand = Helpers.find_participant_hand_by_position(table.participant_hands, :big_blind)
 
       %BigBlindPosted{
         id: Ecto.UUID.generate(),
@@ -159,7 +161,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       %PotsRecalculated{
         table_id: table.id,
         hand_id: hand_id,
-        pots: Pot.recalculate_pots(table)
+        pots: Pot.recalculate_pots(table.participant_hands)
       }
     end)
   end

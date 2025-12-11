@@ -53,7 +53,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
       %PotsRecalculated{
         table_id: table.id,
         hand_id: table_hand_id,
-        pots: Pot.recalculate_pots(table)
+        pots: Pot.recalculate_pots(table.participant_hands)
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
@@ -80,7 +80,11 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
 
   defp process_action(table, %{action: :raise} = command) do
     participant = Helpers.find_participant_to_act(table)
-    raise_amount = command.amount - participant.bet_this_round
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    raise_amount = command.amount - participant_hand.bet_this_round
 
     if participant.chips < raise_amount do
       {:error, :insufficient_chips}
@@ -100,8 +104,11 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
     participant = Helpers.find_participant_to_act(table)
     last_bet_amount = table.round.last_bet_amount
 
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
     call_amount =
-      [last_bet_amount - participant.bet_this_round, participant.chips]
+      [last_bet_amount - participant_hand.bet_this_round, participant.chips]
       |> Enum.filter(&(&1 >= 0))
       |> Enum.min()
 

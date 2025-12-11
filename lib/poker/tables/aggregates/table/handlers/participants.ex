@@ -37,8 +37,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         initial_chips: initial_chips,
         seat_number: seat_number,
         is_sitting_out: false,
-        bet_this_round: 0,
-        total_bet_this_hand: 0,
         status: :active
       }
     else

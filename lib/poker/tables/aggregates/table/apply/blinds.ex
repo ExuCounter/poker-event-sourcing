@@ -8,34 +8,20 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Blinds do
   alias Poker.Tables.Events.{SmallBlindPosted, BigBlindPosted}
 
   def apply(%Table{} = table, %SmallBlindPosted{} = event) do
-    updated_participants =
-      Helpers.update_participant(
-        table,
-        event.participant_id,
-        &%{
-          &1
-          | chips: &1.chips - event.amount,
-            bet_this_round: event.amount,
-            total_bet_this_hand: event.amount
-        }
-      )
-
-    %Table{table | participants: updated_participants}
+    table
+    |> Helpers.update_participant(event.participant_id, &%{&1 | chips: &1.chips - event.amount})
+    |> Helpers.update_participant_hand(
+      event.participant_id,
+      &%{&1 | bet_this_round: event.amount, total_bet_this_hand: event.amount}
+    )
   end
 
   def apply(%Table{} = table, %BigBlindPosted{} = event) do
-    updated_participants =
-      Helpers.update_participant(
-        table,
-        event.participant_id,
-        &%{
-          &1
-          | chips: &1.chips - event.amount,
-            bet_this_round: event.amount,
-            total_bet_this_hand: event.amount
-        }
-      )
-
-    %Table{table | participants: updated_participants}
+    table
+    |> Helpers.update_participant(event.participant_id, &%{&1 | chips: &1.chips - event.amount})
+    |> Helpers.update_participant_hand(
+      event.participant_id,
+      &%{&1 | bet_this_round: event.amount, total_bet_this_hand: event.amount}
+    )
   end
 end

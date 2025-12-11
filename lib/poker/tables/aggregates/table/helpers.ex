@@ -5,34 +5,32 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   # Participant finders
 
-  def find_participant_by_id(table, participant_id) do
-    Enum.find(table.participants, &(&1.id == participant_id))
+  def find_participant_by_id(participants, participant_id) do
+    Enum.find(participants, &(&1.id == participant_id))
   end
 
-  def find_participant_by_seat(table, seat_number) do
-    Enum.find(table.participants, &(&1.seat_number == seat_number))
+  def find_participant_by_seat(participants, seat_number) do
+    Enum.find(participants, &(&1.seat_number == seat_number))
+  end
+
+  def find_participant_hand_by_position(participant_hands, position) do
+    Enum.find(participant_hands, &(&1.position == position))
   end
 
   def find_participant_by_position(table, position) do
-    hand = find_participant_hand_by_position(table, position)
-    find_participant_by_id(table, hand.participant_id)
-  end
-
-  def find_participant_hand_by_position(table, position) do
-    Enum.find(table.participant_hands, &(&1.position == position))
+    hand = find_participant_hand_by_position(table.participant_hands, position)
+    find_participant_by_id(table.participants, hand.participant_id)
   end
 
   def find_participant_to_act(%{round: %{type: :pre_flop, acted_participant_ids: []}} = table) do
     big_blind_participant = find_participant_by_position(table, :big_blind)
-    active_participants = filter_active_participants(table.participants)
-
     seat_number = next_seat(big_blind_participant.seat_number, length(table.participants))
 
-    find_participant_by_seat(table, seat_number)
+    find_participant_by_seat(table.participants, seat_number)
   end
 
   def find_participant_to_act(%{participants: participants, round: %{participant_to_act_id: participant_to_act_id}}) do
-    Enum.find(participants, &(&1.id == participant_to_act_id))
+    find_participant_by_id(participants, participant_to_act_id)
   end
 
   def find_next_participant_to_act(table) do
@@ -42,17 +40,17 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     next_participant_to_act_seat_number =
       next_seat(participant_to_act.seat_number, length(active_participants))
 
-    find_participant_by_seat(table, next_participant_to_act_seat_number)
+    find_participant_by_seat(table.participants, next_participant_to_act_seat_number)
   end
 
   def find_dealer_button_participant(table) do
     if is_nil(table.dealer_button_id) do
       hd(table.participants)
     else
-      dealer_button_participant = find_participant_by_id(table, table.dealer_button_id)
+      dealer_button_participant = find_participant_by_id(table.participants, table.dealer_button_id)
       seat_number = next_seat(dealer_button_participant.seat_number, length(table.participants))
 
-      find_participant_by_seat(table, seat_number)
+      find_participant_by_seat(table.participants, seat_number)
     end
   end
 
@@ -63,23 +61,29 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   end
 
   def update_participant(table, participant_id, fun) when is_function(fun, 1) do
-    Enum.map(table.participants, fn
-      %{id: ^participant_id} = participant ->
-        fun.(participant)
+    updated_participants =
+      Enum.map(table.participants, fn
+        %{id: ^participant_id} = participant ->
+          fun.(participant)
 
-      participant ->
-        participant
-    end)
+        participant ->
+          participant
+      end)
+
+    %{table | participants: updated_participants}
   end
 
   def update_participant_hand(table, participant_id, fun) when is_function(fun, 1) do
-    Enum.map(table.participant_hands, fn
-      %{participant_id: ^participant_id} = participant_hand ->
-        fun.(participant_hand)
+    updated_participant_hands =
+      Enum.map(table.participant_hands, fn
+        %{participant_id: ^participant_id} = participant_hand ->
+          fun.(participant_hand)
 
-      participant_hand ->
-        participant_hand
-    end)
+        participant_hand ->
+          participant_hand
+      end)
+
+    %{table | participant_hands: updated_participant_hands}
   end
 
   # State checks

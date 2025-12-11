@@ -84,49 +84,41 @@ defmodule Poker.Tables.Aggregates.Table do
 
   # STATE MUTATORS - Delegate to Apply modules
 
-  # Lifecycle events
   def apply(table, %evt{} = event)
       when evt in [TableCreated, TableSettingsCreated, TableStarted, TableFinished] do
     Apply.Lifecycle.apply(table, event)
   end
 
-  # Participant events
   def apply(table, %evt{} = event)
       when evt in [TableParticipantJoined, ParticipantSatOut, ParticipantSatIn, ParticipantBusted] do
     Apply.Participants.apply(table, event)
   end
 
-  # Hand events
   def apply(table, %evt{} = event)
       when evt in [HandStarted, ParticipantHandGiven, HandFinished] do
     Apply.Hand.apply(table, event)
   end
 
-  # Round events
   def apply(table, %evt{} = event)
       when evt in [RoundStarted, RoundCompleted] do
     Apply.Round.apply(table, event)
   end
 
-  # Action events
   def apply(table, %evt{} = event)
       when evt in [ParticipantActedInHand, ParticipantToActSelected] do
     Apply.Actions.apply(table, event)
   end
 
-  # Blind events
   def apply(table, %evt{} = event)
       when evt in [SmallBlindPosted, BigBlindPosted] do
     Apply.Blinds.apply(table, event)
   end
 
-  # Deck events
   def apply(table, %evt{} = event)
       when evt in [DeckGenerated, DeckUpdated, DealerButtonMoved] do
     Apply.Deck.apply(table, event)
   end
 
-  # Pot events
   def apply(table, %PotsRecalculated{} = event)
       when is_struct(event, PotsRecalculated) do
     Apply.Pot.apply(table, event)

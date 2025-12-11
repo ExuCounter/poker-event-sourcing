@@ -8,9 +8,9 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
   Recalculates all pots based on current participant bets.
   Returns a list of pots with main and side pots properly structured.
   """
-  def recalculate_pots(table) do
+  def recalculate_pots(participant_hands) do
     unique_bet_amounts =
-      table.participants
+      participant_hands
       |> Enum.map(& &1.total_bet_this_hand)
       |> Enum.filter(&(&1 > 0))
       |> Enum.uniq()
@@ -18,27 +18,23 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
 
     unique_bet_amounts
     |> Enum.reduce([], fn bet_amount, pots ->
-      contributing_participants =
-        table.participants
+      contributing_participant_hands =
+        participant_hands
         |> Enum.filter(&(&1.total_bet_this_hand >= bet_amount))
-        |> filter_active_participants()
+        |> filter_active_participant_hands()
 
-      previous_bet_amount =
-        if pots == [] do
-          0
-        else
-          pots |> List.last() |> Map.get(:bet_amount)
-        end
+      previous_bet_amount = Enum.sum_by(pots, & &1.bet_amount)
 
       bet_amount = bet_amount - previous_bet_amount
-      pot_amount = bet_amount * length(contributing_participants)
+      pot_amount = bet_amount * length(contributing_participant_hands)
 
       pots ++
         [
           %{
             bet_amount: bet_amount,
             amount: pot_amount,
-            contributing_participant_ids: Enum.map(contributing_participants, & &1.id)
+            contributing_participant_ids:
+              Enum.map(contributing_participant_hands, & &1.participant_id)
           }
         ]
     end)
@@ -49,7 +45,7 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
     end)
   end
 
-  defp filter_active_participants(participants) do
-    Enum.filter(participants, &(&1.status == :active))
+  defp filter_active_participant_hands(participant_hands) do
+    Enum.filter(participant_hands, &(&1.status == :playing or &1.status == :all_in))
   end
 end

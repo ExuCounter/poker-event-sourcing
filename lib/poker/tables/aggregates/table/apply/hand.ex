@@ -18,7 +18,9 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
       participant_id: event.participant_id,
       hole_cards: event.hole_cards,
       position: event.position,
-      status: event.status
+      status: event.status,
+      bet_this_round: event.bet_this_round,
+      total_bet_this_hand: event.total_bet_this_hand
     }
 
     %Table{table | participant_hands: participant_hands ++ [new_participant_hand]}

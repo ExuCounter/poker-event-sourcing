@@ -14,9 +14,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
       chips: event.chips,
       seat_number: event.seat_number,
       status: event.status,
-      bet_this_round: event.bet_this_round,
       is_sitting_out: event.is_sitting_out,
-      total_bet_this_hand: event.total_bet_this_hand,
       initial_chips: event.initial_chips
     }
 
@@ -24,23 +22,14 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
   end
 
   def apply(%Table{} = table, %ParticipantSatOut{} = event) do
-    updated_participants =
-      Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: true})
-
-    %Table{table | participants: updated_participants}
+    Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: true})
   end
 
   def apply(%Table{} = table, %ParticipantSatIn{} = event) do
-    updated_participants =
-      Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: false})
-
-    %Table{table | participants: updated_participants}
+    Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: false})
   end
 
   def apply(%Table{} = table, %ParticipantBusted{participant_id: participant_id}) do
-    updated_participants =
-      Helpers.update_participant(table, participant_id, &%{&1 | status: :busted})
-
-    %Table{table | participants: updated_participants}
+    Helpers.update_participant(table, participant_id, &%{&1 | status: :busted})
   end
 end
