@@ -22,7 +22,6 @@ defmodule Poker.Tables.Aggregates.Table do
 
   alias Poker.Tables.Events.{
     TableCreated,
-    TableSettingsCreated,
     TableParticipantJoined,
     HandStarted,
     ParticipantHandGiven,
@@ -85,7 +84,7 @@ defmodule Poker.Tables.Aggregates.Table do
   # STATE MUTATORS - Delegate to Apply modules
 
   def apply(table, %evt{} = event)
-      when evt in [TableCreated, TableSettingsCreated, TableStarted, TableFinished] do
+      when evt in [TableCreated, TableStarted, TableFinished] do
     Apply.Lifecycle.apply(table, event)
   end
 

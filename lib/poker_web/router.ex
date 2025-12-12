@@ -21,6 +21,7 @@ defmodule PokerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/tables/:id/lobby", PageController, :lobby
   end
 
   # Other scopes may use custom stacks.
@@ -57,6 +58,7 @@ defmodule PokerWeb.Router do
     end
 
     post "/players/update-password", PlayerSessionController, :update_password
+    post "/tables", PageController, :create
   end
 
   scope "/", PokerWeb do

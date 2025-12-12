@@ -110,6 +110,18 @@ defmodule Poker.Tables do
     end
   end
 
+  def get_tables() do
+    Poker.Repo.all(Poker.Tables.Projections.TableList)
+  end
+
+  def get_lobby(table_id) do
+    Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
+  end
+
+  def list_tables() do
+    Poker.Repo.all(Poker.Tables.Projections.TableList)
+  end
+
   defp act_in_hand(table_id, participant_id, action_attrs) do
     hand_action_id = Ecto.UUID.generate()
 

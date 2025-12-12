@@ -17,7 +17,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     test "should have not_started status when created", ctx do
       ctx = ctx |> produce(:table)
 
-      assert ctx.table.status == :not_started
+      assert ctx.table.status == :waiting
     end
 
     test "should belong to creator player", ctx do

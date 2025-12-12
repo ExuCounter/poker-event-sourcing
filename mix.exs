@@ -73,7 +73,8 @@ defmodule Poker.MixProject do
       {:eventstore, "~> 1.4.0"},
       {:seed_factory, "~> 0.6.0", only: :test},
       {:faker, "~> 0.18.0", only: :test},
-      {:mox, "~> 1.2", only: :test}
+      {:mox, "~> 1.2", only: :test},
+      {:bodyguard, "~> 2.4.3"}
     ]
   end
 

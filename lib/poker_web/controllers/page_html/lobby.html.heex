@@ -1,0 +1,74 @@
+<Layouts.flash_group flash={@flash} />
+<div class="flex p-10">
+  <div class="flex-col w-full max-w-4xl mx-auto">
+    <div class="mb-6">
+      <.link navigate={~p"/"} class="text-blue-600 hover:text-blue-800">
+        &larr; Back to Tables List
+      </.link>
+    </div>
+
+    <h1 class="text-3xl font-bold mb-6">Table Lobby</h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Table Information</h2>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-gray-600">Table Type</p>
+          <p class="font-semibold capitalize"><%= @lobby.table_type %></p>
+        </div>
+
+        <div>
+          <p class="text-gray-600">Status</p>
+          <p class="font-semibold capitalize"><%= @lobby.status %></p>
+        </div>
+
+        <div>
+          <p class="text-gray-600">Small Blind</p>
+          <p class="font-semibold"><%= @lobby.small_blind %></p>
+        </div>
+
+        <div>
+          <p class="text-gray-600">Big Blind</p>
+          <p class="font-semibold"><%= @lobby.big_blind %></p>
+        </div>
+
+        <div>
+          <p class="text-gray-600">Starting Stack</p>
+          <p class="font-semibold"><%= @lobby.starting_stack %></p>
+        </div>
+
+        <div>
+          <p class="text-gray-600">Players</p>
+          <p class="font-semibold"><%= @lobby.seated_count %>/<%= @lobby.seats_count %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <h2 class="text-xl font-semibold mb-4">Players</h2>
+
+      <div class="space-y-2">
+        <%= if @lobby.seated_count == 0 do %>
+          <p class="text-gray-500">No players seated yet</p>
+        <% else %>
+          <%= for _i <- 1..@lobby.seated_count do %>
+            <div class="border-b pb-2">
+              <p class="font-medium">Player <%= _i %></p>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%= if @lobby.seated_count < @lobby.seats_count do %>
+        <div class="mt-6">
+          <.button class="w-full">Join Table</.button>
+        </div>
+      <% else %>
+        <div class="mt-6">
+          <p class="text-center text-gray-500">Table is full</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

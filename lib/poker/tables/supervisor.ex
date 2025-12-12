@@ -10,7 +10,8 @@ defmodule Poker.Tables.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
-        # Tables.Projectors.Table,
+        Tables.Projectors.TableList,
+        Tables.Projectors.TableLobby,
         # Tables.Projectors.Settings,
         # Tables.Projectors.Participant,
         # Tables.Projectors.Hand,

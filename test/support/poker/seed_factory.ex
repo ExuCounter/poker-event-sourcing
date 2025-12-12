@@ -43,6 +43,8 @@ defmodule Poker.SeedFactorySchema do
     resolve(fn args ->
       {:ok, player} = Poker.Accounts.register_player(%{email: args.email})
 
+      Poker.Accounts.generate_player_session_token(player) |> dbg()
+
       {:ok, %{player: player}}
     end)
 
