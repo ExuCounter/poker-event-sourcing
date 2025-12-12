@@ -32,14 +32,14 @@ defmodule Poker.Tables do
     end
   end
 
-  def join_participant(table, player, attrs \\ %{}) do
+  def join_participant(table_id, player_id, attrs \\ %{}) do
     participant_id = Ecto.UUID.generate()
     starting_stack = Map.get(attrs, :starting_stack)
 
     command_attrs = %{
       participant_id: participant_id,
-      player_id: player.id,
-      table_id: table.id,
+      player_id: player_id,
+      table_id: table_id,
       starting_stack: starting_stack
     }
 

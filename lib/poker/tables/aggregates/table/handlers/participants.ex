@@ -5,7 +5,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   """
 
   alias Poker.Tables.Commands.{JoinTableParticipant, SitOutParticipant, SitInParticipant}
-  alias Poker.Tables.Events.{TableParticipantJoined, ParticipantSatOut, ParticipantSatIn}
+  alias Poker.Tables.Events.{ParticipantJoined, ParticipantSatOut, ParticipantSatIn}
 
   @doc """
   Handles participant commands.
@@ -29,7 +29,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
           command.starting_stack
         end
 
-      %TableParticipantJoined{
+      %ParticipantJoined{
         id: command.participant_id,
         player_id: command.player_id,
         table_id: command.table_id,

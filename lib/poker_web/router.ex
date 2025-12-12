@@ -17,13 +17,6 @@ defmodule PokerWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", PokerWeb do
-    pipe_through :browser
-
-    get "/", PageController, :home
-    get "/tables/:id/lobby", PageController, :lobby
-  end
-
   # Other scopes may use custom stacks.
   # scope "/api", PokerWeb do
   #   pipe_through :api
@@ -57,8 +50,13 @@ defmodule PokerWeb.Router do
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end
 
+    get "/", PageController, :dashboard
     post "/users/update-password", UserSessionController, :update_password
-    post "/tables", PageController, :create
+    get "/tables/:id/lobby", PageController, :lobby
+
+    resources "/tables", TableController, only: [:create] do
+      resources "/participants", ParticipantController, only: [:create]
+    end
   end
 
   scope "/", PokerWeb do
@@ -73,5 +71,7 @@ defmodule PokerWeb.Router do
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+
+    get "/", PageController, :home
   end
 end

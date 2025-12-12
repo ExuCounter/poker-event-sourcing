@@ -3,9 +3,13 @@ defmodule PokerWeb.PageController do
   require Logger
 
   def home(conn, _params) do
+    render(conn, :home)
+  end
+
+  def dashboard(conn, _params) do
     tables_list = PokerWeb.Api.Tables.list_tables()
 
-    render(conn, :home, tables_list: tables_list)
+    render(conn, :dashboard, tables_list: tables_list)
   end
 
   def lobby(conn, %{"id" => table_id}) do

@@ -8,7 +8,10 @@ defmodule PokerWeb.Api.Tables do
   end
 
   def create_table(%{user: user} = _scope, settings) do
-    dbg(user)
     Poker.Tables.create_table(user.id, settings)
+  end
+
+  def join_participant(%{user: user} = _scope, %{table_id: table_id}) do
+    Poker.Tables.join_participant(table_id, user.id)
   end
 end

@@ -22,7 +22,7 @@ defmodule Poker.Tables.Aggregates.Table do
 
   alias Poker.Tables.Events.{
     TableCreated,
-    TableParticipantJoined,
+    ParticipantJoined,
     HandStarted,
     ParticipantHandGiven,
     TableStarted,
@@ -89,7 +89,7 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def apply(table, %evt{} = event)
-      when evt in [TableParticipantJoined, ParticipantSatOut, ParticipantSatIn, ParticipantBusted] do
+      when evt in [ParticipantJoined, ParticipantSatOut, ParticipantSatIn, ParticipantBusted] do
     Apply.Participants.apply(table, event)
   end
 

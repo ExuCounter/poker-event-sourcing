@@ -62,7 +62,9 @@
 
       <%= if @lobby.seated_count < @lobby.seats_count do %>
         <div class="mt-6">
-          <.button class="w-full">Join Table</.button>
+          <.link href={~p"/tables/#{@lobby.id}/participants"} method="post">
+            <.button>Join Table</.button>
+          </.link>
         </div>
       <% else %>
         <div class="mt-6">

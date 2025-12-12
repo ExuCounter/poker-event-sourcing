@@ -87,7 +87,7 @@ defmodule Poker.SeedFactorySchema do
           player -> {player, %{}}
         end)
         |> Enum.map(fn {player, attrs} ->
-          {:ok, _participant_id} = Poker.Tables.join_participant(args.table, player, attrs)
+          {:ok, _participant_id} = Poker.Tables.join_participant(args.table.id, player.id, attrs)
         end)
 
       table = aggregate_state(:table, args.table.id)

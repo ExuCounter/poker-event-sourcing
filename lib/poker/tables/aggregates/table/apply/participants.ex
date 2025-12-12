@@ -5,9 +5,15 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
 
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Aggregates.Table.Helpers
-  alias Poker.Tables.Events.{TableParticipantJoined, ParticipantSatOut, ParticipantSatIn, ParticipantBusted}
 
-  def apply(%Table{participants: participants} = table, %TableParticipantJoined{} = event) do
+  alias Poker.Tables.Events.{
+    ParticipantJoined,
+    ParticipantSatOut,
+    ParticipantSatIn,
+    ParticipantBusted
+  }
+
+  def apply(%Table{participants: participants} = table, %ParticipantJoined{} = event) do
     new_participant = %{
       id: event.id,
       player_id: event.player_id,

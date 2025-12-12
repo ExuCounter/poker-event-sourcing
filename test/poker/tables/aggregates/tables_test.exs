@@ -87,7 +87,8 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       %{player: player} = produce(ctx, :player)
 
-      assert {:error, :table_already_started} = Poker.Tables.join_participant(ctx.table, player)
+      assert {:error, :table_already_started} =
+               Poker.Tables.join_participant(ctx.table.id, player.id)
     end
 
     test "should not allow to join table if full", ctx do
@@ -105,7 +106,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       %{player: player} = produce(ctx, :player)
 
       assert {:error, :table_full} =
-               Poker.Tables.join_participant(ctx.table, player)
+               Poker.Tables.join_participant(ctx.table.id, player.id)
     end
 
     test "should not allow to start table with less than 2 players", ctx do

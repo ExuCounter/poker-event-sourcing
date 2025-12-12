@@ -1,4 +1,4 @@
-defmodule Poker.Tables.Events.TableParticipantJoined do
+defmodule Poker.Tables.Events.ParticipantJoined do
   @derive {Jason.Encoder,
            only: [
              :id,

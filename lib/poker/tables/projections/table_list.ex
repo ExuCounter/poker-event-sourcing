@@ -4,7 +4,7 @@ defmodule Poker.Tables.Projections.TableList do
   schema "table_list" do
     field :seated_count, :integer
     field :seats_count, :integer
-    field :status, Ecto.Enum, values: [:waiting, :playing]
+    field :status, Ecto.Enum, values: [:waiting, :live, :finished]
 
     timestamps()
   end

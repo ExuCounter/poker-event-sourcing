@@ -15,6 +15,7 @@ defmodule Poker.Tables.Projectors.TableLobby do
   alias Poker.Tables.Projections.TableLobby
 
   def max_seats(:six_max), do: 6
+  def table_query(id), do: from(t in TableLobby, where: t.id == ^id)
 
   project(
     %TableCreated{
@@ -40,4 +41,20 @@ defmodule Poker.Tables.Projectors.TableLobby do
       })
     end
   )
+
+  project(%TableStarted{id: id, status: status}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
+  end)
+
+  project(%ParticipantJoined{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), inc: [seated_count: 1])
+  end)
+
+  project(%ParticipantBusted{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [seated_count: -1])
+  end)
+
+  project(%TableFinished{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
+  end)
 end
