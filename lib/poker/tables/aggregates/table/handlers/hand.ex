@@ -172,8 +172,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     |> Commanded.Aggregate.Multi.execute(fn %{
                                               hand: %{id: hand_id},
                                               pots: pots,
-                                              participant_hands: participant_hands,
-                                              community_cards: community_cards
+                                              participant_hands: participant_hands
                                             } ->
       active_participant_hand =
         Enum.find(participant_hands, fn hand -> hand.status == :playing end)
@@ -192,7 +191,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
       %HandFinished{
         table_id: table.id,
-        hand_id: table.hand.id,
+        hand_id: hand_id,
         finish_reason: reason,
         payouts: payouts
       }

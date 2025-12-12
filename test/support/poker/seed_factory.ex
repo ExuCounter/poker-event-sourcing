@@ -41,7 +41,7 @@ defmodule Poker.SeedFactorySchema do
     param(:email, generate: &Faker.Internet.email/0)
 
     resolve(fn args ->
-      {:ok, user} = Poker.Accounts.register_user(%{email: args.email})
+      {:ok, user} = Poker.Accounts.register_user(%{email: args.email, role: :player})
 
       {:ok, %{player: user}}
     end)

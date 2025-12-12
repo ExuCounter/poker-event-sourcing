@@ -6,10 +6,9 @@ defmodule Poker.Services.DeckStub do
     ranks = [2, 3, 4, 5, 6, 7, 8, 9, :T, :J, :Q, :K, :A]
     suits = [:hearts, :diamonds, :clubs, :spades]
 
-    deck =
-      for rank <- ranks, suit <- suits do
-        %{rank: rank, suit: suit}
-      end
+    for rank <- ranks, suit <- suits do
+      %{rank: rank, suit: suit}
+    end
   end
 
   @impl true

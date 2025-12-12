@@ -34,16 +34,16 @@ defmodule Poker.Services.HandEvaluatorStub do
     Enum.map(cards, &cast/1) |> List.to_tuple()
   end
 
-  defp load(cards) when is_list(cards) do
-    Enum.map(cards, &load/1)
-  end
-
   defp cast(card) do
     {card.rank, suit_abbreviation(card.suit)}
   end
 
   defp load(card) do
     {card.rank, suit_full(card.suit)}
+  end
+
+  defp load(cards) when is_list(cards) do
+    Enum.map(cards, &load/1)
   end
 
   defp suit_abbreviation(suit) do
