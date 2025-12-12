@@ -1,127 +1,127 @@
 defmodule Poker.Accounts do
   import Ecto.Query
   alias Poker.Repo
-  alias Poker.Accounts.Schemas.{Player, PlayerToken}
-  alias Poker.Accounts.PlayerNotifier
+  alias Poker.Accounts.Schemas.{User, UserToken}
+  alias Poker.Accounts.UserNotifier
 
   ## Database getters
 
   @doc """
-  Gets a player by email.
+  Gets a user by email.
 
   ## Examples
 
-      iex> get_player_by_email("foo@example.com")
-      %Player{}
+      iex> get_user_by_email("foo@example.com")
+      %User{}
 
-      iex> get_player_by_email("unknown@example.com")
+      iex> get_user_by_email("unknown@example.com")
       nil
 
   """
-  def get_player_by_email(email) when is_binary(email) do
-    Repo.get_by(Player, email: email)
+  def get_user_by_email(email) when is_binary(email) do
+    Repo.get_by(User, email: email)
   end
 
   @doc """
-  Gets a player by email and password.
+  Gets a user by email and password.
 
   ## Examples
 
-      iex> get_player_by_email_and_password("foo@example.com", "correct_password")
-      %Player{}
+      iex> get_user_by_email_and_password("foo@example.com", "correct_password")
+      %User{}
 
-      iex> get_player_by_email_and_password("foo@example.com", "invalid_password")
+      iex> get_user_by_email_and_password("foo@example.com", "invalid_password")
       nil
 
   """
-  def get_player_by_email_and_password(email, password)
+  def get_user_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
-    player = Repo.get_by(Player, email: email)
-    if valid_password?(player, password), do: player
+    user = Repo.get_by(User, email: email)
+    if valid_password?(user, password), do: user
   end
 
   @doc """
-  Gets a single player.
+  Gets a single user.
 
-  Raises `Ecto.NoResultsError` if the Player does not exist.
+  Raises `Ecto.NoResultsError` if the User does not exist.
 
   ## Examples
 
-      iex> get_player!(123)
-      %Player{}
+      iex> get_user!(123)
+      %User{}
 
-      iex> get_player!(456)
+      iex> get_user!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_player!(id), do: Repo.get!(Player, id)
+  def get_user!(id), do: Repo.get!(User, id)
 
-  ## Player registration
+  ## User registration
 
   @doc """
-  Registers a player.
+  Registers a user.
 
   ## Examples
 
-      iex> register_player(%{field: value})
-      {:ok, %Player{}}
+      iex> register_user(%{field: value})
+      {:ok, %User{}}
 
-      iex> register_player(%{field: bad_value})
+      iex> register_user(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def register_player(attrs) do
-    %Player{}
-    |> Player.email_changeset(attrs)
+  def register_user(attrs) do
+    %User{}
+    |> User.email_changeset(attrs)
     |> Repo.insert()
   end
 
   ## Settings
 
   @doc """
-  Checks whether the player is in sudo mode.
+  Checks whether the user is in sudo mode.
 
-  The player is in sudo mode when the last authentication was done no further
+  The user is in sudo mode when the last authentication was done no further
   than 20 minutes ago. The limit can be given as second argument in minutes.
   """
-  def sudo_mode?(player, minutes \\ -20)
+  def sudo_mode?(user, minutes \\ -20)
 
-  def sudo_mode?(%Player{authenticated_at: ts}, minutes) when is_struct(ts, DateTime) do
+  def sudo_mode?(%User{authenticated_at: ts}, minutes) when is_struct(ts, DateTime) do
     DateTime.after?(ts, DateTime.utc_now() |> DateTime.add(minutes, :minute))
   end
 
-  def sudo_mode?(_player, _minutes), do: false
+  def sudo_mode?(_user, _minutes), do: false
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for changing the player email.
+  Returns an `%Ecto.Changeset{}` for changing the user email.
 
-  See `Poker.Accounts.Player.email_changeset/3` for a list of supported options.
+  See `Poker.Accounts.User.email_changeset/3` for a list of supported options.
 
   ## Examples
 
-      iex> change_player_email(player)
-      %Ecto.Changeset{data: %Player{}}
+      iex> change_user_email(user)
+      %Ecto.Changeset{data: %User{}}
 
   """
-  def change_player_email(player, attrs \\ %{}, opts \\ []) do
-    Player.email_changeset(player, attrs, opts)
+  def change_user_email(user, attrs \\ %{}, opts \\ []) do
+    User.email_changeset(user, attrs, opts)
   end
 
   @doc """
-  Updates the player email using the given token.
+  Updates the user email using the given token.
 
-  If the token matches, the player email is updated and the token is deleted.
+  If the token matches, the user email is updated and the token is deleted.
   """
-  def update_player_email(player, token) do
-    context = "change:#{player.email}"
+  def update_user_email(user, token) do
+    context = "change:#{user.email}"
 
     Repo.transact(fn ->
-      with {:ok, query} <- PlayerToken.verify_change_email_token_query(token, context),
-           %PlayerToken{sent_to: email} <- Repo.one(query),
-           {:ok, player} <- Repo.update(Player.email_changeset(player, %{email: email})),
+      with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
+           %UserToken{sent_to: email} <- Repo.one(query),
+           {:ok, user} <- Repo.update(User.email_changeset(user, %{email: email})),
            {_count, _result} <-
-             Repo.delete_all(from(PlayerToken, where: [player_id: ^player.id, context: ^context])) do
-        {:ok, player}
+             Repo.delete_all(from(UserToken, where: [user_id: ^user.id, context: ^context])) do
+        {:ok, user}
       else
         _ -> {:error, :transaction_aborted}
       end
@@ -129,38 +129,38 @@ defmodule Poker.Accounts do
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for changing the player password.
+  Returns an `%Ecto.Changeset{}` for changing the user password.
 
-  See `Poker.Accounts.Player.password_changeset/3` for a list of supported options.
+  See `Poker.Accounts.User.password_changeset/3` for a list of supported options.
 
   ## Examples
 
-      iex> change_player_password(player)
-      %Ecto.Changeset{data: %Player{}}
+      iex> change_user_password(user)
+      %Ecto.Changeset{data: %User{}}
 
   """
-  def change_player_password(player, attrs \\ %{}, opts \\ []) do
-    Player.password_changeset(player, attrs, opts)
+  def change_user_password(user, attrs \\ %{}, opts \\ []) do
+    User.password_changeset(user, attrs, opts)
   end
 
   @doc """
-  Updates the player password.
+  Updates the user password.
 
-  Returns a tuple with the updated player, as well as a list of expired tokens.
+  Returns a tuple with the updated user, as well as a list of expired tokens.
 
   ## Examples
 
-      iex> update_player_password(player, %{password: ...})
-      {:ok, {%Player{}, [...]}}
+      iex> update_user_password(user, %{password: ...})
+      {:ok, {%User{}, [...]}}
 
-      iex> update_player_password(player, %{password: "too short"})
+      iex> update_user_password(user, %{password: "too short"})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_player_password(player, attrs) do
-    player
-    |> Player.password_changeset(attrs)
-    |> update_player_and_delete_all_tokens()
+  def update_user_password(user, attrs) do
+    user
+    |> User.password_changeset(attrs)
+    |> update_user_and_delete_all_tokens()
   end
 
   ## Session
@@ -168,58 +168,58 @@ defmodule Poker.Accounts do
   @doc """
   Generates a session token.
   """
-  def generate_player_session_token(player) do
-    {token, player_token} = PlayerToken.build_session_token(player)
-    Repo.insert!(player_token)
+  def generate_user_session_token(user) do
+    {token, user_token} = UserToken.build_session_token(user)
+    Repo.insert!(user_token)
     token
   end
 
   @doc """
-  Gets the player with the given signed token.
+  Gets the user with the given signed token.
 
-  If the token is valid `{player, token_inserted_at}` is returned, otherwise `nil` is returned.
+  If the token is valid `{user, token_inserted_at}` is returned, otherwise `nil` is returned.
   """
-  def get_player_by_session_token(token) do
-    {:ok, query} = PlayerToken.verify_session_token_query(token)
+  def get_user_by_session_token(token) do
+    {:ok, query} = UserToken.verify_session_token_query(token)
     Repo.one(query)
   end
 
   @doc """
-  Gets the player with the given magic link token.
+  Gets the user with the given magic link token.
   """
-  def get_player_by_magic_link_token(token) do
-    with {:ok, query} <- PlayerToken.verify_magic_link_token_query(token),
-         {player, _token} <- Repo.one(query) do
-      player
+  def get_user_by_magic_link_token(token) do
+    with {:ok, query} <- UserToken.verify_magic_link_token_query(token),
+         {user, _token} <- Repo.one(query) do
+      user
     else
       _ -> nil
     end
   end
 
   @doc """
-  Logs the player in by magic link.
+  Logs the user in by magic link.
 
   There are three cases to consider:
 
-  1. The player has already confirmed their email. They are logged in
+  1. The user has already confirmed their email. They are logged in
      and the magic link is expired.
 
-  2. The player has not confirmed their email and no password is set.
-     In this case, the player gets confirmed, logged in, and all tokens -
+  2. The user has not confirmed their email and no password is set.
+     In this case, the user gets confirmed, logged in, and all tokens -
      including session ones - are expired. In theory, no other tokens
      exist but we delete all of them for best security practices.
 
-  3. The player has not confirmed their email but a password is set.
+  3. The user has not confirmed their email but a password is set.
      This cannot happen in the default implementation but may be the
      source of security pitfalls. See the "Mixing magic link and password registration" section of
      `mix help phx.gen.auth`.
   """
-  def login_player_by_magic_link(token) do
-    {:ok, query} = PlayerToken.verify_magic_link_token_query(token)
+  def login_user_by_magic_link(token) do
+    {:ok, query} = UserToken.verify_magic_link_token_query(token)
 
     case Repo.one(query) do
       # Prevent session fixation attacks by disallowing magic links for unconfirmed users with password
-      {%Player{confirmed_at: nil, hashed_password: hash}, _token} when not is_nil(hash) ->
+      {%User{confirmed_at: nil, hashed_password: hash}, _token} when not is_nil(hash) ->
         raise """
         magic link log in is not allowed for unconfirmed users with a password set!
 
@@ -228,14 +228,14 @@ defmodule Poker.Accounts do
         "Mixing magic link and password registration" section of `mix help phx.gen.auth`.
         """
 
-      {%Player{confirmed_at: nil} = player, _token} ->
-        player
-        |> Player.confirm_changeset()
-        |> update_player_and_delete_all_tokens()
+      {%User{confirmed_at: nil} = user, _token} ->
+        user
+        |> User.confirm_changeset()
+        |> update_user_and_delete_all_tokens()
 
-      {player, token} ->
+      {user, token} ->
         Repo.delete!(token)
-        {:ok, {player, []}}
+        {:ok, {user, []}}
 
       nil ->
         {:error, :not_found}
@@ -243,52 +243,52 @@ defmodule Poker.Accounts do
   end
 
   @doc ~S"""
-  Delivers the update email instructions to the given player.
+  Delivers the update email instructions to the given user.
 
   ## Examples
 
-      iex> deliver_player_update_email_instructions(player, current_email, &url(~p"/players/settings/confirm-email/#{&1}"))
+      iex> deliver_user_update_email_instructions(user, current_email, &url(~p"/users/settings/confirm-email/#{&1}"))
       {:ok, %{to: ..., body: ...}}
 
   """
-  def deliver_player_update_email_instructions(
-        %Player{} = player,
+  def deliver_user_update_email_instructions(
+        %User{} = user,
         current_email,
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, player_token} =
-      PlayerToken.build_email_token(player, "change:#{current_email}")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "change:#{current_email}")
 
-    Repo.insert!(player_token)
-    PlayerNotifier.deliver_update_email_instructions(player, update_email_url_fun.(encoded_token))
+    Repo.insert!(user_token)
+    UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(encoded_token))
   end
 
   @doc """
-  Delivers the magic link login instructions to the given player.
+  Delivers the magic link login instructions to the given user.
   """
-  def deliver_login_instructions(%Player{} = player, magic_link_url_fun)
+  def deliver_login_instructions(%User{} = user, magic_link_url_fun)
       when is_function(magic_link_url_fun, 1) do
-    {encoded_token, player_token} = PlayerToken.build_email_token(player, "login")
-    Repo.insert!(player_token)
-    PlayerNotifier.deliver_login_instructions(player, magic_link_url_fun.(encoded_token))
+    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
+    Repo.insert!(user_token)
+    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
   end
 
   @doc """
   Deletes the signed token with the given context.
   """
-  def delete_player_session_token(token) do
-    Repo.delete_all(from(PlayerToken, where: [token: ^token, context: "session"]))
+  def delete_user_session_token(token) do
+    Repo.delete_all(from(UserToken, where: [token: ^token, context: "session"]))
     :ok
   end
 
   @doc """
   Verifies the password.
 
-  If there is no player or the player doesn't have a password, we call
+  If there is no user or the user doesn't have a password, we call
   `Bcrypt.no_user_verify/0` to avoid timing attacks.
   """
-  def valid_password?(%Player{hashed_password: hashed_password}, password)
+  def valid_password?(%User{hashed_password: hashed_password}, password)
       when is_binary(hashed_password) and byte_size(password) > 0 do
     Bcrypt.verify_pass(password, hashed_password)
   end
@@ -300,16 +300,16 @@ defmodule Poker.Accounts do
 
   ## Token helper
 
-  defp update_player_and_delete_all_tokens(changeset) do
+  defp update_user_and_delete_all_tokens(changeset) do
     Repo.transact(fn ->
-      with {:ok, player} <- Repo.update(changeset) do
-        tokens_to_expire = Repo.all_by(PlayerToken, player_id: player.id)
+      with {:ok, user} <- Repo.update(changeset) do
+        tokens_to_expire = Repo.all_by(UserToken, user_id: user.id)
 
         Repo.delete_all(
-          from(t in PlayerToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id))
+          from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id))
         )
 
-        {:ok, {player, tokens_to_expire}}
+        {:ok, {user, tokens_to_expire}}
       end
     end)
   end

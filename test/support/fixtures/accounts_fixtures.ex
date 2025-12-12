@@ -8,57 +8,57 @@ defmodule Poker.AccountsFixtures do
 
   alias Poker.Accounts
   alias Poker.Accounts.Scope
-  alias Poker.Accounts.Schemas.{Player, PlayerToken}
+  alias Poker.Accounts.Schemas.{User, UserToken}
 
-  def unique_player_email, do: "player#{System.unique_integer()}@example.com"
-  def valid_player_password, do: "hello world!"
+  def unique_user_email, do: "user#{System.unique_integer()}@example.com"
+  def valid_user_password, do: "hello world!"
 
-  def valid_player_attributes(attrs \\ %{}) do
+  def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
-      email: unique_player_email()
+      email: unique_user_email()
     })
   end
 
-  def unconfirmed_player_fixture(attrs \\ %{}) do
-    {:ok, player} =
+  def unconfirmed_user_fixture(attrs \\ %{}) do
+    {:ok, user} =
       attrs
-      |> valid_player_attributes()
-      |> Accounts.register_player()
+      |> valid_user_attributes()
+      |> Accounts.register_user()
 
-    player
+    user
   end
 
-  def player_fixture(attrs \\ %{}) do
-    player = unconfirmed_player_fixture(attrs)
+  def user_fixture(attrs \\ %{}) do
+    user = unconfirmed_user_fixture(attrs)
 
     token =
-      extract_player_token(fn url ->
-        Accounts.deliver_login_instructions(player, url)
+      extract_user_token(fn url ->
+        Accounts.deliver_login_instructions(user, url)
       end)
 
-    {:ok, {player, _expired_tokens}} =
-      Accounts.login_player_by_magic_link(token)
+    {:ok, {user, _expired_tokens}} =
+      Accounts.login_user_by_magic_link(token)
 
-    player
+    user
   end
 
-  def player_scope_fixture do
-    player = player_fixture()
-    player_scope_fixture(player)
+  def user_scope_fixture do
+    user = user_fixture()
+    user_scope_fixture(user)
   end
 
-  def player_scope_fixture(player) do
-    Scope.for_player(player)
+  def user_scope_fixture(user) do
+    Scope.for_user(user)
   end
 
-  def set_password(player) do
-    {:ok, {player, _expired_tokens}} =
-      Accounts.update_player_password(player, %{password: valid_player_password()})
+  def set_password(user) do
+    {:ok, {user, _expired_tokens}} =
+      Accounts.update_user_password(user, %{password: valid_user_password()})
 
-    player
+    user
   end
 
-  def extract_player_token(fun) do
+  def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
@@ -66,24 +66,24 @@ defmodule Poker.AccountsFixtures do
 
   def override_token_authenticated_at(token, authenticated_at) when is_binary(token) do
     Poker.Repo.update_all(
-      from(t in PlayerToken,
+      from(t in UserToken,
         where: t.token == ^token
       ),
       set: [authenticated_at: authenticated_at]
     )
   end
 
-  def generate_player_magic_link_token(player) do
-    {encoded_token, player_token} = PlayerToken.build_email_token(player, "login")
-    Poker.Repo.insert!(player_token)
-    {encoded_token, player_token.token}
+  def generate_user_magic_link_token(user) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
+    Poker.Repo.insert!(user_token)
+    {encoded_token, user_token.token}
   end
 
-  def offset_player_token(token, amount_to_add, unit) do
+  def offset_user_token(token, amount_to_add, unit) do
     dt = DateTime.add(DateTime.utc_now(:second), amount_to_add, unit)
 
     Poker.Repo.update_all(
-      from(ut in PlayerToken, where: ut.token == ^token),
+      from(ut in UserToken, where: ut.token == ^token),
       set: [inserted_at: dt, authenticated_at: dt]
     )
   end

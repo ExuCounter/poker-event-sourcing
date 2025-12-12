@@ -1,18 +1,19 @@
-defmodule Poker.Accounts.Schemas.Player do
+defmodule Poker.Accounts.Schemas.User do
   use Poker, :schema
 
-  schema "players" do
+  schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    field :role, Ecto.Enum, values: [:player], default: :player
 
     timestamps(type: :utc_datetime)
   end
 
   @doc """
-  A player changeset for registering or changing the email.
+  A user changeset for registering or changing the email.
 
   It requires the email to change otherwise an error is added.
 
@@ -22,8 +23,8 @@ defmodule Poker.Accounts.Schemas.Player do
       uniqueness of the email, useful when displaying live validations.
       Defaults to `true`.
   """
-  def email_changeset(player, attrs, opts \\ []) do
-    player
+  def email_changeset(user, attrs, opts \\ []) do
+    user
     |> cast(attrs, [:email])
     |> validate_email(opts)
   end
@@ -56,7 +57,7 @@ defmodule Poker.Accounts.Schemas.Player do
   end
 
   @doc """
-  A player changeset for changing the password.
+  A user changeset for changing the password.
 
   It is important to validate the length of the password, as long passwords may
   be very expensive to hash for certain algorithms.
@@ -70,8 +71,8 @@ defmodule Poker.Accounts.Schemas.Player do
       validations on a LiveView form), this option can be set to `false`.
       Defaults to `true`.
   """
-  def password_changeset(player, attrs, opts \\ []) do
-    player
+  def password_changeset(user, attrs, opts \\ []) do
+    user
     |> cast(attrs, [:password])
     |> validate_confirmation(:password, message: "does not match password")
     |> validate_password(opts)
@@ -108,8 +109,8 @@ defmodule Poker.Accounts.Schemas.Player do
   @doc """
   Confirms the account by setting `confirmed_at`.
   """
-  def confirm_changeset(player) do
+  def confirm_changeset(user) do
     now = DateTime.utc_now(:second)
-    change(player, confirmed_at: now)
+    change(user, confirmed_at: now)
   end
 end

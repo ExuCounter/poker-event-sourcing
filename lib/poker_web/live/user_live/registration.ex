@@ -1,8 +1,8 @@
-defmodule PokerWeb.PlayerLive.Registration do
+defmodule PokerWeb.UserLive.Registration do
   use PokerWeb, :live_view
 
   alias Poker.Accounts
-  alias Poker.Accounts.Schemas.Player
+  alias Poker.Accounts.Schemas.User
 
   @impl true
   def render(assigns) do
@@ -14,7 +14,7 @@ defmodule PokerWeb.PlayerLive.Registration do
             Register for an account
             <:subtitle>
               Already registered?
-              <.link navigate={~p"/players/log-in"} class="font-semibold text-brand hover:underline">
+              <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
                 Log in
               </.link>
               to your account now.
@@ -42,47 +42,47 @@ defmodule PokerWeb.PlayerLive.Registration do
   end
 
   @impl true
-  def mount(_params, _session, %{assigns: %{current_scope: %{player: player}}} = socket)
-      when not is_nil(player) do
-    {:ok, redirect(socket, to: PokerWeb.PlayerAuth.signed_in_path(socket))}
+  def mount(_params, _session, %{assigns: %{current_scope: %{user: user}}} = socket)
+      when not is_nil(user) do
+    {:ok, redirect(socket, to: PokerWeb.UserAuth.signed_in_path(socket))}
   end
 
   def mount(_params, _session, socket) do
-    changeset = Accounts.change_player_email(%Player{}, %{}, validate_unique: false)
+    changeset = Accounts.change_user_email(%User{}, %{}, validate_unique: false)
 
     {:ok, assign_form(socket, changeset), temporary_assigns: [form: nil]}
   end
 
   @impl true
-  def handle_event("save", %{"player" => player_params}, socket) do
-    case Accounts.register_player(player_params) do
-      {:ok, player} ->
+  def handle_event("save", %{"user" => user_params}, socket) do
+    case Accounts.register_user(user_params) do
+      {:ok, user} ->
         {:ok, _} =
           Accounts.deliver_login_instructions(
-            player,
-            &url(~p"/players/log-in/#{&1}")
+            user,
+            &url(~p"/users/log-in/#{&1}")
           )
 
         {:noreply,
          socket
          |> put_flash(
            :info,
-           "An email was sent to #{player.email}, please access it to confirm your account."
+           "An email was sent to #{user.email}, please access it to confirm your account."
          )
-         |> push_navigate(to: ~p"/players/log-in")}
+         |> push_navigate(to: ~p"/users/log-in")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
   end
 
-  def handle_event("validate", %{"player" => player_params}, socket) do
-    changeset = Accounts.change_player_email(%Player{}, player_params, validate_unique: false)
+  def handle_event("validate", %{"user" => user_params}, socket) do
+    changeset = Accounts.change_user_email(%User{}, user_params, validate_unique: false)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
-    form = to_form(changeset, as: "player")
+    form = to_form(changeset, as: "user")
     assign(socket, form: form)
   end
 end

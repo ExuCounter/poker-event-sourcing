@@ -44,38 +44,38 @@ defmodule PokerWeb.ConnCase do
   end
 
   @doc """
-  Setup helper that registers and logs in players.
+  Setup helper that registers and logs in users.
 
-      setup :register_and_log_in_player
+      setup :register_and_log_in_user
 
-  It stores an updated connection and a registered player in the
+  It stores an updated connection and a registered user in the
   test context.
   """
-  def register_and_log_in_player(%{conn: conn} = context) do
-    player = Poker.AccountsFixtures.player_fixture()
-    scope = Poker.Accounts.Scope.for_player(player)
+  def register_and_log_in_user(%{conn: conn} = context) do
+    user = Poker.AccountsFixtures.user_fixture()
+    scope = Poker.Accounts.Scope.for_user(user)
 
     opts =
       context
       |> Map.take([:token_authenticated_at])
       |> Enum.into([])
 
-    %{conn: log_in_player(conn, player, opts), player: player, scope: scope}
+    %{conn: log_in_user(conn, user, opts), user: user, scope: scope}
   end
 
   @doc """
-  Logs the given `player` into the `conn`.
+  Logs the given `user` into the `conn`.
 
   It returns an updated `conn`.
   """
-  def log_in_player(conn, player, opts \\ []) do
-    token = Poker.Accounts.generate_player_session_token(player)
+  def log_in_user(conn, user, opts \\ []) do
+    token = Poker.Accounts.generate_user_session_token(user)
 
     maybe_set_token_authenticated_at(token, opts[:token_authenticated_at])
 
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
-    |> Plug.Conn.put_session(:player_token, token)
+    |> Plug.Conn.put_session(:user_token, token)
   end
 
   defp maybe_set_token_authenticated_at(_token, nil), do: nil

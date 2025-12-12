@@ -1,7 +1,7 @@
-defmodule PokerWeb.PlayerLive.Settings do
+defmodule PokerWeb.UserLive.Settings do
   use PokerWeb, :live_view
 
-  on_mount {PokerWeb.PlayerAuth, :require_sudo_mode}
+  on_mount {PokerWeb.UserAuth, :require_sudo_mode}
 
   alias Poker.Accounts
 
@@ -32,7 +32,7 @@ defmodule PokerWeb.PlayerLive.Settings do
       <.form
         for={@password_form}
         id="password_form"
-        action={~p"/players/update-password"}
+        action={~p"/users/update-password"}
         method="post"
         phx-change="validate_password"
         phx-submit="update_password"
@@ -41,7 +41,7 @@ defmodule PokerWeb.PlayerLive.Settings do
         <input
           name={@password_form[:email].name}
           type="hidden"
-          id="hidden_player_email"
+          id="hidden_user_email"
           autocomplete="username"
           value={@current_email}
         />
@@ -69,25 +69,25 @@ defmodule PokerWeb.PlayerLive.Settings do
   @impl true
   def mount(%{"token" => token}, _session, socket) do
     socket =
-      case Accounts.update_player_email(socket.assigns.current_scope.player, token) do
-        {:ok, _player} ->
+      case Accounts.update_user_email(socket.assigns.current_scope.user, token) do
+        {:ok, _user} ->
           put_flash(socket, :info, "Email changed successfully.")
 
         {:error, _} ->
           put_flash(socket, :error, "Email change link is invalid or it has expired.")
       end
 
-    {:ok, push_navigate(socket, to: ~p"/players/settings")}
+    {:ok, push_navigate(socket, to: ~p"/users/settings")}
   end
 
   def mount(_params, _session, socket) do
-    player = socket.assigns.current_scope.player
-    email_changeset = Accounts.change_player_email(player, %{}, validate_unique: false)
-    password_changeset = Accounts.change_player_password(player, %{}, hash_password: false)
+    user = socket.assigns.current_scope.user
+    email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
+    password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
 
     socket =
       socket
-      |> assign(:current_email, player.email)
+      |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
@@ -97,11 +97,11 @@ defmodule PokerWeb.PlayerLive.Settings do
 
   @impl true
   def handle_event("validate_email", params, socket) do
-    %{"player" => player_params} = params
+    %{"user" => user_params} = params
 
     email_form =
-      socket.assigns.current_scope.player
-      |> Accounts.change_player_email(player_params, validate_unique: false)
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_email(user_params, validate_unique: false)
       |> Map.put(:action, :validate)
       |> to_form()
 
@@ -109,16 +109,16 @@ defmodule PokerWeb.PlayerLive.Settings do
   end
 
   def handle_event("update_email", params, socket) do
-    %{"player" => player_params} = params
-    player = socket.assigns.current_scope.player
-    true = Accounts.sudo_mode?(player)
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
 
-    case Accounts.change_player_email(player, player_params) do
+    case Accounts.change_user_email(user, user_params) do
       %{valid?: true} = changeset ->
-        Accounts.deliver_player_update_email_instructions(
+        Accounts.deliver_user_update_email_instructions(
           Ecto.Changeset.apply_action!(changeset, :insert),
-          player.email,
-          &url(~p"/players/settings/confirm-email/#{&1}")
+          user.email,
+          &url(~p"/users/settings/confirm-email/#{&1}")
         )
 
         info = "A link to confirm your email change has been sent to the new address."
@@ -130,11 +130,11 @@ defmodule PokerWeb.PlayerLive.Settings do
   end
 
   def handle_event("validate_password", params, socket) do
-    %{"player" => player_params} = params
+    %{"user" => user_params} = params
 
     password_form =
-      socket.assigns.current_scope.player
-      |> Accounts.change_player_password(player_params, hash_password: false)
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_password(user_params, hash_password: false)
       |> Map.put(:action, :validate)
       |> to_form()
 
@@ -142,11 +142,11 @@ defmodule PokerWeb.PlayerLive.Settings do
   end
 
   def handle_event("update_password", params, socket) do
-    %{"player" => player_params} = params
-    player = socket.assigns.current_scope.player
-    true = Accounts.sudo_mode?(player)
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    true = Accounts.sudo_mode?(user)
 
-    case Accounts.change_player_password(player, player_params) do
+    case Accounts.change_user_password(user, user_params) do
       %{valid?: true} = changeset ->
         {:noreply, assign(socket, trigger_submit: true, password_form: to_form(changeset))}
 

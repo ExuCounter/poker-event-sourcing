@@ -1,7 +1,7 @@
 defmodule PokerWeb.Router do
   use PokerWeb, :router
 
-  import PokerWeb.PlayerAuth
+  import PokerWeb.UserAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -10,7 +10,7 @@ defmodule PokerWeb.Router do
     plug :put_root_layout, html: {PokerWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :fetch_current_scope_for_player
+    plug :fetch_current_scope_for_user
   end
 
   pipeline :api do
@@ -49,29 +49,29 @@ defmodule PokerWeb.Router do
   ## Authentication routes
 
   scope "/", PokerWeb do
-    pipe_through [:browser, :require_authenticated_player]
+    pipe_through [:browser, :require_authenticated_user]
 
-    live_session :require_authenticated_player,
-      on_mount: [{PokerWeb.PlayerAuth, :require_authenticated}] do
-      live "/players/settings", PlayerLive.Settings, :edit
-      live "/players/settings/confirm-email/:token", PlayerLive.Settings, :confirm_email
+    live_session :require_authenticated_user,
+      on_mount: [{PokerWeb.UserAuth, :require_authenticated}] do
+      live "/users/settings", UserLive.Settings, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end
 
-    post "/players/update-password", PlayerSessionController, :update_password
+    post "/users/update-password", UserSessionController, :update_password
     post "/tables", PageController, :create
   end
 
   scope "/", PokerWeb do
     pipe_through [:browser]
 
-    live_session :current_player,
-      on_mount: [{PokerWeb.PlayerAuth, :mount_current_scope}] do
-      live "/players/register", PlayerLive.Registration, :new
-      live "/players/log-in", PlayerLive.Login, :new
-      live "/players/log-in/:token", PlayerLive.Confirmation, :new
+    live_session :current_user,
+      on_mount: [{PokerWeb.UserAuth, :mount_current_scope}] do
+      live "/users/register", UserLive.Registration, :new
+      live "/users/log-in", UserLive.Login, :new
+      live "/users/log-in/:token", UserLive.Confirmation, :new
     end
 
-    post "/players/log-in", PlayerSessionController, :create
-    delete "/players/log-out", PlayerSessionController, :delete
+    post "/users/log-in", UserSessionController, :create
+    delete "/users/log-out", UserSessionController, :delete
   end
 end

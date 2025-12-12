@@ -1,4 +1,4 @@
-defmodule PokerWeb.PlayerLive.Login do
+defmodule PokerWeb.UserLive.Login do
   use PokerWeb, :live_view
 
   alias Poker.Accounts
@@ -16,7 +16,7 @@ defmodule PokerWeb.PlayerLive.Login do
                 You need to reauthenticate to perform sensitive actions on your account.
               <% else %>
                 Don't have an account? <.link
-                  navigate={~p"/players/register"}
+                  navigate={~p"/users/register"}
                   class="font-semibold text-brand hover:underline"
                   phx-no-format
                 >Sign up</.link> for an account now.
@@ -39,7 +39,7 @@ defmodule PokerWeb.PlayerLive.Login do
           :let={f}
           for={@form}
           id="login_form_magic"
-          action={~p"/players/log-in"}
+          action={~p"/users/log-in"}
           phx-submit="submit_magic"
         >
           <.input
@@ -62,7 +62,7 @@ defmodule PokerWeb.PlayerLive.Login do
           :let={f}
           for={@form}
           id="login_form_password"
-          action={~p"/players/log-in"}
+          action={~p"/users/log-in"}
           phx-submit="submit_password"
           phx-trigger-action={@trigger_submit}
         >
@@ -96,9 +96,9 @@ defmodule PokerWeb.PlayerLive.Login do
   def mount(_params, _session, socket) do
     email =
       Phoenix.Flash.get(socket.assigns.flash, :email) ||
-        get_in(socket.assigns, [:current_scope, Access.key(:player), Access.key(:email)])
+        get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
 
-    form = to_form(%{"email" => email}, as: "player")
+    form = to_form(%{"email" => email}, as: "user")
 
     {:ok, assign(socket, form: form, trigger_submit: false)}
   end
@@ -108,11 +108,11 @@ defmodule PokerWeb.PlayerLive.Login do
     {:noreply, assign(socket, :trigger_submit, true)}
   end
 
-  def handle_event("submit_magic", %{"player" => %{"email" => email}}, socket) do
-    if player = Accounts.get_player_by_email(email) do
+  def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do
+    if user = Accounts.get_user_by_email(email) do
       Accounts.deliver_login_instructions(
-        player,
-        &url(~p"/players/log-in/#{&1}")
+        user,
+        &url(~p"/users/log-in/#{&1}")
       )
     end
 
@@ -122,7 +122,7 @@ defmodule PokerWeb.PlayerLive.Login do
     {:noreply,
      socket
      |> put_flash(:info, info)
-     |> push_navigate(to: ~p"/players/log-in")}
+     |> push_navigate(to: ~p"/users/log-in")}
   end
 
   defp local_mail_adapter? do

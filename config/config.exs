@@ -8,16 +8,16 @@
 import Config
 
 config :poker, :scopes,
-  player: [
+  user: [
     default: true,
     module: Poker.Accounts.Scope,
     assign_key: :current_scope,
-    access_path: [:player, :id],
-    schema_key: :player_id,
+    access_path: [:user, :id],
+    schema_key: :user_id,
     schema_type: :id,
-    schema_table: :players,
+    schema_table: :users,
     test_data_fixture: Poker.AccountsFixtures,
-    test_setup_helper: :register_and_log_in_player
+    test_setup_helper: :register_and_log_in_user
   ]
 
 config :poker,

@@ -9,11 +9,11 @@ defmodule Poker.SeedFactorySchema do
     end)
   end
 
-  def aggregate_state(:player, player_id) do
+  def aggregate_state(:user, user_id) do
     Commanded.Aggregates.Aggregate.aggregate_state(
       Poker.App,
-      Poker.Accounts.Aggregates.Player,
-      "player-" <> player_id
+      Poker.Accounts.Aggregates.User,
+      "user-" <> user_id
     )
   end
 
@@ -41,11 +41,9 @@ defmodule Poker.SeedFactorySchema do
     param(:email, generate: &Faker.Internet.email/0)
 
     resolve(fn args ->
-      {:ok, player} = Poker.Accounts.register_player(%{email: args.email})
+      {:ok, user} = Poker.Accounts.register_user(%{email: args.email})
 
-      Poker.Accounts.generate_player_session_token(player) |> dbg()
-
-      {:ok, %{player: player}}
+      {:ok, %{player: user}}
     end)
 
     produce(:player)

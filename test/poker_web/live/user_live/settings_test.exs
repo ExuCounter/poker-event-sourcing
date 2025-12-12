@@ -1,4 +1,4 @@
-defmodule PokerWeb.PlayerLive.SettingsTest do
+defmodule PokerWeb.UserLive.SettingsTest do
   use PokerWeb.ConnCase, async: true
 
   alias Poker.Accounts
@@ -9,29 +9,29 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
     test "renders settings page", %{conn: conn} do
       {:ok, _lv, html} =
         conn
-        |> log_in_player(player_fixture())
-        |> live(~p"/players/settings")
+        |> log_in_user(user_fixture())
+        |> live(~p"/users/settings")
 
       assert html =~ "Change Email"
       assert html =~ "Save Password"
     end
 
-    test "redirects if player is not logged in", %{conn: conn} do
-      assert {:error, redirect} = live(conn, ~p"/players/settings")
+    test "redirects if user is not logged in", %{conn: conn} do
+      assert {:error, redirect} = live(conn, ~p"/users/settings")
 
       assert {:redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/players/log-in"
+      assert path == ~p"/users/log-in"
       assert %{"error" => "You must log in to access this page."} = flash
     end
 
-    test "redirects if player is not in sudo mode", %{conn: conn} do
+    test "redirects if user is not in sudo mode", %{conn: conn} do
       {:ok, conn} =
         conn
-        |> log_in_player(player_fixture(),
+        |> log_in_user(user_fixture(),
           token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
         )
-        |> live(~p"/players/settings")
-        |> follow_redirect(conn, ~p"/players/log-in")
+        |> live(~p"/users/settings")
+        |> follow_redirect(conn, ~p"/users/log-in")
 
       assert conn.resp_body =~ "You must re-authenticate to access this page."
     end
@@ -39,48 +39,48 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
 
   describe "update email form" do
     setup %{conn: conn} do
-      player = player_fixture()
-      %{conn: log_in_player(conn, player), player: player}
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "updates the player email", %{conn: conn, player: player} do
-      new_email = unique_player_email()
+    test "updates the user email", %{conn: conn, user: user} do
+      new_email = unique_user_email()
 
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       result =
         lv
         |> form("#email_form", %{
-          "player" => %{"email" => new_email}
+          "user" => %{"email" => new_email}
         })
         |> render_submit()
 
       assert result =~ "A link to confirm your email"
-      assert Accounts.get_player_by_email(player.email)
+      assert Accounts.get_user_by_email(user.email)
     end
 
     test "renders errors with invalid data (phx-change)", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       result =
         lv
         |> element("#email_form")
         |> render_change(%{
           "action" => "update_email",
-          "player" => %{"email" => "with spaces"}
+          "user" => %{"email" => "with spaces"}
         })
 
       assert result =~ "Change Email"
       assert result =~ "must have the @ sign and no spaces"
     end
 
-    test "renders errors with invalid data (phx-submit)", %{conn: conn, player: player} do
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+    test "renders errors with invalid data (phx-submit)", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       result =
         lv
         |> form("#email_form", %{
-          "player" => %{"email" => player.email}
+          "user" => %{"email" => user.email}
         })
         |> render_submit()
 
@@ -91,19 +91,19 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
 
   describe "update password form" do
     setup %{conn: conn} do
-      player = player_fixture()
-      %{conn: log_in_player(conn, player), player: player}
+      user = user_fixture()
+      %{conn: log_in_user(conn, user), user: user}
     end
 
-    test "updates the player password", %{conn: conn, player: player} do
-      new_password = valid_player_password()
+    test "updates the user password", %{conn: conn, user: user} do
+      new_password = valid_user_password()
 
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       form =
         form(lv, "#password_form", %{
-          "player" => %{
-            "email" => player.email,
+          "user" => %{
+            "email" => user.email,
             "password" => new_password,
             "password_confirmation" => new_password
           }
@@ -113,24 +113,24 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
 
       new_password_conn = follow_trigger_action(form, conn)
 
-      assert redirected_to(new_password_conn) == ~p"/players/settings"
+      assert redirected_to(new_password_conn) == ~p"/users/settings"
 
-      assert get_session(new_password_conn, :player_token) != get_session(conn, :player_token)
+      assert get_session(new_password_conn, :user_token) != get_session(conn, :user_token)
 
       assert Phoenix.Flash.get(new_password_conn.assigns.flash, :info) =~
                "Password updated successfully"
 
-      assert Accounts.get_player_by_email_and_password(player.email, new_password)
+      assert Accounts.get_user_by_email_and_password(user.email, new_password)
     end
 
     test "renders errors with invalid data (phx-change)", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       result =
         lv
         |> element("#password_form")
         |> render_change(%{
-          "player" => %{
+          "user" => %{
             "password" => "too short",
             "password_confirmation" => "does not match"
           }
@@ -142,12 +142,12 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
     end
 
     test "renders errors with invalid data (phx-submit)", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/players/settings")
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
       result =
         lv
         |> form("#password_form", %{
-          "player" => %{
+          "user" => %{
             "password" => "too short",
             "password_confirmation" => "does not match"
           }
@@ -162,49 +162,49 @@ defmodule PokerWeb.PlayerLive.SettingsTest do
 
   describe "confirm email" do
     setup %{conn: conn} do
-      player = player_fixture()
-      email = unique_player_email()
+      user = user_fixture()
+      email = unique_user_email()
 
       token =
-        extract_player_token(fn url ->
-          Accounts.deliver_player_update_email_instructions(%{player | email: email}, player.email, url)
+        extract_user_token(fn url ->
+          Accounts.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
         end)
 
-      %{conn: log_in_player(conn, player), token: token, email: email, player: player}
+      %{conn: log_in_user(conn, user), token: token, email: email, user: user}
     end
 
-    test "updates the player email once", %{conn: conn, player: player, token: token, email: email} do
-      {:error, redirect} = live(conn, ~p"/players/settings/confirm-email/#{token}")
+    test "updates the user email once", %{conn: conn, user: user, token: token, email: email} do
+      {:error, redirect} = live(conn, ~p"/users/settings/confirm-email/#{token}")
 
       assert {:live_redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/players/settings"
+      assert path == ~p"/users/settings"
       assert %{"info" => message} = flash
       assert message == "Email changed successfully."
-      refute Accounts.get_player_by_email(player.email)
-      assert Accounts.get_player_by_email(email)
+      refute Accounts.get_user_by_email(user.email)
+      assert Accounts.get_user_by_email(email)
 
       # use confirm token again
-      {:error, redirect} = live(conn, ~p"/players/settings/confirm-email/#{token}")
+      {:error, redirect} = live(conn, ~p"/users/settings/confirm-email/#{token}")
       assert {:live_redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/players/settings"
+      assert path == ~p"/users/settings"
       assert %{"error" => message} = flash
       assert message == "Email change link is invalid or it has expired."
     end
 
-    test "does not update email with invalid token", %{conn: conn, player: player} do
-      {:error, redirect} = live(conn, ~p"/players/settings/confirm-email/oops")
+    test "does not update email with invalid token", %{conn: conn, user: user} do
+      {:error, redirect} = live(conn, ~p"/users/settings/confirm-email/oops")
       assert {:live_redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/players/settings"
+      assert path == ~p"/users/settings"
       assert %{"error" => message} = flash
       assert message == "Email change link is invalid or it has expired."
-      assert Accounts.get_player_by_email(player.email)
+      assert Accounts.get_user_by_email(user.email)
     end
 
-    test "redirects if player is not logged in", %{token: token} do
+    test "redirects if user is not logged in", %{token: token} do
       conn = build_conn()
-      {:error, redirect} = live(conn, ~p"/players/settings/confirm-email/#{token}")
+      {:error, redirect} = live(conn, ~p"/users/settings/confirm-email/#{token}")
       assert {:redirect, %{to: path, flash: flash}} = redirect
-      assert path == ~p"/players/log-in"
+      assert path == ~p"/users/log-in"
       assert %{"error" => message} = flash
       assert message == "You must log in to access this page."
     end

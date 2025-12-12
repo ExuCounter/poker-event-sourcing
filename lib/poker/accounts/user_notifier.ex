@@ -1,8 +1,8 @@
-defmodule Poker.Accounts.PlayerNotifier do
+defmodule Poker.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Poker.Mailer
-  alias Poker.Accounts.Schemas.Player
+  alias Poker.Accounts.Schemas.User
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
@@ -19,14 +19,14 @@ defmodule Poker.Accounts.PlayerNotifier do
   end
 
   @doc """
-  Deliver instructions to update a player email.
+  Deliver instructions to update a user email.
   """
-  def deliver_update_email_instructions(player, url) do
-    deliver(player.email, "Update email instructions", """
+  def deliver_update_email_instructions(user, url) do
+    deliver(user.email, "Update email instructions", """
 
     ==============================
 
-    Hi #{player.email},
+    Hi #{user.email},
 
     You can change your email by visiting the URL below:
 
@@ -41,19 +41,19 @@ defmodule Poker.Accounts.PlayerNotifier do
   @doc """
   Deliver instructions to log in with a magic link.
   """
-  def deliver_login_instructions(player, url) do
-    case player do
-      %Player{confirmed_at: nil} -> deliver_confirmation_instructions(player, url)
-      _ -> deliver_magic_link_instructions(player, url)
+  def deliver_login_instructions(user, url) do
+    case user do
+      %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url)
+      _ -> deliver_magic_link_instructions(user, url)
     end
   end
 
-  defp deliver_magic_link_instructions(player, url) do
-    deliver(player.email, "Log in instructions", """
+  defp deliver_magic_link_instructions(user, url) do
+    deliver(user.email, "Log in instructions", """
 
     ==============================
 
-    Hi #{player.email},
+    Hi #{user.email},
 
     You can log into your account by visiting the URL below:
 
@@ -65,12 +65,12 @@ defmodule Poker.Accounts.PlayerNotifier do
     """)
   end
 
-  defp deliver_confirmation_instructions(player, url) do
-    deliver(player.email, "Confirmation instructions", """
+  defp deliver_confirmation_instructions(user, url) do
+    deliver(user.email, "Confirmation instructions", """
 
     ==============================
 
-    Hi #{player.email},
+    Hi #{user.email},
 
     You can confirm your account by visiting the URL below:
 

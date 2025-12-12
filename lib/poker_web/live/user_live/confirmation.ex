@@ -1,4 +1,4 @@
-defmodule PokerWeb.PlayerLive.Confirmation do
+defmodule PokerWeb.UserLive.Confirmation do
   use PokerWeb, :live_view
 
   alias Poker.Accounts
@@ -9,16 +9,16 @@ defmodule PokerWeb.PlayerLive.Confirmation do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <div class="mx-auto max-w-sm">
         <div class="text-center">
-          <.header>Welcome {@player.email}</.header>
+          <.header>Welcome {@user.email}</.header>
         </div>
 
         <.form
-          :if={!@player.confirmed_at}
+          :if={!@user.confirmed_at}
           for={@form}
           id="confirmation_form"
           phx-mounted={JS.focus_first()}
           phx-submit="submit"
-          action={~p"/players/log-in?_action=confirmed"}
+          action={~p"/users/log-in?_action=confirmed"}
           phx-trigger-action={@trigger_submit}
         >
           <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
@@ -36,12 +36,12 @@ defmodule PokerWeb.PlayerLive.Confirmation do
         </.form>
 
         <.form
-          :if={@player.confirmed_at}
+          :if={@user.confirmed_at}
           for={@form}
           id="login_form"
           phx-submit="submit"
           phx-mounted={JS.focus_first()}
-          action={~p"/players/log-in"}
+          action={~p"/users/log-in"}
           phx-trigger-action={@trigger_submit}
         >
           <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
@@ -64,8 +64,8 @@ defmodule PokerWeb.PlayerLive.Confirmation do
           <% end %>
         </.form>
 
-        <p :if={!@player.confirmed_at} class="alert alert-outline mt-8">
-          Tip: If you prefer passwords, you can enable them in the player settings.
+        <p :if={!@user.confirmed_at} class="alert alert-outline mt-8">
+          Tip: If you prefer passwords, you can enable them in the user settings.
         </p>
       </div>
     </Layouts.app>
@@ -74,21 +74,21 @@ defmodule PokerWeb.PlayerLive.Confirmation do
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
-    if player = Accounts.get_player_by_magic_link_token(token) do
-      form = to_form(%{"token" => token}, as: "player")
+    if user = Accounts.get_user_by_magic_link_token(token) do
+      form = to_form(%{"token" => token}, as: "user")
 
-      {:ok, assign(socket, player: player, form: form, trigger_submit: false),
+      {:ok, assign(socket, user: user, form: form, trigger_submit: false),
        temporary_assigns: [form: nil]}
     else
       {:ok,
        socket
        |> put_flash(:error, "Magic link is invalid or it has expired.")
-       |> push_navigate(to: ~p"/players/log-in")}
+       |> push_navigate(to: ~p"/users/log-in")}
     end
   end
 
   @impl true
-  def handle_event("submit", %{"player" => params}, socket) do
-    {:noreply, assign(socket, form: to_form(params, as: "player"), trigger_submit: true)}
+  def handle_event("submit", %{"user" => params}, socket) do
+    {:noreply, assign(socket, form: to_form(params, as: "user"), trigger_submit: true)}
   end
 end
