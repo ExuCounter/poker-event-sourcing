@@ -12,6 +12,7 @@ defmodule Poker.Tables.Supervisor do
       [
         Tables.Projectors.TableList,
         Tables.Projectors.TableLobby,
+        Tables.Projectors.TableState,
         # Tables.Projectors.Settings,
         # Tables.Projectors.Participant,
         # Tables.Projectors.Hand,

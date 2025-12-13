@@ -2,7 +2,8 @@ defmodule Poker.Tables.Projectors.TableList do
   use Commanded.Projections.Ecto,
     application: Poker.App,
     repo: Poker.Repo,
-    name: __MODULE__
+    name: __MODULE__,
+    consistency: :strong
 
   alias Poker.Tables.Events.{
     TableCreated,
@@ -29,19 +30,45 @@ defmodule Poker.Tables.Projectors.TableList do
     })
   end)
 
-  project(%TableStarted{id: id, status: status}, fn multi ->
-    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
+  project(%TableStarted{id: table_id, status: status}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(table_id), set: [status: status])
   end)
 
-  project(%ParticipantJoined{table_id: id}, fn multi ->
-    Ecto.Multi.update_all(multi, :table, table_query(id), inc: [seated_count: 1])
+  project(%ParticipantJoined{table_id: table_id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(table_id), inc: [seated_count: 1])
   end)
 
-  project(%ParticipantBusted{table_id: id}, fn multi ->
-    Ecto.Multi.update_all(multi, :table, table_query(id), set: [seated_count: -1])
+  project(%ParticipantBusted{table_id: table_id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(table_id), inc: [seated_count: -1])
   end)
 
-  project(%TableFinished{table_id: id}, fn multi ->
-    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
+  project(%TableFinished{table_id: table_id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(table_id), set: [status: :finished])
   end)
+
+  @impl Commanded.Projections.Ecto
+  def after_update(%TableCreated{id: table_id}, _metadata, _changes) do
+    broadcast_table_list(table_id, :table_created)
+  end
+
+  def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
+    broadcast_table_list(table_id, :table_started)
+  end
+
+  def after_update(%ParticipantJoined{table_id: table_id}, _metadata, _changes) do
+    broadcast_table_list(table_id, :participant_joined)
+  end
+
+  def after_update(%ParticipantBusted{table_id: table_id}, _metadata, _changes) do
+    broadcast_table_list(table_id, :participant_busted)
+  end
+
+  def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
+    broadcast_table_list(table_id, :table_finished)
+  end
+
+  defp broadcast_table_list(table_id, event) do
+    Phoenix.PubSub.broadcast(Poker.PubSub, "table_list", {:table_list_updated, table_id, event})
+    :ok
+  end
 end

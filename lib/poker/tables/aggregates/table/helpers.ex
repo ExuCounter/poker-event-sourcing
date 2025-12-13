@@ -29,7 +29,10 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     find_participant_by_seat(table.participants, seat_number)
   end
 
-  def find_participant_to_act(%{participants: participants, round: %{participant_to_act_id: participant_to_act_id}}) do
+  def find_participant_to_act(%{
+        participants: participants,
+        round: %{participant_to_act_id: participant_to_act_id}
+      }) do
     find_participant_by_id(participants, participant_to_act_id)
   end
 
@@ -47,7 +50,9 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     if is_nil(table.dealer_button_id) do
       hd(table.participants)
     else
-      dealer_button_participant = find_participant_by_id(table.participants, table.dealer_button_id)
+      dealer_button_participant =
+        find_participant_by_id(table.participants, table.dealer_button_id)
+
       seat_number = next_seat(dealer_button_participant.seat_number, length(table.participants))
 
       find_participant_by_seat(table.participants, seat_number)

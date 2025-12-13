@@ -50,17 +50,14 @@ defmodule Poker.Tables do
     end
   end
 
-  def start_table(table) do
-    hand_id = Ecto.UUID.generate()
-
+  def start_table(table_id) do
     command_attrs = %{
-      table_id: table.id,
-      hand_id: hand_id
+      table_id: table_id
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &StartTable.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      {:ok, hand_id}
+      {:ok, :table_started}
     end
   end
 
@@ -116,6 +113,25 @@ defmodule Poker.Tables do
 
   def get_lobby(table_id) do
     Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
+  end
+
+  def get_table_state(table_id, current_user_id) do
+    with {:ok, table_state} <- Poker.Repo.get(Poker.Tables.Projections.TableState, table_id) do
+      # filtered_hands =
+      #   Enum.map(state.participant_hands, fn hand ->
+      #     participant =
+      #       Enum.find(lobby.participants, &(&1.player_id == hand.participant_id))
+
+      #     if participant && participant.player_id == current_user_id do
+      #       hand
+      #     else
+      #       %{hand | hole_cards: []}
+      #     end
+      #   end)
+
+      # %{state | participant_hands: filtered_hands}
+      {:ok, table_state}
+    end
   end
 
   def list_tables() do

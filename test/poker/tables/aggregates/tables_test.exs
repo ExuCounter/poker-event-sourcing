@@ -113,7 +113,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       ctx = ctx |> exec(:create_table, type: :six_max)
 
       assert {:error, :not_enough_participants} =
-               Poker.Tables.start_table(ctx.table)
+               Poker.Tables.start_table(ctx.table.id)
     end
   end
 

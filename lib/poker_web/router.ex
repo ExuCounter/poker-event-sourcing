@@ -48,15 +48,14 @@ defmodule PokerWeb.Router do
       on_mount: [{PokerWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/", PlayerLive.Dashboard, :render
+      live "/tables/:id/lobby", PlayerLive.Lobby, :show
+      live "/tables/:id/game", PlayerLive.Game, :play
     end
 
-    get "/", PageController, :dashboard
     post "/users/update-password", UserSessionController, :update_password
-    get "/tables/:id/lobby", PageController, :lobby
 
-    resources "/tables", TableController, only: [:create] do
-      resources "/participants", ParticipantController, only: [:create]
-    end
+    resources "/tables/participants", ParticipantController, only: [:create]
   end
 
   scope "/", PokerWeb do

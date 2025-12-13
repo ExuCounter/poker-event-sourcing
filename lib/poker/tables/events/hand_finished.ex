@@ -24,7 +24,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.HandFinish
             if is_nil(payout.hand_rank) do
               nil
             else
-              payout.hand_rank |> Enum.map(&String.to_existing_atom(&1))
+              payout.hand_rank
             end
 
           %{payout | hand_rank: hand_rank}
