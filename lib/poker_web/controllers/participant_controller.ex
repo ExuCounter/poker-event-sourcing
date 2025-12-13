@@ -7,12 +7,12 @@ defmodule PokerWeb.ParticipantController do
       {:ok, _data} ->
         redirect(conn, to: ~p"/tables/#{table_id}/lobby")
 
-      {:error, reason} ->
+      {:error, %{message: message} = reason} ->
         Logger.error("Failed to join table: #{inspect(reason)}")
 
         conn
-        |> put_flash(:error, "Failed to join table")
-        |> redirect(to: ~p"/")
+        |> put_flash(:error, message)
+        |> redirect(to: ~p"/tables/#{table_id}/lobby")
     end
   end
 end

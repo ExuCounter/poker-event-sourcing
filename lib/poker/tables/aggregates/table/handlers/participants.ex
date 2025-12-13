@@ -7,6 +7,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   alias Poker.Tables.Commands.{JoinTableParticipant, SitOutParticipant, SitInParticipant}
   alias Poker.Tables.Events.{ParticipantJoined, ParticipantSatOut, ParticipantSatIn}
 
+  @max_players %{
+    six_max: 6
+  }
+
   @doc """
   Handles participant commands.
   """
@@ -14,12 +18,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     do: {:error, :table_already_started}
 
   def handle(table, %JoinTableParticipant{} = command) do
-    max_players =
-      case table.settings.table_type do
-        :six_max -> 6
-      end
+    max_players = Map.fetch!(@max_players, table.settings.table_type)
 
-    if length(table.participants) < max_players do
+    with :ok <- validate_not_already_joined(table.participants, command.player_id),
+         :ok <- validate_seat_available(table.participants, max_players) do
       seat_number = length(table.participants) + 1
 
       initial_chips =
@@ -39,8 +41,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         is_sitting_out: false,
         status: :active
       }
-    else
-      {:error, :table_full}
     end
   end
 
@@ -76,5 +76,17 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         }
       end
     end
+  end
+
+  defp validate_not_already_joined(participants, player_id) do
+    if Enum.any?(participants, &(&1.player_id == player_id)),
+      do: {:error, %{status: :unprocessable_entity, message: "Already joined to the table"}},
+      else: :ok
+  end
+
+  defp validate_seat_available(participants, max_players) do
+    if length(participants) < max_players,
+      do: :ok,
+      else: {:error, :table_full}
   end
 end
