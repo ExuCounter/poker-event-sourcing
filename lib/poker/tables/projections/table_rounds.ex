@@ -6,7 +6,7 @@ defmodule Poker.Tables.Projections.TableRounds do
     belongs_to :hand, Poker.Tables.Projections.TableHands, type: :binary_id
     belongs_to :participant_to_act, Poker.Tables.Projections.TableParticipants, type: :binary_id
 
-    field :round_type, Ecto.Enum, values: [:preflop, :flop, :turn, :river]
+    field :round_type, Ecto.Enum, values: [:pre_flop, :flop, :turn, :river]
     field :community_cards, {:array, Poker.Ecto.Card}
 
     timestamps()

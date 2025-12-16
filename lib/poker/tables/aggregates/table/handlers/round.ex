@@ -62,7 +62,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
       },
       %ParticipantToActSelected{
         table_id: table.id,
-        hand_id: command.hand_id,
+        round_id: command.round_id,
         participant_id: participant_to_act.id
       }
     ]

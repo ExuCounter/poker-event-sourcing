@@ -5,33 +5,40 @@ defmodule Poker.Tables.Projectors.Table do
     name: __MODULE__,
     consistency: :strong
 
-  alias Poker.Tables.Events.{
-    HandStarted,
-    HandFinished,
-    ParticipantHandGiven,
-    RoundStarted,
-    ParticipantActedInHand,
-    ParticipantToActSelected,
-    PotsRecalculated,
-    TableStarted,
-    RoundStarted
-  }
+  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished}
+  alias Poker.Tables.Projections.Table
 
-  # alias Poker.Tables.Projections.{Table, TableLobby}
+  import Ecto.Query
 
-  # import Ecto.Query
+  def table_query(id), do: from(t in Table, where: t.id == ^id)
 
-  # def table_state_query(table_id), do: from(t in TableState, where: t.id == ^table_id)
+  project(%TableCreated{id: id, status: status}, fn multi ->
+    Ecto.Multi.insert(multi, :table, %Table{id: id, status: status})
+  end)
 
-  # project(%TableStarted{id: table_id}, fn multi ->
-  #   Ecto.Multi.insert(multi, :table_state, %TableState{id: table_id})
-  # end)
+  project(%TableStarted{id: id, status: status}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
+  end)
 
-  # project(%HandStarted{id: hand_id, table_id: table_id}, fn multi ->
-  #   Ecto.Multi.update_all(multi, :table, table_state_query(table_id), set: [hand_id: hand_id])
-  # end)
+  project(%TableFinished{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
+  end)
 
-  # project(%RoundStarted{table_id: table_id, type: type}, fn multi ->
-  #   Ecto.Multi.update_all(multi, :table, table_state_query(table_id), set: [round_type: type])
-  # end)
+  @impl Commanded.Projections.Ecto
+  def after_update(%TableCreated{id: table_id}, _metadata, _changes) do
+    broadcast_table(table_id, :table_created)
+  end
+
+  def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
+    broadcast_table(table_id, :table_started)
+  end
+
+  def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
+    broadcast_table(table_id, :table_finished)
+  end
+
+  defp broadcast_table(table_id, event) do
+    Phoenix.PubSub.broadcast(Poker.PubSub, "table:#{table_id}", {:table_updated, event})
+    :ok
+  end
 end

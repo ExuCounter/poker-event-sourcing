@@ -3,11 +3,13 @@ defmodule Poker.Ecto.Card do
 
   def type, do: :map
 
-  def cast(%{rank: rank, suit: suit} = card) when is_binary(rank) and is_binary(suit) do
+  def cast(%{rank: rank, suit: suit} = card)
+      when (is_binary(rank) or is_integer(rank)) and is_binary(suit) do
     {:ok, card}
   end
 
-  def cast(%{"rank" => rank, "suit" => suit}) when is_binary(rank) and is_binary(suit) do
+  def cast(%{"rank" => rank, "suit" => suit})
+      when (is_binary(rank) or is_integer(rank)) and is_binary(suit) do
     {:ok, %{rank: rank, suit: suit}}
   end
 
@@ -19,6 +21,10 @@ defmodule Poker.Ecto.Card do
        rank: data["rank"],
        suit: data["suit"]
      }}
+  end
+
+  def dump(%{rank: rank, suit: suit}) when is_integer(rank) and is_binary(suit) do
+    {:ok, %{"rank" => Integer.to_string(rank), "suit" => suit}}
   end
 
   def dump(%{rank: rank, suit: suit}) when is_binary(rank) and is_binary(suit) do

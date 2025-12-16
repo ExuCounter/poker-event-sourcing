@@ -45,7 +45,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
 
       %ParticipantToActSelected{
         table_id: table.id,
-        hand_id: table_hand_id,
+        round_id: round_id,
         participant_id: next_participant.id
       }
     end)
@@ -93,6 +93,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
         id: command.hand_action_id,
         participant_id: command.participant_id,
         table_hand_id: table.hand.id,
+        table_id: table.id,
         action: command.action,
         amount: raise_amount,
         round: table.round.type
@@ -119,6 +120,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
         id: command.hand_action_id,
         participant_id: command.participant_id,
         table_hand_id: table.hand.id,
+        table_id: table.id,
         action: command.action,
         amount: call_amount,
         round: table.round.type
@@ -133,6 +135,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
       id: command.hand_action_id,
       participant_id: command.participant_id,
       table_hand_id: table.hand.id,
+      table_id: table.id,
       action: command.action,
       amount: participant.chips,
       round: table.round.type
@@ -145,6 +148,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
       participant_id: command.participant_id,
       table_hand_id: table.hand.id,
       action: command.action,
+      table_id: table.id,
       amount: 0,
       round: table.round.type
     }

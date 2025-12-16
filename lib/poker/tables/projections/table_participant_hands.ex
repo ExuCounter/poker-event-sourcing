@@ -7,8 +7,11 @@ defmodule Poker.Tables.Projections.TableParticipantHands do
     belongs_to :participant, Poker.Tables.Projections.TableParticipants, type: :binary_id
 
     field :hole_cards, {:array, Poker.Ecto.Card}
-    field :position, Ecto.Enum, values: [:dealer, :small_blind, :big_blind, :utg, :utg_plus_one, :cutoff]
-    field :status, Ecto.Enum, values: [:active, :folded, :all_in]
+
+    field :position, Ecto.Enum,
+      values: [:dealer, :small_blind, :big_blind, :utg, :hijack, :cutoff]
+
+    field :status, Ecto.Enum, values: [:playing, :folded, :all_in]
 
     timestamps()
   end

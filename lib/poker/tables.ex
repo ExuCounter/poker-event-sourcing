@@ -115,6 +115,14 @@ defmodule Poker.Tables do
     Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
   end
 
+  def get_table(table_id) do
+    with {:ok, table} <- Poker.Repo.get_by(Poker.Tables.Projections.Table, table_id: table_id) do
+      table = table |> Poker.Repo.preload([:participants, hands: [:rounds]])
+
+      {:ok, table}
+    end
+  end
+
   def get_table_state(table_id, current_user_id) do
     with {:ok, table_state} <- Poker.Repo.get(Poker.Tables.Projections.TableState, table_id) do
       # filtered_hands =

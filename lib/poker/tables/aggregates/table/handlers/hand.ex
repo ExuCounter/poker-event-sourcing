@@ -154,7 +154,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
       %ParticipantToActSelected{
         table_id: table.id,
-        hand_id: hand_id,
+        round_id: table.round.id,
         participant_id: participant_to_act.id
       }
     end)
@@ -183,6 +183,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           acc ++
             [
               %{
+                pot_id: pot.id,
                 participant_id: active_participant_hand.participant_id,
                 amount: pot.amount,
                 hand_rank: nil
@@ -236,6 +237,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
             Enum.map(
               winners,
               &%{
+                pot_id: pot.id,
                 participant_id: &1.participant_id,
                 amount: pot.amount,
                 hand_rank: &1.hand_rank

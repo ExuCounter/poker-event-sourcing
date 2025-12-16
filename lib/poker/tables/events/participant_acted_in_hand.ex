@@ -4,6 +4,7 @@ defmodule Poker.Tables.Events.ParticipantActedInHand do
              :id,
              :participant_id,
              :table_hand_id,
+             :table_id,
              :action,
              :amount,
              :round
@@ -12,6 +13,7 @@ defmodule Poker.Tables.Events.ParticipantActedInHand do
     :id,
     :participant_id,
     :table_hand_id,
+    :table_id,
     :action,
     :amount,
     :round

@@ -3,12 +3,12 @@ defmodule Poker.Repo.Migrations.CreateTableState do
 
   def change do
     execute(
-      "CREATE TYPE participant_position AS ENUM ('dealer', 'small_blind', 'big_blind', 'utg', 'utg_plus_one', 'cutoff')",
+      "CREATE TYPE participant_position AS ENUM ('dealer', 'small_blind', 'big_blind', 'utg', 'hijack', 'cutoff')",
       "DROP TYPE participant_position"
     )
 
     execute(
-      "CREATE TYPE participant_hand_status AS ENUM ('active', 'folded', 'all_in')",
+      "CREATE TYPE participant_hand_status AS ENUM ('playing', 'folded', 'all_in')",
       "DROP TYPE participant_hand_status"
     )
 
@@ -18,7 +18,7 @@ defmodule Poker.Repo.Migrations.CreateTableState do
     )
 
     execute(
-      "CREATE TYPE round_type AS ENUM ('preflop', 'flop', 'turn', 'river')",
+      "CREATE TYPE round_type AS ENUM ('pre_flop', 'flop', 'turn', 'river')",
       "DROP TYPE round_type"
     )
 
@@ -62,7 +62,7 @@ defmodule Poker.Repo.Migrations.CreateTableState do
       add :hand_id, references(:table_hands, type: :uuid), null: false
       add :round_type, :round_type
       add :participant_to_act_id, references(:table_participants, type: :uuid)
-      add :community_cards, {:array, :string}, default: []
+      add :community_cards, {:array, :map}, default: []
 
       timestamps()
     end
@@ -73,7 +73,7 @@ defmodule Poker.Repo.Migrations.CreateTableState do
       add :id, :uuid, primary_key: true
       add :hand_id, references(:table_hands, type: :uuid), null: false
       add :participant_id, references(:table_participants, type: :uuid), null: false
-      add :hole_cards, {:array, :string}, default: []
+      add :hole_cards, {:array, :map}, default: []
       add :position, :participant_position
       add :status, :participant_hand_status
 

@@ -31,6 +31,7 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
       pots ++
         [
           %{
+            id: Ecto.UUID.generate(),
             bet_amount: bet_amount,
             amount: pot_amount,
             contributing_participant_ids:
