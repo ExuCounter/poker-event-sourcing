@@ -147,7 +147,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
 
             <%= if @lobby.status == :live do %>
               <.link navigate={~p"/tables/#{@lobby.id}/game"}>
-                <.button >
+                <.button>
                   Play the game
                 </.button>
               </.link>

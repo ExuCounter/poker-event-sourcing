@@ -83,7 +83,9 @@ config :logger, :default_formatter,
 config :phoenix, :json_library, Jason
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Implementation
-config :poker, Poker.Services.HandEvaluator, dispatcher: Poker.Services.HandEvaluator.Implementation
+
+config :poker, Poker.Services.HandEvaluator,
+  dispatcher: Poker.Services.HandEvaluator.Implementation
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

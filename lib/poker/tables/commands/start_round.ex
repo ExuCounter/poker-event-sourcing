@@ -12,6 +12,12 @@ defmodule Poker.Tables.Commands.StartRound do
   def changeset(attrs) do
     %__MODULE__{}
     |> Ecto.Changeset.cast(attrs, [:round_id, :table_id, :hand_id, :round, :community_cards])
-    |> Ecto.Changeset.validate_required([:round_id, :table_id, :hand_id, :round, :community_cards])
+    |> Ecto.Changeset.validate_required([
+      :round_id,
+      :table_id,
+      :hand_id,
+      :round,
+      :community_cards
+    ])
   end
 end

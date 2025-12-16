@@ -6,7 +6,10 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Round do
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Events.{RoundStarted, RoundCompleted}
 
-  def apply(%Table{participant_hands: participant_hands, community_cards: community_cards} = table, %RoundStarted{} = event) do
+  def apply(
+        %Table{participant_hands: participant_hands, community_cards: community_cards} = table,
+        %RoundStarted{} = event
+      ) do
     round = %{
       id: event.id,
       type: event.type,

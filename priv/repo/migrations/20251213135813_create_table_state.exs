@@ -13,22 +13,98 @@ defmodule Poker.Repo.Migrations.CreateTableState do
     )
 
     execute(
+      "CREATE TYPE participant_status AS ENUM ('active', 'busted')",
+      "DROP TYPE participant_status"
+    )
+
+    execute(
       "CREATE TYPE round_type AS ENUM ('preflop', 'flop', 'turn', 'river')",
       "DROP TYPE round_type"
     )
 
-    create table(:table_state, primary_key: false) do
-      add :id, :uuid, null: false
-      add :hand_id, :uuid
-      add :round_type, :round_type
-      add :community_cards, {:array, :string}, default: []
-      add :participant_to_act_id, :uuid
-      add :pots, :jsonb, default: "[]"
-      add :participant_hands, :jsonb, default: "[]"
+    execute(
+      "CREATE TYPE table_hand_status AS ENUM ('active', 'finished')",
+      "DROP TYPE table_hand_status"
+    )
+
+    create table(:tables, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :status, :table_status
 
       timestamps()
     end
 
-    create index(:table_state, [:id], unique: true)
+    create table(:table_participants, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :table_id, references(:tables, type: :uuid), null: false
+      add :player_id, references(:users, type: :uuid), null: false
+      add :chips, :integer
+      add :status, :participant_status
+      add :is_sitting_out, :boolean, default: false
+
+      timestamps()
+    end
+
+    create index(:table_participants, [:table_id])
+
+    create table(:table_hands, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :table_id, references(:tables, type: :uuid), null: false
+      add :status, :table_hand_status
+
+      timestamps()
+    end
+
+    create index(:table_hands, [:table_id])
+
+    create table(:table_rounds, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :hand_id, references(:table_hands, type: :uuid), null: false
+      add :round_type, :round_type
+      add :participant_to_act_id, references(:table_participants, type: :uuid)
+      add :community_cards, {:array, :string}, default: []
+
+      timestamps()
+    end
+
+    create index(:table_rounds, [:hand_id])
+
+    create table(:table_participant_hands, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :hand_id, references(:table_hands, type: :uuid), null: false
+      add :participant_id, references(:table_participants, type: :uuid), null: false
+      add :hole_cards, {:array, :string}, default: []
+      add :position, :participant_position
+      add :status, :participant_hand_status
+
+      timestamps()
+    end
+
+    create index(:table_participant_hands, [:hand_id])
+    create index(:table_participant_hands, [:participant_id])
+    create unique_index(:table_participant_hands, [:hand_id, :participant_id])
+
+    create table(:table_pots, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :hand_id, references(:table_hands, type: :uuid), null: false
+      add :amount, :integer, default: 0
+
+      timestamps()
+    end
+
+    create index(:table_pots, [:hand_id])
+
+    create table(:table_pot_winners, primary_key: false) do
+      add :id, :uuid, primary_key: true
+      add :hand_id, references(:table_hands, type: :uuid), null: false
+      add :pot_id, references(:table_pots, type: :uuid), null: false
+      add :participant_id, references(:table_participants, type: :uuid), null: false
+      add :amount, :integer
+
+      timestamps()
+    end
+
+    create index(:table_pot_winners, [:hand_id])
+    create index(:table_pot_winners, [:pot_id])
   end
 end

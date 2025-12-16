@@ -50,6 +50,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
       %RoundStarted{
         id: command.round_id,
         hand_id: command.hand_id,
+        table_id: table.id,
         type: command.round,
         last_bet_amount: 0,
         community_cards: community_cards

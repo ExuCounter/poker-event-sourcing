@@ -85,6 +85,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       %RoundStarted{
         id: Ecto.UUID.generate(),
         hand_id: hand_id,
+        table_id: table.id,
         type: :pre_flop,
         last_bet_amount: table.settings.big_blind,
         community_cards: []

@@ -45,8 +45,7 @@ defmodule Poker.Accounts.Schemas.UserToken do
     token = :crypto.strong_rand_bytes(@rand_size)
     dt = user.authenticated_at || DateTime.utc_now(:second)
 
-    {token,
-     %UserToken{token: token, context: "session", user_id: user.id, authenticated_at: dt}}
+    {token, %UserToken{token: token, context: "session", user_id: user.id, authenticated_at: dt}}
   end
 
   @doc """

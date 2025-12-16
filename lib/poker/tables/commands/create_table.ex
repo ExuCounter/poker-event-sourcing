@@ -12,7 +12,12 @@ defmodule Poker.Tables.Commands.CreateTable do
   def changeset(attrs) do
     %__MODULE__{}
     |> Ecto.Changeset.cast(attrs, [:table_id, :creator_id, :creator_participant_id, :settings_id])
-    |> Ecto.Changeset.validate_required([:table_id, :creator_id, :creator_participant_id, :settings_id])
+    |> Ecto.Changeset.validate_required([
+      :table_id,
+      :creator_id,
+      :creator_participant_id,
+      :settings_id
+    ])
     |> Ecto.Changeset.cast_embed(:settings, required: true)
   end
 end
