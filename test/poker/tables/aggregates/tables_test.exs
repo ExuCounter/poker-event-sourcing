@@ -1,17 +1,6 @@
 defmodule Poker.Accounts.Aggregates.TablesTest do
-  use Poker.DataCase, async: false
-
-  setup do
-    Mox.set_mox_global()
-  end
-
-  def aggregate_table(table_id) do
-    Commanded.Aggregates.Aggregate.aggregate_state(
-      Poker.App,
-      Poker.Tables.Aggregates.Table,
-      "table-" <> table_id
-    )
-  end
+  use Poker.DataCase
+  import Poker.DeckFixtures
 
   describe "create table aggregate" do
     test "should have not_started status when created", ctx do
@@ -389,6 +378,44 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
         Poker.Tables.Events.HandStarted,
         fn _event -> :ok end
       )
+    end
+
+    test "new hand should have no old data", ctx do
+      ctx = ctx |> exec(:start_table)
+
+      previous_table = ctx.table
+
+      ctx = ctx |> exec(:fold_hand)
+
+      assert ctx.table.hand.id != previous_table.hand.id
+      assert ctx.table.community_cards == []
+      assert ctx.table.pots != previous_table.pots
+      assert ctx.table.round.type == :pre_flop
+    end
+
+    test "raise re-reraise re-reraise call should keep the same round", ctx do
+      ctx = ctx |> exec(:start_table)
+
+      ctx = ctx |> exec(:raise_hand, amount: 100)
+      ctx = ctx |> exec(:raise_hand, amount: 100)
+      ctx = ctx |> exec(:raise_hand, amount: 100)
+
+      assert ctx.table.round.type == :pre_flop
+
+      ctx = ctx |> exec(:call_hand)
+
+      assert ctx.table.round.type == :flop
+    end
+
+    test "all-in should start runout and finish the game", ctx do
+      ctx = ctx |> setup_winning_hand() |> exec(:start_table)
+
+      prev_hand_id = ctx.table.hand.id
+
+      ctx = ctx |> exec(:all_in_hand)
+      ctx = ctx |> exec(:all_in_hand)
+
+      assert ctx.table.status == :finished
     end
   end
 end

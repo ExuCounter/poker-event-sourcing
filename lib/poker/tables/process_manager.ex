@@ -45,20 +45,33 @@ defmodule Poker.Tables.ProcessManager do
         %RoundCompleted{} = event
       ) do
     round_type = event.type |> String.to_existing_atom()
+    reason = event.reason |> String.to_existing_atom()
 
-    if round_type == :river do
-      struct(FinishHand, %{
-        table_id: event.table_id,
-        hand_id: event.hand_id,
-        finish_reason: :showdown
-      })
-    else
-      struct(StartRound, %{
-        round_id: Ecto.UUID.generate(),
-        round: next_round(round_type),
-        table_id: event.table_id,
-        hand_id: event.hand_id
-      })
+    cond do
+      # If all players folded except one, finish the hand immediately
+      reason == :all_folded ->
+        struct(FinishHand, %{
+          table_id: event.table_id,
+          hand_id: event.hand_id,
+          finish_reason: :all_folded
+        })
+
+      # If river round completed and all acted, go to showdown
+      round_type == :river and reason == :all_acted ->
+        struct(FinishHand, %{
+          table_id: event.table_id,
+          hand_id: event.hand_id,
+          finish_reason: :showdown
+        })
+
+      # Otherwise, start next round
+      reason == :all_acted ->
+        struct(StartRound, %{
+          round_id: Ecto.UUID.generate(),
+          round: next_round(round_type),
+          table_id: event.table_id,
+          hand_id: event.hand_id
+        })
     end
   end
 

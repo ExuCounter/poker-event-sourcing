@@ -1,12 +1,11 @@
-defmodule Poker.Tables.Events.ParticipantActedInHand do
+defmodule Poker.Tables.Events.ParticipantFolded do
   @derive {Jason.Encoder,
            only: [
              :id,
              :participant_id,
              :table_hand_id,
              :table_id,
-             :action,
-             :amount,
+             :status,
              :round
            ]}
   defstruct [
@@ -14,8 +13,7 @@ defmodule Poker.Tables.Events.ParticipantActedInHand do
     :participant_id,
     :table_hand_id,
     :table_id,
-    :action,
-    :amount,
+    :status,
     :round
   ]
 end

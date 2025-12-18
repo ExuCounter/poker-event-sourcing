@@ -12,6 +12,7 @@ defmodule Poker.Tables.Projections.TableParticipantHands do
       values: [:dealer, :small_blind, :big_blind, :utg, :hijack, :cutoff]
 
     field :status, Ecto.Enum, values: [:playing, :folded, :all_in]
+    field :bet_this_round, :integer
 
     timestamps()
   end

@@ -76,6 +76,7 @@ defmodule Poker.Repo.Migrations.CreateTableState do
       add :hole_cards, {:array, :map}, default: []
       add :position, :participant_position
       add :status, :participant_hand_status
+      add :bet_this_round, :integer
 
       timestamps()
     end
@@ -97,7 +98,7 @@ defmodule Poker.Repo.Migrations.CreateTableState do
     create table(:table_pot_winners, primary_key: false) do
       add :id, :uuid, primary_key: true
       add :hand_id, references(:table_hands, type: :uuid), null: false
-      add :pot_id, references(:table_pots, type: :uuid), null: false
+      add :pot_id, references(:table_pots, type: :uuid, on_delete: :delete_all), null: false
       add :participant_id, references(:table_participants, type: :uuid), null: false
       add :amount, :integer
 

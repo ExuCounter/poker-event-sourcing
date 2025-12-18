@@ -61,7 +61,11 @@ defmodule PokerWeb.PlayerLive.Lobby do
   end
 
   @impl true
-  def handle_info(:lobby_updated, socket) do
+  def handle_info({:table_lobby, :table_started, %{table_id: table_id}}, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/tables/#{table_id}/game")}
+  end
+
+  def handle_info({:table_lobby, _event, _data}, socket) do
     lobby = Tables.get_lobby(socket.assigns.table_id)
     {:noreply, assign(socket, lobby: lobby)}
   end

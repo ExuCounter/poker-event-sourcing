@@ -1,5 +1,5 @@
 defmodule Poker.Tables.Aggregates.PotTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   alias Poker.Tables.Aggregates.Table.Pot
 

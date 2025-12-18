@@ -34,7 +34,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.HandFinish
     %Poker.Tables.Events.HandFinished{
       event
       | payouts: payouts,
-        finish_reason: String.to_existing_atom(event.finish_reason)
+        finish_reason: String.to_atom(event.finish_reason)
     }
   end
 end

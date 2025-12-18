@@ -1,16 +1,11 @@
 defmodule Poker.Tables.Projectors.TableParticipantsTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TableParticipants
   import Poker.DeckFixtures
-
-  setup do
-    Mox.set_mox_global()
-  end
+  require Logger
 
   setup ctx do
-    ctx = ctx |> produce(:table)
-
-    ctx
+    ctx |> produce(:table)
   end
 
   describe "ParticipantJoined event" do
@@ -19,7 +14,8 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       [participant] = ctx.table.participants
 
-      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id}}
+      assert_receive {:table, :participant_joined,
+                      %{table_id: _table_id, participant_id: participant_id}}
 
       assert participant_id == participant.id
 
@@ -38,9 +34,14 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       [participant1, participant2, participant3] = ctx.table.participants
 
-      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_1}}
-      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_2}}
-      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_3}}
+      assert_receive {:table, :participant_joined,
+                      %{table_id: _table_id, participant_id: participant_id_1}}
+
+      assert_receive {:table, :participant_joined,
+                      %{table_id: _table_id, participant_id: participant_id_2}}
+
+      assert_receive {:table, :participant_joined,
+                      %{table_id: _table_id, participant_id: participant_id_3}}
 
       assert participant_id_1 == participant1.id
       assert participant_id_2 == participant2.id
@@ -50,6 +51,48 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       assert length(participants) == 3
     end
+  end
+
+  test "Payouts are distributed correctly", ctx do
+    ctx =
+      ctx
+      |> exec(:add_participants, generate_players: 2)
+      |> setup_winning_hand()
+
+    [initial_participant1, initial_participant2] =
+      Enum.map(ctx.table.participants, fn participant ->
+        Poker.Repo.get!(TableParticipants, participant.id)
+      end)
+
+    ctx = ctx |> exec(:start_table)
+
+    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+
+    ctx =
+      ctx
+      |> exec(:raise_hand, amount: 500)
+
+    assert_receive {:table, :participant_raised, _data}
+
+    ctx =
+      ctx
+      |> exec(:call_hand)
+
+    assert_receive {:table, :participant_called, _data}
+
+    ctx =
+      ctx
+      |> exec(:advance_round)
+      |> exec(:advance_round)
+      |> exec(:advance_round)
+
+    [participant1, participant2] =
+      Enum.map(ctx.table.participants, fn participant ->
+        Poker.Repo.get!(TableParticipants, participant.id)
+      end)
+
+    assert participant1.chips == initial_participant1.chips + 500 - ctx.table.settings.big_blind
+    assert participant2.chips == initial_participant2.chips - 500 - ctx.table.settings.small_blind
   end
 
   # describe "ParticipantSatOut event" do
@@ -98,8 +141,11 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       [_participant1, participant2, participant3] = ctx.table.participants
 
-      assert_receive {:table, :participant_busted, %{table_id: _table_id, participant_id: participant_id_2}}
-      assert_receive {:table, :participant_busted, %{table_id: _table_id, participant_id: participant_id_3}}
+      assert_receive {:table, :participant_busted,
+                      %{table_id: _table_id, participant_id: participant_id_2}}
+
+      assert_receive {:table, :participant_busted,
+                      %{table_id: _table_id, participant_id: participant_id_3}}
 
       assert participant_id_2 == participant2.id
       assert participant_id_3 == participant3.id
@@ -128,7 +174,8 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       ctx = ctx |> exec(:start_runout)
 
-      assert_receive {:table, :payouts_distributed, %{table_id: _table_id, hand_id: _hand_id, payouts: payouts}}
+      assert_receive {:table, :payouts_distributed,
+                      %{table_id: _table_id, hand_id: _hand_id, payouts: payouts}}
 
       assert length(payouts) > 0
 

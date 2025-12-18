@@ -31,6 +31,7 @@ defmodule Poker.DataCase do
 
       use SeedFactory.Test, schema: Poker.SeedFactorySchema
 
+      setup :set_mox_from_context
       setup :verify_on_exit!
     end
   end

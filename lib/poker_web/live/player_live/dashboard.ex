@@ -32,7 +32,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   end
 
   @impl true
-  def handle_info(:tables_updated, socket) do
+  def handle_info({:table_list, _event, _data}, socket) do
     {:noreply, assign(socket, tables_list: Tables.list_tables())}
   end
 

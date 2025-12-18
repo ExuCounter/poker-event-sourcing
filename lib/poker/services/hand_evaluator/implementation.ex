@@ -23,6 +23,8 @@ defmodule Poker.Services.HandEvaluator.Implementation do
       end)
       |> Enum.sort_by(& &1.hand_value, :desc)
 
+    dbg(participant_hands)
+
     max_value = values |> hd() |> Map.get(:hand_value)
 
     values

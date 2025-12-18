@@ -234,6 +234,11 @@ defmodule Poker.Comparison do
   defp card_value(:Q), do: 12
   defp card_value(:J), do: 11
   defp card_value(:T), do: 10
+  defp card_value("A"), do: 14
+  defp card_value("K"), do: 13
+  defp card_value("Q"), do: 12
+  defp card_value("J"), do: 11
+  defp card_value("T"), do: 10
   defp card_value(i) when is_integer(i) and i >= 2 and i <= 9, do: i
 
   @doc """

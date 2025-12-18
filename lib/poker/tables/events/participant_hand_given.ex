@@ -33,7 +33,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.Participan
     %Poker.Tables.Events.ParticipantHandGiven{
       event
       | status: decode_status(event.status),
-        position: String.to_existing_atom(event.position)
+        position: String.to_atom(event.position)
     }
   end
 end

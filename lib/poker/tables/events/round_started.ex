@@ -5,7 +5,6 @@ defmodule Poker.Tables.Events.RoundStarted do
              :hand_id,
              :table_id,
              :type,
-             :last_bet_amount,
              :community_cards
            ]}
   defstruct [
@@ -13,7 +12,6 @@ defmodule Poker.Tables.Events.RoundStarted do
     :hand_id,
     :table_id,
     :type,
-    :last_bet_amount,
     :community_cards
   ]
 end

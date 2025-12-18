@@ -12,10 +12,10 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     %Table{
       table
       | hand: hand,
-        community_cards: nil,
-        participant_hands: nil,
+        community_cards: [],
+        participant_hands: [],
         round: nil,
-        pots: nil,
+        pots: [],
         remaining_deck: nil
     }
   end
@@ -45,6 +45,14 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
         %{participant | chips: participant.chips + total_payout}
       end)
 
-    %Table{table | participants: updated_participants}
+    %Table{
+      table
+      | participants: updated_participants,
+        community_cards: [],
+        participant_hands: [],
+        round: nil,
+        pots: [],
+        remaining_deck: nil
+    }
   end
 end

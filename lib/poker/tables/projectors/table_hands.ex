@@ -29,7 +29,14 @@ defmodule Poker.Tables.Projectors.TableHands do
     Poker.TableEvents.broadcast_table(table_id, :hand_started, %{hand_id: hand_id})
   end
 
-  def after_update(%HandFinished{hand_id: hand_id, table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table(table_id, :hand_finished, %{hand_id: hand_id})
+  def after_update(
+        %HandFinished{hand_id: hand_id, table_id: table_id, payouts: payouts},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table(table_id, :hand_finished, %{
+      hand_id: hand_id,
+      payouts: payouts
+    })
   end
 end

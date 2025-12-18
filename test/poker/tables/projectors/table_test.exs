@@ -1,11 +1,7 @@
 defmodule Poker.Tables.Projectors.TableTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.Table
   import Poker.DeckFixtures
-
-  setup do
-    Mox.set_mox_global()
-  end
 
   setup ctx do
     ctx |> produce(:table)

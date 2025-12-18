@@ -4,8 +4,29 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   Manages joining, sitting out, and sitting in.
   """
 
-  alias Poker.Tables.Commands.{JoinTableParticipant, SitOutParticipant, SitInParticipant}
-  alias Poker.Tables.Events.{ParticipantJoined, ParticipantSatOut, ParticipantSatIn}
+  alias Poker.Tables.Commands.{
+    JoinTableParticipant,
+    SitOutParticipant,
+    SitInParticipant,
+    ParticipantFold,
+    ParticipantCheck,
+    ParticipantCall,
+    ParticipantRaise,
+    ParticipantAllIn
+  }
+
+  alias Poker.Tables.Events.{
+    ParticipantJoined,
+    ParticipantSatOut,
+    ParticipantSatIn,
+    ParticipantFolded,
+    ParticipantChecked,
+    ParticipantCalled,
+    ParticipantRaised,
+    ParticipantWentAllIn
+  }
+
+  alias Poker.Tables.Aggregates.Table.Helpers
 
   @max_players %{
     six_max: 6
@@ -76,6 +97,121 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         }
       end
     end
+  end
+
+  def handle(table, %ParticipantFold{} = command) do
+    participant = Helpers.find_participant_to_act(table)
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    %ParticipantFolded{
+      id: participant_hand.id,
+      participant_id: command.participant_id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :folded,
+      round: table.round.type
+    }
+  end
+
+  def handle(table, %ParticipantCheck{} = command) do
+    participant = Helpers.find_participant_to_act(table)
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    %ParticipantChecked{
+      id: participant_hand.id,
+      participant_id: command.participant_id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :playing,
+      round: table.round.type
+    }
+  end
+
+  def handle(table, %ParticipantCall{} = command) do
+    participant = Helpers.find_participant_to_act(table)
+
+    last_bet_amount =
+      table.participant_hands
+      |> Enum.map(& &1.bet_this_round)
+      |> Enum.max()
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    call_amount =
+      [last_bet_amount - participant_hand.bet_this_round, participant.chips]
+      |> Enum.filter(&(&1 >= 0))
+      |> Enum.min()
+
+    if participant.chips < call_amount do
+      {:error, :insufficient_chips}
+    else
+      %ParticipantCalled{
+        id: participant_hand.id,
+        participant_id: command.participant_id,
+        table_hand_id: table.hand.id,
+        table_id: table.id,
+        status: :playing,
+        amount: call_amount,
+        round: table.round.type
+      }
+    end
+  end
+
+  def handle(table, %ParticipantRaise{} = command) do
+    participant = Helpers.find_participant_to_act(table)
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    raise_amount = command.amount - participant_hand.bet_this_round
+
+    if participant.chips < raise_amount do
+      {:error, :insufficient_chips}
+    else
+      if participant.chips == raise_amount do
+        %ParticipantWentAllIn{
+          id: participant_hand.id,
+          participant_id: command.participant_id,
+          table_hand_id: table.hand.id,
+          table_id: table.id,
+          status: :all_in,
+          amount: participant.chips,
+          round: table.round.type
+        }
+      else
+        %ParticipantRaised{
+          id: participant_hand.id,
+          participant_id: command.participant_id,
+          table_hand_id: table.hand.id,
+          table_id: table.id,
+          status: :playing,
+          amount: raise_amount,
+          round: table.round.type
+        }
+      end
+    end
+  end
+
+  def handle(table, %ParticipantAllIn{} = command) do
+    participant = Helpers.find_participant_to_act(table)
+
+    participant_hand =
+      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+    %ParticipantWentAllIn{
+      id: participant_hand.id,
+      participant_id: command.participant_id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :all_in,
+      amount: participant.chips,
+      round: table.round.type
+    }
   end
 
   defp validate_not_already_joined(participants, player_id) do

@@ -6,7 +6,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished}
 
-  def apply(%Table{} = table, %TableCreated{} = created) do
+  def apply(%Table{} = _table, %TableCreated{} = created) do
     settings = %{
       small_blind: created.small_blind,
       big_blind: created.big_blind,

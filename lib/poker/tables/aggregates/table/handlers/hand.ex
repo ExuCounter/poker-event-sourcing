@@ -45,9 +45,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   def handle(%{hand: nil}, %FinishHand{}),
     do: {:error, :no_active_hand}
 
-  def handle(%{hand: %{id: hand_id}}, %FinishHand{hand_id: command_hand_id})
-      when hand_id != command_hand_id,
-      do: {:error, :hand_id_mismatch}
+  def handle(%{hand: %{id: hand_id} = hand}, %FinishHand{hand_id: command_hand_id} = _command)
+      when hand_id != command_hand_id do
+    {:error, :hand_id_mismatch}
+  end
 
   def handle(table, %FinishHand{} = command),
     do: finish_hand(table, command.finish_reason)
@@ -57,15 +58,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
     table
     |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      shuffled_deck = Poker.Services.Deck.generate_deck() |> Poker.Services.Deck.shuffle_deck()
-
-      %DeckGenerated{
-        hand_id: hand_id,
-        table_id: table.id,
-        cards: shuffled_deck
-      }
-    end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       dealer_button_participant = Helpers.find_dealer_button_participant(table)
 
@@ -82,12 +74,20 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
+      shuffled_deck = Poker.Services.Deck.generate_deck() |> Poker.Services.Deck.shuffle_deck()
+
+      %DeckGenerated{
+        hand_id: hand_id,
+        table_id: table.id,
+        cards: shuffled_deck
+      }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
       %RoundStarted{
         id: Ecto.UUID.generate(),
         hand_id: hand_id,
         table_id: table.id,
         type: :pre_flop,
-        last_bet_amount: table.settings.big_blind,
         community_cards: []
       }
     end)
@@ -124,7 +124,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           table_id: table.id,
           hand_id: hand_id,
           participant_id: hand.participant_id,
-          amount: table.settings.small_blind
+          amount: table.settings.small_blind,
+          participant_hand_id: hand.id
         }
       else
         hand = Helpers.find_participant_hand_by_position(table.participant_hands, :small_blind)
@@ -134,7 +135,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           table_id: table.id,
           hand_id: hand_id,
           participant_id: hand.participant_id,
-          amount: table.settings.small_blind
+          amount: table.settings.small_blind,
+          participant_hand_id: hand.id
         }
       end
     end)
@@ -146,7 +148,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         table_id: table.id,
         hand_id: hand_id,
         participant_id: hand.participant_id,
-        amount: table.settings.big_blind
+        amount: table.settings.big_blind,
+        participant_hand_id: hand.id
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->

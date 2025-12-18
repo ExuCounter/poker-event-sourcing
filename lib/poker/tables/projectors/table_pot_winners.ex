@@ -12,6 +12,10 @@ defmodule Poker.Tables.Projectors.TablePotWinners do
     Enum.reduce(payouts, multi, fn payout, acc_multi ->
       winner_id = Ecto.UUID.generate()
 
+      dbg(Poker.Repo.all(Poker.Tables.Projections.TablePots))
+      dbg("WINNERS")
+      dbg(payouts)
+
       Ecto.Multi.insert(
         acc_multi,
         {:insert_winner, winner_id},

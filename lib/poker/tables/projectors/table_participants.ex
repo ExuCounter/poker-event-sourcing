@@ -10,7 +10,14 @@ defmodule Poker.Tables.Projectors.TableParticipants do
     ParticipantSatOut,
     ParticipantSatIn,
     ParticipantBusted,
-    HandFinished
+    HandFinished,
+    ParticipantFolded,
+    ParticipantChecked,
+    ParticipantCalled,
+    ParticipantRaised,
+    ParticipantWentAllIn,
+    BigBlindPosted,
+    SmallBlindPosted
   }
 
   alias Poker.Tables.Projections.TableParticipants
@@ -58,6 +65,36 @@ defmodule Poker.Tables.Projectors.TableParticipants do
     )
   end)
 
+  project(%SmallBlindPosted{participant_id: participant_id, amount: amount}, fn multi ->
+    Ecto.Multi.update_all(multi, :participant, participant_query(participant_id),
+      inc: [chips: -amount]
+    )
+  end)
+
+  project(%BigBlindPosted{participant_id: participant_id, amount: amount}, fn multi ->
+    Ecto.Multi.update_all(multi, :participant, participant_query(participant_id),
+      inc: [chips: -amount]
+    )
+  end)
+
+  project(%ParticipantCalled{participant_id: participant_id, amount: amount}, fn multi ->
+    Ecto.Multi.update_all(multi, :participant, participant_query(participant_id),
+      inc: [chips: -amount]
+    )
+  end)
+
+  project(%ParticipantRaised{participant_id: participant_id, amount: amount}, fn multi ->
+    Ecto.Multi.update_all(multi, :participant, participant_query(participant_id),
+      inc: [chips: -amount]
+    )
+  end)
+
+  project(%ParticipantWentAllIn{participant_id: participant_id, amount: amount}, fn multi ->
+    Ecto.Multi.update_all(multi, :participant, participant_query(participant_id),
+      inc: [chips: -amount]
+    )
+  end)
+
   project(%HandFinished{payouts: payouts}, fn multi ->
     Enum.reduce(payouts, multi, fn payout, acc_multi ->
       Ecto.Multi.update_all(
@@ -75,7 +112,9 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table(table_id, :participant_joined, %{participant_id: participant_id})
+    Poker.TableEvents.broadcast_table(table_id, :participant_joined, %{
+      participant_id: participant_id
+    })
   end
 
   def after_update(
@@ -83,7 +122,9 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table(table_id, :participant_sat_out, %{participant_id: participant_id})
+    Poker.TableEvents.broadcast_table(table_id, :participant_sat_out, %{
+      participant_id: participant_id
+    })
   end
 
   def after_update(
@@ -91,7 +132,9 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table(table_id, :participant_sat_in, %{participant_id: participant_id})
+    Poker.TableEvents.broadcast_table(table_id, :participant_sat_in, %{
+      participant_id: participant_id
+    })
   end
 
   def after_update(
@@ -99,10 +142,58 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table(table_id, :participant_busted, %{participant_id: participant_id})
+    Poker.TableEvents.broadcast_table(table_id, :participant_busted, %{
+      participant_id: participant_id
+    })
   end
 
-  def after_update(%HandFinished{table_id: table_id, hand_id: hand_id, payouts: payouts}, _metadata, _changes) do
+  def after_update(%ParticipantFolded{}, _metadata, _changes) do
+    :ok
+  end
+
+  def after_update(%ParticipantChecked{}, _metadata, _changes) do
+    :ok
+  end
+
+  def after_update(%ParticipantCalled{}, _metadata, _changes) do
+    :ok
+  end
+
+  def after_update(%ParticipantRaised{}, _metadata, _changes) do
+    :ok
+  end
+
+  def after_update(%ParticipantWentAllIn{}, _metadata, _changes) do
+    :ok
+  end
+
+  def after_update(
+        %SmallBlindPosted{table_id: table_id, participant_id: participant_id, amount: amount},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table(table_id, :small_blind_posted, %{
+      participant_id: participant_id,
+      amount: amount
+    })
+  end
+
+  def after_update(
+        %BigBlindPosted{table_id: table_id, participant_id: participant_id, amount: amount},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table(table_id, :big_blind_posted, %{
+      participant_id: participant_id,
+      amount: amount
+    })
+  end
+
+  def after_update(
+        %HandFinished{table_id: table_id, hand_id: hand_id, payouts: payouts},
+        _metadata,
+        _changes
+      ) do
     Poker.TableEvents.broadcast_table(table_id, :payouts_distributed, %{
       hand_id: hand_id,
       payouts:

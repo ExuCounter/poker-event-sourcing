@@ -1,16 +1,10 @@
 defmodule Poker.Tables.Projectors.TableRoundsTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TableRounds
   import Poker.DeckFixtures
 
-  setup do
-    Mox.set_mox_global()
-  end
-
   setup ctx do
-    ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
-
-    ctx
+    ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
   end
 
   describe "RoundStarted event" do
@@ -48,12 +42,21 @@ defmodule Poker.Tables.Projectors.TableRoundsTest do
 
       round_id = ctx.table.round.id
 
-      assert_receive {:table, :participant_to_act_selected, %{table_id: _table_id, round_id: ^round_id, participant_id: participant_id}}
+      assert_receive {:table, :participant_to_act_selected,
+                      %{table_id: _table_id, round_id: ^round_id, participant_id: participant_id}}
 
       round = Repo.get(TableRounds, round_id)
 
       assert round.participant_to_act_id != nil
       assert round.participant_to_act_id == participant_id
     end
+  end
+
+  test "test", ctx do
+    ctx = ctx |> setup_winning_hand() |> exec(:start_table)
+
+    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+
+    ctx = ctx |> exec(:start_runout)
   end
 end

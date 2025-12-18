@@ -2,15 +2,9 @@ defmodule Poker.SeedFactorySchema do
   use SeedFactory.Schema
   import Commanded.Assertions.EventAssertions
 
-  def maybe_wait_for_event(app, event_module) do
-    try do
-      wait_for_event(app, event_module)
-    rescue
-      _ -> :ok
-    end
-  end
-
   def aggregate_state(:table, table_id) do
+    Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
+
     Commanded.Aggregates.Aggregate.aggregate_state(
       Poker.App,
       Poker.Tables.Aggregates.Table,
@@ -61,9 +55,12 @@ defmodule Poker.SeedFactorySchema do
       {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
 
       Poker.TableEvents.subscribe_to_table(table_id)
-      Poker.TableEvents.subscribe_to_lobby(table_id)
 
       aggregate_state = aggregate_state(:table, table_id)
+
+      ExUnit.Callbacks.on_exit(fn ->
+        Poker.TableEvents.unsubscribe_from_table(table_id)
+      end)
 
       {:ok, %{table: aggregate_state}}
     end)
@@ -113,16 +110,6 @@ defmodule Poker.SeedFactorySchema do
     resolve(fn args ->
       {:ok, _hand_id} = Poker.Tables.start_table(args.table.id)
 
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.HandStarted
-      )
-
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.RoundStarted
-      )
-
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
 
@@ -133,11 +120,49 @@ defmodule Poker.SeedFactorySchema do
     produce(:positions)
   end
 
+  command :raise_hand do
+    param(:table, entity: :table)
+    param(:amount)
+
+    resolve(fn args ->
+      :ok =
+        Poker.Tables.raise_hand(
+          args.table.id,
+          args.table.round.participant_to_act_id,
+          args.amount
+        )
+
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
+
+      {:ok, %{table: table, positions: positions}}
+    end)
+
+    update(:table)
+    update(:positions)
+  end
+
   command :call_hand do
     param(:table, entity: :table)
 
     resolve(fn args ->
       :ok = Poker.Tables.call_hand(args.table.id, args.table.round.participant_to_act_id)
+
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
+
+      {:ok, %{table: table, positions: positions}}
+    end)
+
+    update(:table)
+    update(:positions)
+  end
+
+  command :all_in_hand do
+    param(:table, entity: :table)
+
+    resolve(fn args ->
+      :ok = Poker.Tables.all_in_hand(args.table.id, args.table.round.participant_to_act_id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
@@ -180,14 +205,6 @@ defmodule Poker.SeedFactorySchema do
         :ok = Poker.Tables.call_hand(args.table.id, participant_to_act_id)
       end)
 
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.RoundCompleted
-      )
-
-      maybe_wait_for_event(Poker.App, Poker.Tables.Events.HandFinished)
-      maybe_wait_for_event(Poker.App, Poker.Tables.Events.TableFinished)
-
       table = aggregate_state(:table, args.table.id)
 
       {:ok, %{table: table}}
@@ -210,13 +227,6 @@ defmodule Poker.SeedFactorySchema do
 
         :ok = Poker.Tables.all_in_hand(args.table.id, participant_to_act_id)
       end)
-
-      wait_for_event(
-        Poker.App,
-        Poker.Tables.Events.HandFinished
-      )
-
-      maybe_wait_for_event(Poker.App, Poker.Tables.Events.TableFinished)
 
       table = aggregate_state(:table, args.table.id)
 

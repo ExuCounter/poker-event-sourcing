@@ -1,10 +1,7 @@
 defmodule Poker.Tables.TableTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.Table
-
-  setup do
-    Mox.set_mox_global()
-  end
+  import Poker.DeckFixtures
 
   test "test", ctx do
     ctx =
@@ -14,6 +11,7 @@ defmodule Poker.Tables.TableTest do
       |> exec(:start_runout)
 
     table = Poker.Tables.get_table(ctx.table.id)
-    dbg(table)
+
+    dbg(table.participants)
   end
 end

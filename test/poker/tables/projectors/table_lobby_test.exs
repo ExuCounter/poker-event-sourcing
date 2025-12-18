@@ -1,17 +1,13 @@
 defmodule Poker.Tables.Projectors.TableLobbyTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TableLobby
   import Poker.DeckFixtures
-
-  setup do
-    Mox.set_mox_global()
-  end
 
   setup ctx do
     ctx = ctx |> produce(:table)
 
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{ctx.table.id}:lobby")
-    on_exit(fn -> Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{ctx.table.id}:lobby") end)
+    Poker.TableEvents.subscribe_to_lobby(ctx.table.id)
+    on_exit(fn -> Poker.TableEvents.unsubscribe_from_lobby(ctx.table.id) end)
 
     ctx
   end

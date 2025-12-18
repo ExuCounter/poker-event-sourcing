@@ -21,7 +21,6 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
       contributing_participant_hands =
         participant_hands
         |> Enum.filter(&(&1.total_bet_this_hand >= bet_amount))
-        |> filter_active_participant_hands()
 
       previous_bet_amount = Enum.sum_by(pots, & &1.bet_amount)
 
@@ -35,7 +34,9 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
             bet_amount: bet_amount,
             amount: pot_amount,
             contributing_participant_ids:
-              Enum.map(contributing_participant_hands, & &1.participant_id)
+              contributing_participant_hands
+              |> filter_active_participant_hands()
+              |> Enum.map(& &1.participant_id)
           }
         ]
     end)

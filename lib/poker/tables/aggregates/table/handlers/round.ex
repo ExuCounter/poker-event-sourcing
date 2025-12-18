@@ -11,9 +11,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
   @doc """
   Handles round commands.
   """
-  def handle(%{hand: %{id: hand_id}}, %StartRound{hand_id: command_hand_id})
-      when hand_id != command_hand_id,
-      do: {:error, :hand_id_mismatch}
+  def handle(%{hand: %{id: hand_id}}, %StartRound{hand_id: command_hand_id} = _command)
+      when hand_id != command_hand_id do
+    {:error, :hand_id_mismatch}
+  end
 
   def handle(table, %StartRound{} = command) do
     if Helpers.runout?(table) do
@@ -25,7 +26,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
           id: table.round.id,
           hand_id: table.hand.id,
           type: table.round.type,
-          table_id: table.id
+          table_id: table.id,
+          reason: :all_acted
         }
       end)
     else
@@ -52,7 +54,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
         hand_id: command.hand_id,
         table_id: table.id,
         type: command.round,
-        last_bet_amount: 0,
         community_cards: community_cards
       },
       %DeckUpdated{

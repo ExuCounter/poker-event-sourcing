@@ -13,7 +13,6 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Round do
     round = %{
       id: event.id,
       type: event.type,
-      last_bet_amount: event.last_bet_amount,
       acted_participant_ids: [],
       participant_to_act_id: nil
     }
@@ -30,6 +29,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Round do
   end
 
   def apply(%Table{} = table, %RoundCompleted{}) do
-    table
+    updated_participant_hands = Enum.map(table.participant_hands, &%{&1 | bet_this_round: 0})
+
+    %Table{table | participant_hands: updated_participant_hands}
   end
 end

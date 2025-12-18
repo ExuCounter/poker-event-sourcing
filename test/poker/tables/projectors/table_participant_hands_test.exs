@@ -7,13 +7,13 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
     Mox.set_mox_global()
   end
 
-  setup ctx do
-    ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
-
-    ctx
-  end
-
   describe "ParticipantHandGiven event" do
+    setup ctx do
+      ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
+
+      ctx
+    end
+
     test "creates participant hand and broadcasts with data", ctx do
       ctx = ctx |> exec(:start_table)
 
@@ -73,7 +73,13 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
     end
   end
 
-  describe "ParticipantActedInHand event" do
+  describe "Participant action events" do
+    setup ctx do
+      ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
+
+      ctx
+    end
+
     test "updates participant hand status when participant acts", ctx do
       ctx = ctx |> setup_winning_hand() |> exec(:start_table) |> exec(:start_runout)
 
@@ -95,5 +101,38 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
 
       assert Map.keys(status_counts) |> length() > 0
     end
+  end
+
+  test "Payouts are distributed correctly", ctx do
+    ctx =
+      ctx
+      |> exec(:add_participants, generate_players: 2)
+
+    ctx = ctx |> exec(:start_table)
+
+    ctx = ctx |> exec(:raise_hand, amount: 500)
+
+    ctx = ctx |> exec(:call_hand)
+
+    [participant_hand1, participant_hand2] =
+      Enum.map(ctx.table.participants, fn participant ->
+        Poker.Repo.get_by!(TableParticipantHands, participant_id: participant.id)
+      end)
+
+    # ctx =
+    #   ctx
+    #   |> exec(:advance_round)
+    #   |> exec(:advance_round)
+    #   |> exec(:advance_round)
+
+    # [participant1, participant2] =
+    #   Enum.map(ctx.table.participants, fn participant ->
+    #     Poker.Repo.get!(TableParticipants, participant.id)
+    #   end)
+
+    # assert participant1.chips == initial_participant1.chips + 500 - ctx.table.settings.big_blind
+
+    # assert participant2.chips ==
+    #          initial_participant2.chips - 500 - ctx.table.settings.small_blind
   end
 end

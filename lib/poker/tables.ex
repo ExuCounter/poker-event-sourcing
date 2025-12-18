@@ -3,7 +3,11 @@ defmodule Poker.Tables do
     CreateTable,
     JoinTableParticipant,
     StartTable,
-    ParticipantActInHand,
+    ParticipantFold,
+    ParticipantCheck,
+    ParticipantCall,
+    ParticipantRaise,
+    ParticipantAllIn,
     SitOutParticipant,
     SitInParticipant
   }
@@ -64,23 +68,84 @@ defmodule Poker.Tables do
   end
 
   def fold_hand(table_id, participant_id) do
-    act_in_hand(table_id, participant_id, %{action: :fold})
+    hand_action_id = Ecto.UUID.generate()
+
+    command_attrs = %{
+      hand_action_id: hand_action_id,
+      participant_id: participant_id,
+      table_id: table_id
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &ParticipantFold.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
   end
 
   def check_hand(table_id, participant_id) do
-    act_in_hand(table_id, participant_id, %{action: :check})
+    hand_action_id = Ecto.UUID.generate()
+
+    command_attrs = %{
+      hand_action_id: hand_action_id,
+      participant_id: participant_id,
+      table_id: table_id
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &ParticipantCheck.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
   end
 
   def call_hand(table_id, participant_id) do
-    act_in_hand(table_id, participant_id, %{action: :call})
+    hand_action_id = Ecto.UUID.generate()
+
+    command_attrs = %{
+      hand_action_id: hand_action_id,
+      participant_id: participant_id,
+      table_id: table_id
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &ParticipantCall.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
   end
 
   def raise_hand(table_id, participant_id, amount) do
-    act_in_hand(table_id, participant_id, %{action: :raise, amount: amount})
+    hand_action_id = Ecto.UUID.generate()
+
+    command_attrs = %{
+      hand_action_id: hand_action_id,
+      participant_id: participant_id,
+      table_id: table_id,
+      amount: amount
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &ParticipantRaise.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
   end
 
   def all_in_hand(table_id, participant_id) do
-    act_in_hand(table_id, participant_id, %{action: :all_in})
+    hand_action_id = Ecto.UUID.generate()
+
+    command_attrs = %{
+      hand_action_id: hand_action_id,
+      participant_id: participant_id,
+      table_id: table_id
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &ParticipantAllIn.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
   end
 
   def sit_out(participant) do
@@ -110,7 +175,9 @@ defmodule Poker.Tables do
   end
 
   def get_tables() do
-    Poker.Repo.all(Poker.Tables.Projections.TableList)
+    Poker.Tables.Projections.TableList
+    |> order_by(desc: :inserted_at)
+    |> Poker.Repo.all()
   end
 
   def get_lobby(table_id) do
@@ -130,7 +197,7 @@ defmodule Poker.Tables do
         where: h.table_id == ^table_id,
         order_by: [desc: h.inserted_at],
         limit: 1,
-        preload: [:rounds, :participant_hands, pots: [:winners]]
+        preload: [:rounds, :participant_hands, :pots]
       )
       |> Poker.Repo.one()
 
@@ -141,6 +208,10 @@ defmodule Poker.Tables do
       pots: (current_hand && current_hand.pots) || [],
       rounds: (current_hand && current_hand.rounds) || []
     }
+  end
+
+  def get_table_round(round_id) do
+    Poker.Repo.get(Poker.Tables.Projections.TableRounds, round_id)
   end
 
   def get_table_state(table_id, current_user_id) do
@@ -164,22 +235,5 @@ defmodule Poker.Tables do
 
   def list_tables() do
     Poker.Repo.all(Poker.Tables.Projections.TableList)
-  end
-
-  defp act_in_hand(table_id, participant_id, action_attrs) do
-    hand_action_id = Ecto.UUID.generate()
-
-    command_attrs =
-      Map.merge(action_attrs, %{
-        hand_action_id: hand_action_id,
-        participant_id: participant_id,
-        table_id: table_id
-      })
-
-    with {:ok, command} <-
-           Poker.Repo.validate_changeset(command_attrs, &ParticipantActInHand.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      :ok
-    end
   end
 end

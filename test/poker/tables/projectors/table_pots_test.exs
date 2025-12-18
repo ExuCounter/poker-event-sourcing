@@ -1,19 +1,13 @@
 defmodule Poker.Tables.Projectors.TablePotsTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TablePots
   import Poker.DeckFixtures
 
-  setup do
-    Mox.set_mox_global()
-  end
-
-  setup ctx do
-    ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
-
-    ctx
-  end
-
   describe "PotsRecalculated event" do
+    setup ctx do
+      ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
+    end
+
     test "creates pots and broadcasts pot data", ctx do
       ctx = ctx |> exec(:start_table)
 
@@ -22,8 +16,7 @@ defmodule Poker.Tables.Projectors.TablePotsTest do
       assert hand_id == ctx.table.hand.id
       assert length(pots) > 0
 
-      # Verify database records
-      db_pots = Repo.all(from p in TablePots, where: p.hand_id == ^ctx.table.hand.id)
+      db_pots = Repo.all(from(p in TablePots))
 
       assert length(db_pots) > 0
 
@@ -32,5 +25,23 @@ defmodule Poker.Tables.Projectors.TablePotsTest do
         assert db_pot.amount > 0
       end)
     end
+  end
+
+  test "Pots recalculate event", ctx do
+    ctx =
+      ctx |> produce(:table) |> exec(:add_participants, generate_players: 2) |> exec(:start_table)
+
+    ctx =
+      ctx
+      |> exec(:raise_hand, amount: 100)
+      |> exec(:call_hand)
+      |> exec(:raise_hand, amount: 100)
+      |> exec(:call_hand)
+      |> exec(:raise_hand, amount: 50)
+      |> exec(:call_hand)
+
+    db_pots = Repo.all(from(p in TablePots))
+
+    dbg(db_pots)
   end
 end

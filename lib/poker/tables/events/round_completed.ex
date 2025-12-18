@@ -4,12 +4,14 @@ defmodule Poker.Tables.Events.RoundCompleted do
              :id,
              :hand_id,
              :table_id,
-             :type
+             :type,
+             :reason
            ]}
   defstruct [
     :id,
     :hand_id,
     :table_id,
-    :type
+    :type,
+    :reason
   ]
 end

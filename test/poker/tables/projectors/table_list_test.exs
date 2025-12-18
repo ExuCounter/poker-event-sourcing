@@ -1,15 +1,11 @@
 defmodule Poker.Tables.Projectors.TableListTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TableList
   import Poker.DeckFixtures
 
   setup do
-    Mox.set_mox_global()
-  end
-
-  setup do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table_list")
-    on_exit(fn -> Phoenix.PubSub.unsubscribe(Poker.PubSub, "table_list") end)
+    Poker.TableEvents.subscribe_to_table_list()
+    on_exit(fn -> Poker.TableEvents.unsubscribe_from_table_list() end)
   end
 
   describe "TableCreated event" do

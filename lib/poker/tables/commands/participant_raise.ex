@@ -1,0 +1,26 @@
+defmodule Poker.Tables.Commands.ParticipantRaise do
+  use Poker, :schema
+
+  embedded_schema do
+    field :hand_action_id, :binary_id
+    field :participant_id, :binary_id
+    field :table_id, :binary_id
+    field :amount, :integer
+  end
+
+  def changeset(attrs) do
+    %__MODULE__{}
+    |> Ecto.Changeset.cast(attrs, [
+      :hand_action_id,
+      :participant_id,
+      :table_id,
+      :amount
+    ])
+    |> Ecto.Changeset.validate_required([
+      :hand_action_id,
+      :participant_id,
+      :table_id,
+      :amount
+    ])
+  end
+end

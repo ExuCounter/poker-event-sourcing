@@ -12,7 +12,11 @@ defmodule Poker.Tables.Aggregates.Table do
     JoinTableParticipant,
     StartHand,
     StartTable,
-    ParticipantActInHand,
+    ParticipantFold,
+    ParticipantCheck,
+    ParticipantCall,
+    ParticipantRaise,
+    ParticipantAllIn,
     SitOutParticipant,
     SitInParticipant,
     StartRound,
@@ -26,7 +30,11 @@ defmodule Poker.Tables.Aggregates.Table do
     HandStarted,
     ParticipantHandGiven,
     TableStarted,
-    ParticipantActedInHand,
+    ParticipantFolded,
+    ParticipantChecked,
+    ParticipantCalled,
+    ParticipantRaised,
+    ParticipantWentAllIn,
     ParticipantSatOut,
     ParticipantSatIn,
     SmallBlindPosted,
@@ -66,8 +74,23 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def execute(table, %cmd{} = command)
-      when cmd in [JoinTableParticipant, SitOutParticipant, SitInParticipant] do
+      when cmd in [
+             JoinTableParticipant,
+             SitOutParticipant,
+             SitInParticipant
+           ] do
     Handlers.Participants.handle(table, command)
+  end
+
+  def execute(table, %cmd{} = command)
+      when cmd in [
+             ParticipantFold,
+             ParticipantCheck,
+             ParticipantCall,
+             ParticipantRaise,
+             ParticipantAllIn
+           ] do
+    Handlers.Actions.handle(table, command)
   end
 
   def execute(table, %cmd{} = command)
@@ -78,9 +101,6 @@ defmodule Poker.Tables.Aggregates.Table do
   def execute(table, %StartRound{} = command),
     do: Handlers.Round.handle(table, command)
 
-  def execute(table, %ParticipantActInHand{} = command),
-    do: Handlers.Actions.handle(table, command)
-
   # STATE MUTATORS - Delegate to Apply modules
 
   def apply(table, %evt{} = event)
@@ -89,7 +109,18 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def apply(table, %evt{} = event)
-      when evt in [ParticipantJoined, ParticipantSatOut, ParticipantSatIn, ParticipantBusted] do
+      when evt in [
+             ParticipantJoined,
+             ParticipantSatOut,
+             ParticipantSatIn,
+             ParticipantBusted,
+             ParticipantFolded,
+             ParticipantChecked,
+             ParticipantCalled,
+             ParticipantRaised,
+             ParticipantWentAllIn,
+             ParticipantToActSelected
+           ] do
     Apply.Participants.apply(table, event)
   end
 
@@ -101,11 +132,6 @@ defmodule Poker.Tables.Aggregates.Table do
   def apply(table, %evt{} = event)
       when evt in [RoundStarted, RoundCompleted] do
     Apply.Round.apply(table, event)
-  end
-
-  def apply(table, %evt{} = event)
-      when evt in [ParticipantActedInHand, ParticipantToActSelected] do
-    Apply.Actions.apply(table, event)
   end
 
   def apply(table, %evt{} = event)

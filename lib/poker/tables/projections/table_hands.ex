@@ -7,7 +7,11 @@ defmodule Poker.Tables.Projections.TableHands do
 
     field :status, Ecto.Enum, values: [:active, :finished]
 
-    has_many(:rounds, Poker.Tables.Projections.TableRounds, foreign_key: :hand_id)
+    has_many(:rounds, Poker.Tables.Projections.TableRounds,
+      foreign_key: :hand_id,
+      preload_order: [asc: :inserted_at]
+    )
+
     has_many(:pots, Poker.Tables.Projections.TablePots, foreign_key: :hand_id)
 
     has_many(:participant_hands, Poker.Tables.Projections.TableParticipantHands,

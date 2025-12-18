@@ -109,7 +109,10 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   end
 
   def runout?(table) do
-    Enum.all?(table.participant_hands, fn hand -> hand.status in [:all_in, :folded] end)
+    hands_in_play = Enum.reject(table.participant_hands, &(&1.status == :folded))
+    hands_that_can_act = Enum.filter(hands_in_play, &(&1.status == :playing))
+
+    length(hands_in_play) >= 2 and length(hands_that_can_act) <= 1
   end
 
   def heads_up?(table) do

@@ -1,11 +1,7 @@
 defmodule Poker.Tables.Projectors.TableHandsTest do
-  use Poker.DataCase, async: false
+  use Poker.DataCase
   alias Poker.Tables.Projections.TableHands
   import Poker.DeckFixtures
-
-  setup do
-    Mox.set_mox_global()
-  end
 
   setup ctx do
     ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)

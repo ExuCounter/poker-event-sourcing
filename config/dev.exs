@@ -75,6 +75,8 @@ config :poker, PokerWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :poker, dev_routes: true
 
+config :logger, level: :info
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
