@@ -51,3 +51,7 @@ config :phoenix_live_view,
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.DeckMock
 config :poker, Poker.Services.HandEvaluator, dispatcher: Poker.Services.HandEvaluatorMock
+
+config :commanded,
+  assert_receive_event_timeout: 100,
+  refute_receive_event_timeout: 100

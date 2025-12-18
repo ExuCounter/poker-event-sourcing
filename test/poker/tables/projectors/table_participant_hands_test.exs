@@ -10,10 +10,6 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
   setup ctx do
     ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
 
-    subscribe_to_participant_hands(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_participant_hands(ctx.table.id) end)
-
     ctx
   end
 
@@ -21,16 +17,46 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
     test "creates participant hand and broadcasts with data", ctx do
       ctx = ctx |> exec(:start_table)
 
-      assert_participant_hand_event!(:participant_hand_given)
-      assert_participant_hand_event!(:participant_hand_given)
-      assert_participant_hand_event!(:participant_hand_given)
+      # Receive all three participant hand events
+      assert_receive {:table, :participant_hand_given,
+                      %{
+                        table_id: _table_id,
+                        participant_id: _p1,
+                        hole_cards: h1,
+                        position: pos1,
+                        status: :playing
+                      }}
 
-      # # Verify structure of broadcasted data
-      # assert data1.id
-      # assert data1.participant_id
-      # assert is_list(data1.hole_cards)
-      # assert data1.position
-      # assert data1.status == :active
+      assert_receive {:table, :participant_hand_given,
+                      %{
+                        table_id: _table_id,
+                        participant_id: _p2,
+                        hole_cards: h2,
+                        position: pos2,
+                        status: :playing
+                      }}
+
+      assert_receive {:table, :participant_hand_given,
+                      %{
+                        table_id: _table_id,
+                        participant_id: _p3,
+                        hole_cards: h3,
+                        position: pos3,
+                        status: :playing
+                      }}
+
+      # Verify structure of broadcasted data
+      assert is_list(h1) and length(h1) == 2
+      assert is_list(h2) and length(h2) == 2
+      assert is_list(h3) and length(h3) == 2
+
+      # Verify positions are set
+      assert pos1 in [:dealer, :small_blind, :big_blind]
+      assert pos2 in [:dealer, :small_blind, :big_blind]
+      assert pos3 in [:dealer, :small_blind, :big_blind]
+
+      # All positions should be unique
+      assert MapSet.size(MapSet.new([pos1, pos2, pos3])) == 3
 
       # Verify all participant hands are in database
       participant_hands = Repo.all(TableParticipantHands)
@@ -51,9 +77,10 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
     test "updates participant hand status when participant acts", ctx do
       ctx = ctx |> setup_winning_hand() |> exec(:start_table) |> exec(:start_runout)
 
-      assert_participant_hand_event!(:participant_hand_given)
-      assert_participant_hand_event!(:participant_hand_given)
-      assert_participant_hand_event!(:participant_hand_given)
+      # Receive participant hand given events
+      assert_receive {:table, :participant_hand_given, %{table_id: _table_id}}
+      assert_receive {:table, :participant_hand_given, %{table_id: _table_id}}
+      assert_receive {:table, :participant_hand_given, %{table_id: _table_id}}
 
       # Should receive participant_acted events
       # The exact number depends on the actions in start_runout
@@ -67,22 +94,6 @@ defmodule Poker.Tables.Projectors.TableParticipantHandsTest do
         |> Enum.frequencies()
 
       assert Map.keys(status_counts) |> length() > 0
-    end
-  end
-
-  defp subscribe_to_participant_hands(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:participant_hands")
-  end
-
-  defp unsubscribe_from_participant_hands(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}:participant_hands")
-  end
-
-  defp assert_participant_hand_event!(event) do
-    receive do
-      {^event, _data} -> :ok
-    after
-      1000 -> raise "#{event} was not received"
     end
   end
 end

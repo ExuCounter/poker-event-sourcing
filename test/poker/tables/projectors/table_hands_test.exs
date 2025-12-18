@@ -8,13 +8,7 @@ defmodule Poker.Tables.Projectors.TableHandsTest do
   end
 
   setup ctx do
-    ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
-
-    subscribe_to_hands(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_hands(ctx.table.id) end)
-
-    ctx
+    ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
   end
 
   describe "HandStarted event" do
@@ -23,7 +17,7 @@ defmodule Poker.Tables.Projectors.TableHandsTest do
 
       hand_id = ctx.table.hand.id
 
-      assert_hand_event!(hand_id, :hand_started)
+      assert_receive {:table, :hand_started, %{table_id: _table_id, hand_id: ^hand_id}}
 
       hand = Repo.get(TableHands, hand_id)
 
@@ -39,27 +33,11 @@ defmodule Poker.Tables.Projectors.TableHandsTest do
 
       hand_id = ctx.table.hand.id
 
-      assert_hand_event!(hand_id, :hand_finished)
+      assert_receive {:table, :hand_finished, %{table_id: _table_id, hand_id: ^hand_id}}
 
       hand = Repo.get(TableHands, hand_id)
 
       assert hand.status == :finished
-    end
-  end
-
-  defp subscribe_to_hands(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:hands")
-  end
-
-  defp unsubscribe_from_hands(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}:hands")
-  end
-
-  defp assert_hand_event!(hand_id, event) do
-    receive do
-      {:hand_updated, ^hand_id, ^event} -> :ok
-    after
-      1000 -> raise "#{event} was not received for hand #{hand_id}"
     end
   end
 end

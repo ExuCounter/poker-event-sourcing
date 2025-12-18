@@ -47,24 +47,17 @@ defmodule Poker.Tables.Projectors.TableRounds do
         _metadata,
         _changes
       ) do
-    broadcast_round(table_id, round_id, :round_started)
+    Poker.TableEvents.broadcast_table(table_id, :round_started, %{round_id: round_id})
   end
 
   def after_update(
-        %ParticipantToActSelected{table_id: table_id, round_id: round_id},
+        %ParticipantToActSelected{table_id: table_id, round_id: round_id, participant_id: participant_id},
         _metadata,
         _changes
       ) do
-    broadcast_round(table_id, round_id, :participant_to_act_selected)
-  end
-
-  defp broadcast_round(table_id, round_id, event) do
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:rounds",
-      {:round_updated, round_id, event}
-    )
-
-    :ok
+    Poker.TableEvents.broadcast_table(table_id, :participant_to_act_selected, %{
+      round_id: round_id,
+      participant_id: participant_id
+    })
   end
 end

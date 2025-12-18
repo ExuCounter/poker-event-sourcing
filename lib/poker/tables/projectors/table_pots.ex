@@ -31,22 +31,25 @@ defmodule Poker.Tables.Projectors.TablePots do
   end)
 
   @impl Commanded.Projections.Ecto
-  def after_update(%PotsRecalculated{table_id: table_id, hand_id: hand_id, pots: pots}, _metadata, _changes) do
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:pots",
-      {:pots_updated, %{
+  def after_update(
+        %PotsRecalculated{table_id: table_id, hand_id: hand_id, pots: pots},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table(
+      table_id,
+      :pots_updated,
+      %{
         hand_id: hand_id,
-        pots: Enum.map(pots, fn pot ->
-          %{
-            id: pot.id,
-            amount: pot.amount,
-            type: pot.type
-          }
-        end)
-      }}
+        pots:
+          Enum.map(pots, fn pot ->
+            %{
+              id: pot.id,
+              amount: pot.amount,
+              type: pot.type
+            }
+          end)
+      }
     )
-
-    :ok
   end
 end

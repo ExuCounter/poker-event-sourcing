@@ -9,6 +9,7 @@ defmodule Poker.Tables.Projections.TableRounds do
     field :round_type, Ecto.Enum, values: [:pre_flop, :flop, :turn, :river]
     field :community_cards, {:array, Poker.Ecto.Card}
 
+
     timestamps()
   end
 end

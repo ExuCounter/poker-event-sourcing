@@ -10,10 +10,6 @@ defmodule Poker.Tables.Projectors.TableRoundsTest do
   setup ctx do
     ctx = ctx |> produce(:table) |> exec(:add_participants, generate_players: 3)
 
-    subscribe_to_rounds(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_rounds(ctx.table.id) end)
-
     ctx
   end
 
@@ -23,7 +19,7 @@ defmodule Poker.Tables.Projectors.TableRoundsTest do
 
       round_id = ctx.table.round.id
 
-      assert_round_event!(round_id, :round_started)
+      assert_receive {:table, :round_started, %{table_id: _table_id, round_id: ^round_id}}
 
       round = Repo.get(TableRounds, round_id)
 
@@ -37,7 +33,7 @@ defmodule Poker.Tables.Projectors.TableRoundsTest do
 
       flop_round_id = ctx.table.round.id
 
-      assert_round_event!(flop_round_id, :round_started)
+      assert_receive {:table, :round_started, %{table_id: _table_id, round_id: ^flop_round_id}}
 
       round = Repo.get(TableRounds, flop_round_id)
 
@@ -52,27 +48,12 @@ defmodule Poker.Tables.Projectors.TableRoundsTest do
 
       round_id = ctx.table.round.id
 
-      assert_round_event!(round_id, :participant_to_act_selected)
+      assert_receive {:table, :participant_to_act_selected, %{table_id: _table_id, round_id: ^round_id, participant_id: participant_id}}
 
       round = Repo.get(TableRounds, round_id)
 
       assert round.participant_to_act_id != nil
-    end
-  end
-
-  defp subscribe_to_rounds(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:rounds")
-  end
-
-  defp unsubscribe_from_rounds(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}:rounds")
-  end
-
-  defp assert_round_event!(round_id, event) do
-    receive do
-      {:round_updated, ^round_id, ^event} -> :ok
-    after
-      1000 -> raise "#{event} was not received for round #{round_id}"
+      assert round.participant_to_act_id == participant_id
     end
   end
 end

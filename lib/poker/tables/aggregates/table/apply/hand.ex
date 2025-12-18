@@ -9,7 +9,15 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
   def apply(%Table{} = table, %HandStarted{} = event) do
     hand = %{id: event.id}
 
-    %Table{table | hand: hand, community_cards: [], participant_hands: []}
+    %Table{
+      table
+      | hand: hand,
+        community_cards: nil,
+        participant_hands: nil,
+        round: nil,
+        pots: nil,
+        remaining_deck: nil
+    }
   end
 
   def apply(%Table{participant_hands: participant_hands} = table, %ParticipantHandGiven{} = event) do

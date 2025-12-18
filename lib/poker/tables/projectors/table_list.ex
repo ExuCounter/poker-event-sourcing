@@ -48,27 +48,34 @@ defmodule Poker.Tables.Projectors.TableList do
 
   @impl Commanded.Projections.Ecto
   def after_update(%TableCreated{id: table_id}, _metadata, _changes) do
-    broadcast_table_list(table_id, :table_created)
+    Poker.TableEvents.broadcast_table_list(table_id, :table_created)
   end
 
   def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    broadcast_table_list(table_id, :table_started)
+    Poker.TableEvents.broadcast_table_list(table_id, :table_started)
   end
 
-  def after_update(%ParticipantJoined{table_id: table_id}, _metadata, _changes) do
-    broadcast_table_list(table_id, :participant_joined)
+  def after_update(
+        %ParticipantJoined{table_id: table_id, id: participant_id},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table_list(table_id, :participant_joined, %{
+      participant_id: participant_id
+    })
   end
 
-  def after_update(%ParticipantBusted{table_id: table_id}, _metadata, _changes) do
-    broadcast_table_list(table_id, :participant_busted)
+  def after_update(
+        %ParticipantBusted{table_id: table_id, participant_id: participant_id},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_table_list(table_id, :participant_busted, %{
+      participant_id: participant_id
+    })
   end
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    broadcast_table_list(table_id, :table_finished)
-  end
-
-  defp broadcast_table_list(table_id, event) do
-    Phoenix.PubSub.broadcast(Poker.PubSub, "table_list", {:table_list_updated, table_id, event})
-    :ok
+    Poker.TableEvents.broadcast_table_list(table_id, :table_finished)
   end
 end

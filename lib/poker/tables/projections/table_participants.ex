@@ -3,8 +3,8 @@ defmodule Poker.Tables.Projections.TableParticipants do
 
   @primary_key {:id, :binary_id, autogenerate: false}
   schema "table_participants" do
-    belongs_to :table, Poker.Tables.Projections.Table, type: :binary_id
-    belongs_to :player, Poker.Accounts.User, type: :binary_id
+    belongs_to :table, Poker.Tables.Projections.Table
+    belongs_to :player, Poker.Accounts.Schemas.User
 
     field :chips, :integer
     field :status, Ecto.Enum, values: [:active, :busted]

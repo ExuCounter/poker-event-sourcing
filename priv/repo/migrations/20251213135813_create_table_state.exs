@@ -105,6 +105,6 @@ defmodule Poker.Repo.Migrations.CreateTableState do
     end
 
     create index(:table_pot_winners, [:hand_id])
-    create index(:table_pot_winners, [:pot_id])
+    create index(:table_pot_winners, [:pot_id, :participant_id])
   end
 end

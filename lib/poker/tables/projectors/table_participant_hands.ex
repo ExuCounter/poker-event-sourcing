@@ -62,20 +62,17 @@ defmodule Poker.Tables.Projectors.TableParticipantHands do
         _metadata,
         _changes
       ) do
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:participant_hands",
-      {:participant_hand_given,
-       %{
-         id: participant_hand_id,
-         participant_id: participant_id,
-         hole_cards: hole_cards,
-         position: position,
-         status: status
-       }}
+    Poker.TableEvents.broadcast_table(
+      table_id,
+      :participant_hand_given,
+      %{
+        id: participant_hand_id,
+        participant_id: participant_id,
+        hole_cards: hole_cards,
+        position: position,
+        status: status
+      }
     )
-
-    :ok
   end
 
   def after_update(
@@ -95,18 +92,15 @@ defmodule Poker.Tables.Projectors.TableParticipantHands do
         _ -> :active
       end
 
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:participant_hands",
-      {:participant_acted,
-       %{
-         id: participant_hand_id,
-         participant_id: participant_id,
-         action: action,
-         status: status
-       }}
+    Poker.TableEvents.broadcast_table(
+      table_id,
+      :participant_acted,
+      %{
+        id: participant_hand_id,
+        participant_id: participant_id,
+        action: action,
+        status: status
+      }
     )
-
-    :ok
   end
 end

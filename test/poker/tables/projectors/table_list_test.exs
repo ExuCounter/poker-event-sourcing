@@ -18,7 +18,7 @@ defmodule Poker.Tables.Projectors.TableListTest do
 
       table = Repo.get(TableList, ctx.table.id)
 
-      assert_table_list_event!(:table_created)
+      assert_receive {:table_list, :table_created, %{table_id: table_id}}
 
       assert table.id == ctx.table.id
       assert table.status == :waiting
@@ -35,7 +35,16 @@ defmodule Poker.Tables.Projectors.TableListTest do
         |> exec(:add_participants, generate_players: 3)
         |> exec(:start_table)
 
-      assert_table_list_event!(:table_started)
+      assert_receive {:table_list, :participant_joined,
+                      %{table_id: table_id, participant_id: _participant_id1}}
+
+      assert_receive {:table_list, :participant_joined,
+                      %{table_id: table_id, participant_id: _participant_id2}}
+
+      assert_receive {:table_list, :participant_joined,
+                      %{table_id: table_id, participant_id: _participant_id3}}
+
+      assert_receive {:table_list, :table_started, %{table_id: table_id}}
 
       table = Repo.get(TableList, ctx.table.id)
 
@@ -54,8 +63,11 @@ defmodule Poker.Tables.Projectors.TableListTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_table_list_event!(:participant_busted)
-      assert_table_list_event!(:participant_busted)
+      assert_receive {:table_list, :participant_busted,
+                      %{table_id: table_id, participant_id: _participant_id}}
+
+      assert_receive {:table_list, :participant_busted,
+                      %{table_id: table_id, participant_id: _participant_id}}
 
       table = Repo.get(TableList, ctx.table.id)
 
@@ -73,19 +85,11 @@ defmodule Poker.Tables.Projectors.TableListTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_table_list_event!(:table_finished)
+      assert_receive {:table_list, :table_finished, %{table_id: table_id}}
 
       table = Repo.get(TableList, ctx.table.id)
 
       assert table.status == :finished
-    end
-  end
-
-  defp assert_table_list_event!(event) do
-    receive do
-      {:table_list_updated, _table_id, ^event} -> :ok
-    after
-      1000 -> raise "#{event} was not received"
     end
   end
 end

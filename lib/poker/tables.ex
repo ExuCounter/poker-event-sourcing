@@ -8,6 +8,8 @@ defmodule Poker.Tables do
     SitInParticipant
   }
 
+  import Ecto.Query
+
   def create_table(creator_id, settings_attrs \\ %{}) do
     table_id = Ecto.UUID.generate()
     creator_participant_id = Ecto.UUID.generate()
@@ -116,11 +118,29 @@ defmodule Poker.Tables do
   end
 
   def get_table(table_id) do
-    with {:ok, table} <- Poker.Repo.get_by(Poker.Tables.Projections.Table, table_id: table_id) do
-      table = table |> Poker.Repo.preload([:participants, hands: [:rounds]])
+    table = Poker.Repo.get(Poker.Tables.Projections.Table, table_id)
 
-      {:ok, table}
-    end
+    participants =
+      Poker.Repo.all(
+        from p in Poker.Tables.Projections.TableParticipants, where: p.table_id == ^table_id
+      )
+
+    current_hand =
+      from(h in Poker.Tables.Projections.TableHands,
+        where: h.table_id == ^table_id,
+        order_by: [desc: h.inserted_at],
+        limit: 1,
+        preload: [:rounds, :participant_hands, pots: [:winners]]
+      )
+      |> Poker.Repo.one()
+
+    %{
+      table: table,
+      participants: participants,
+      hand: current_hand,
+      pots: (current_hand && current_hand.pots) || [],
+      rounds: (current_hand && current_hand.rounds) || []
+    }
   end
 
   def get_table_state(table_id, current_user_id) do

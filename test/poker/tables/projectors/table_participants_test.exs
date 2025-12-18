@@ -10,10 +10,6 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
   setup ctx do
     ctx = ctx |> produce(:table)
 
-    subscribe_to_participants(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_participants(ctx.table.id) end)
-
     ctx
   end
 
@@ -21,26 +17,34 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
     test "creates a new participant with correct values", ctx do
       ctx = ctx |> exec(:add_participants, generate_players: 1)
 
-      participant_id = hd(ctx.table.participants).id
+      [participant] = ctx.table.participants
 
-      assert_participant_event!(participant_id, :participant_joined)
+      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id}}
 
-      participant = Repo.get(TableParticipants, participant_id)
+      assert participant_id == participant.id
 
-      assert participant.id == participant_id
-      assert participant.table_id == ctx.table.id
-      assert participant.player_id
-      assert participant.chips == ctx.table.settings.starting_stack
-      assert participant.status == :active
-      assert participant.is_sitting_out == false
+      db_participant = Repo.get(TableParticipants, participant_id)
+
+      assert db_participant.id == participant_id
+      assert db_participant.table_id == ctx.table.id
+      assert db_participant.player_id
+      assert db_participant.chips == ctx.table.settings.starting_stack
+      assert db_participant.status == :active
+      assert db_participant.is_sitting_out == false
     end
 
     test "creates multiple participants", ctx do
       ctx = ctx |> exec(:add_participants, generate_players: 3)
 
-      assert_participant_event!(hd(ctx.table.participants).id, :participant_joined)
-      assert_participant_event!(Enum.at(ctx.table.participants, 1).id, :participant_joined)
-      assert_participant_event!(Enum.at(ctx.table.participants, 2).id, :participant_joined)
+      [participant1, participant2, participant3] = ctx.table.participants
+
+      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_1}}
+      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_2}}
+      assert_receive {:table, :participant_joined, %{table_id: _table_id, participant_id: participant_id_3}}
+
+      assert participant_id_1 == participant1.id
+      assert participant_id_2 == participant2.id
+      assert participant_id_3 == participant3.id
 
       participants = Repo.all(TableParticipants)
 
@@ -92,8 +96,13 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_participant_event!(Enum.at(ctx.table.participants, 1).id, :participant_busted)
-      assert_participant_event!(Enum.at(ctx.table.participants, 2).id, :participant_busted)
+      [_participant1, participant2, participant3] = ctx.table.participants
+
+      assert_receive {:table, :participant_busted, %{table_id: _table_id, participant_id: participant_id_2}}
+      assert_receive {:table, :participant_busted, %{table_id: _table_id, participant_id: participant_id_3}}
+
+      assert participant_id_2 == participant2.id
+      assert participant_id_3 == participant3.id
 
       # Get busted participants
       busted_participants =
@@ -119,6 +128,10 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
 
       ctx = ctx |> exec(:start_runout)
 
+      assert_receive {:table, :payouts_distributed, %{table_id: _table_id, hand_id: _hand_id, payouts: payouts}}
+
+      assert length(payouts) > 0
+
       participants_after = Repo.all(TableParticipants)
 
       # At least one participant should have different chips
@@ -129,22 +142,6 @@ defmodule Poker.Tables.Projectors.TableParticipantsTest do
         end)
 
       assert chips_changed
-    end
-  end
-
-  defp subscribe_to_participants(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:participants")
-  end
-
-  defp unsubscribe_from_participants(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}:participants")
-  end
-
-  defp assert_participant_event!(participant_id, event) do
-    receive do
-      {:participant_updated, ^participant_id, ^event} -> :ok
-    after
-      1000 -> raise "#{event} was not received for participant #{participant_id}"
     end
   end
 end

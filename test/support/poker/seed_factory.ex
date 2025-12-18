@@ -1,20 +1,13 @@
 defmodule Poker.SeedFactorySchema do
   use SeedFactory.Schema
   import Commanded.Assertions.EventAssertions
-  # alias Poker.Tables.Projections.{Hand, Table, Settings, Participant, ParticipantHand}
 
-  def wait_for_events(events) when is_list(events) do
-    Enum.each(events, fn event ->
-      wait_for_event(Poker.App, event)
-    end)
-  end
-
-  def aggregate_state(:user, user_id) do
-    Commanded.Aggregates.Aggregate.aggregate_state(
-      Poker.App,
-      Poker.Accounts.Aggregates.User,
-      "user-" <> user_id
-    )
+  def maybe_wait_for_event(app, event_module) do
+    try do
+      wait_for_event(app, event_module)
+    rescue
+      _ -> :ok
+    end
   end
 
   def aggregate_state(:table, table_id) do
@@ -49,31 +42,6 @@ defmodule Poker.SeedFactorySchema do
     produce(:player)
   end
 
-  # command :create_six_max_table do
-  #   param(:players, entity: :players)
-
-  #   param(:settings,
-  #     value: %{
-  #       small_blind: 10,
-  #       big_blind: 20,
-  #       starting_stack: 1000,
-  #       timeout_seconds: 90
-  #     }
-  #   )
-
-  #   resolve(fn args ->
-  #     settings = args.settings |> Map.put(:table_type, :six_max)
-
-  #     {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
-
-  #     aggregate_state = aggregate_state(:table, table_id)
-
-  #     {:ok, %{table: aggregate_state}}
-  #   end)
-
-  #   produce(:table)
-  # end
-
   command :create_table do
     param(:player, entity: :player)
     param(:type, value: :six_max)
@@ -91,6 +59,9 @@ defmodule Poker.SeedFactorySchema do
       settings = args.settings |> Map.put(:table_type, args.type)
 
       {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
+
+      Poker.TableEvents.subscribe_to_table(table_id)
+      Poker.TableEvents.subscribe_to_lobby(table_id)
 
       aggregate_state = aggregate_state(:table, table_id)
 
@@ -137,10 +108,20 @@ defmodule Poker.SeedFactorySchema do
   end
 
   command :start_table do
-    param(:table, entity: :table, with_traits: [:not_ready])
+    param(:table, entity: :table)
 
     resolve(fn args ->
       {:ok, _hand_id} = Poker.Tables.start_table(args.table.id)
+
+      wait_for_event(
+        Poker.App,
+        Poker.Tables.Events.HandStarted
+      )
+
+      wait_for_event(
+        Poker.App,
+        Poker.Tables.Events.RoundStarted
+      )
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
@@ -199,6 +180,14 @@ defmodule Poker.SeedFactorySchema do
         :ok = Poker.Tables.call_hand(args.table.id, participant_to_act_id)
       end)
 
+      wait_for_event(
+        Poker.App,
+        Poker.Tables.Events.RoundCompleted
+      )
+
+      maybe_wait_for_event(Poker.App, Poker.Tables.Events.HandFinished)
+      maybe_wait_for_event(Poker.App, Poker.Tables.Events.TableFinished)
+
       table = aggregate_state(:table, args.table.id)
 
       {:ok, %{table: table}}
@@ -227,15 +216,13 @@ defmodule Poker.SeedFactorySchema do
         Poker.Tables.Events.HandFinished
       )
 
+      maybe_wait_for_event(Poker.App, Poker.Tables.Events.TableFinished)
+
       table = aggregate_state(:table, args.table.id)
 
       {:ok, %{table: table}}
     end)
 
     update(:table)
-  end
-
-  trait :not_ready, :table do
-    exec(:create_table)
   end
 end

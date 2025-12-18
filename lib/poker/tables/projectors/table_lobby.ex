@@ -82,26 +82,33 @@ defmodule Poker.Tables.Projectors.TableLobby do
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
   end)
 
-  def after_update(%TableCreated{id: table_id}, _metadata, _changes), do: :ok
+  def after_update(%TableCreated{id: _table_id}, _metadata, _changes), do: :ok
 
   def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    broadcast_lobby(table_id, :table_started)
+    Poker.TableEvents.broadcast_lobby(table_id, :table_started)
   end
 
-  def after_update(%ParticipantJoined{table_id: table_id}, _metadata, _changes) do
-    broadcast_lobby(table_id, :participant_joined)
+  def after_update(
+        %ParticipantJoined{table_id: table_id, id: participant_id},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_lobby(table_id, :participant_joined, %{
+      participant_id: participant_id
+    })
   end
 
-  def after_update(%ParticipantBusted{table_id: table_id}, _metadata, _changes) do
-    broadcast_lobby(table_id, :participant_busted)
+  def after_update(
+        %ParticipantBusted{table_id: table_id, participant_id: participant_id},
+        _metadata,
+        _changes
+      ) do
+    Poker.TableEvents.broadcast_lobby(table_id, :participant_busted, %{
+      participant_id: participant_id
+    })
   end
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    broadcast_lobby(table_id, :table_finished)
-  end
-
-  defp broadcast_lobby(table_id, event) do
-    Phoenix.PubSub.broadcast(Poker.PubSub, "table:#{table_id}:lobby", {:lobby_updated, event})
-    :ok
+    Poker.TableEvents.broadcast_lobby(table_id, :table_finished)
   end
 end

@@ -8,13 +8,7 @@ defmodule Poker.Tables.Projectors.TableTest do
   end
 
   setup ctx do
-    ctx = ctx |> produce(:table)
-
-    subscribe_to_table(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_table(ctx.table.id) end)
-
-    ctx
+    ctx |> produce(:table)
   end
 
   describe "TableCreated event" do
@@ -33,7 +27,7 @@ defmodule Poker.Tables.Projectors.TableTest do
         |> exec(:add_participants, generate_players: 3)
         |> exec(:start_table)
 
-      assert_table_event!(ctx.table.id, :table_started)
+      assert_receive {:table, :table_started, %{table_id: _table_id}}
 
       table = Repo.get(Table, ctx.table.id)
 
@@ -50,28 +44,11 @@ defmodule Poker.Tables.Projectors.TableTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_table_event!(ctx.table.id, :table_finished)
+      assert_receive {:table, :table_finished, %{table_id: _table_id}}
 
       table = Repo.get(Table, ctx.table.id)
 
       assert table.status == :finished
-    end
-  end
-
-  defp subscribe_to_table(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
-  end
-
-  defp unsubscribe_from_table(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}")
-  end
-
-  defp assert_table_event!(table_id, event) do
-    receive do
-      {:table_updated, ^event} -> :ok
-    after
-      1000 ->
-        raise "#{event} was not received for table #{table_id}"
     end
   end
 end

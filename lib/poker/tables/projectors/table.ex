@@ -25,20 +25,13 @@ defmodule Poker.Tables.Projectors.Table do
   end)
 
   @impl Commanded.Projections.Ecto
-  def after_update(%TableCreated{id: table_id}, _metadata, _changes) do
-    broadcast_table(table_id, :table_created)
-  end
+  def after_update(%TableCreated{}, _metadata, _changes), do: :ok
 
   def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    broadcast_table(table_id, :table_started)
+    Poker.TableEvents.broadcast_table(table_id, :table_started)
   end
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    broadcast_table(table_id, :table_finished)
-  end
-
-  defp broadcast_table(table_id, event) do
-    Phoenix.PubSub.broadcast(Poker.PubSub, "table:#{table_id}", {:table_updated, event})
-    :ok
+    Poker.TableEvents.broadcast_table(table_id, :table_finished)
   end
 end

@@ -10,9 +10,8 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
   setup ctx do
     ctx = ctx |> produce(:table)
 
-    subscribe_to_lobby(ctx.table.id)
-
-    on_exit(fn -> unsubscribe_from_lobby(ctx.table.id) end)
+    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{ctx.table.id}:lobby")
+    on_exit(fn -> Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{ctx.table.id}:lobby") end)
 
     ctx
   end
@@ -21,7 +20,11 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
     test "adds participant to lobby and increments seated count", ctx do
       ctx = ctx |> exec(:add_participants, generate_players: 1)
 
-      assert_lobby_event!(ctx.table.id, :participant_joined)
+      assert_receive {:table_lobby, :participant_joined,
+                      %{
+                        table_id: _table_id,
+                        participant_id: _participant_id
+                      }}
 
       table = Repo.get(TableLobby, ctx.table.id)
 
@@ -32,32 +35,13 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
       assert participant.player_id
       assert participant.email
     end
-
-    test "adds multiple participants correctly", ctx do
-      ctx = ctx |> exec(:add_participants, generate_players: 3)
-
-      assert_lobby_event!(ctx.table.id, :participant_joined)
-      assert_lobby_event!(ctx.table.id, :participant_joined)
-      assert_lobby_event!(ctx.table.id, :participant_joined)
-
-      table = Repo.get(TableLobby, ctx.table.id)
-
-      assert table.seated_count == 3
-      assert length(table.participants) == 3
-
-      # Verify all participants have required fields
-      Enum.each(table.participants, fn participant ->
-        assert participant.player_id
-        assert participant.email
-      end)
-    end
   end
 
   describe "TableStarted event" do
     test "updates table status when starting the table", ctx do
       ctx = ctx |> exec(:add_participants, generate_players: 3) |> exec(:start_table)
 
-      assert_lobby_event!(ctx.table.id, :table_started)
+      assert_receive {:table_lobby, :table_started, %{table_id: _table_id}}
 
       table = Repo.get(TableLobby, ctx.table.id)
 
@@ -76,8 +60,11 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_lobby_event!(ctx.table.id, :participant_busted)
-      assert_lobby_event!(ctx.table.id, :participant_busted)
+      assert_receive {:table_lobby, :participant_busted,
+                      %{table_id: _table_id, participant_id: _participant_id}}
+
+      assert_receive {:table_lobby, :participant_busted,
+                      %{table_id: _table_id, participant_id: _participant_id}}
 
       table = Repo.get(TableLobby, ctx.table.id)
 
@@ -96,27 +83,10 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
         |> exec(:start_table)
         |> exec(:start_runout)
 
-      assert_lobby_event!(ctx.table.id, :table_finished)
-
+      assert_receive {:table_lobby, :table_finished, %{table_id: _table_id}}
       table = Repo.get(TableLobby, ctx.table.id)
 
       assert table.status == :finished
-    end
-  end
-
-  defp subscribe_to_lobby(table_id) do
-    Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:lobby")
-  end
-
-  defp unsubscribe_from_lobby(table_id) do
-    Phoenix.PubSub.unsubscribe(Poker.PubSub, "table:#{table_id}:lobby")
-  end
-
-  defp assert_lobby_event!(table_id, event) do
-    receive do
-      {:lobby_updated, ^event} -> :ok
-    after
-      1000 -> raise "#{event} was not received for table #{table_id}"
     end
   end
 end

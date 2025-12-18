@@ -5,6 +5,8 @@ defmodule Poker.Tables.Projections.TablePots do
   schema "table_pots" do
     belongs_to :hand, Poker.Tables.Projections.TableHands, type: :binary_id
 
+    has_many(:winners, Poker.Tables.Projections.TablePotWinners, foreign_key: :pot_id)
+
     field :amount, :integer
 
     timestamps()

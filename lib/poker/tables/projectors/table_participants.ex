@@ -62,7 +62,7 @@ defmodule Poker.Tables.Projectors.TableParticipants do
     Enum.reduce(payouts, multi, fn payout, acc_multi ->
       Ecto.Multi.update_all(
         acc_multi,
-        "update_chips_#{payout.participant_id}",
+        "update_chips_#{payout.participant_id}_#{payout.pot_id}",
         participant_query(payout.participant_id),
         inc: [chips: payout.amount]
       )
@@ -75,7 +75,7 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    broadcast_participant(table_id, participant_id, :participant_joined)
+    Poker.TableEvents.broadcast_table(table_id, :participant_joined, %{participant_id: participant_id})
   end
 
   def after_update(
@@ -83,7 +83,7 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    broadcast_participant(table_id, participant_id, :participant_sat_out)
+    Poker.TableEvents.broadcast_table(table_id, :participant_sat_out, %{participant_id: participant_id})
   end
 
   def after_update(
@@ -91,7 +91,7 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    broadcast_participant(table_id, participant_id, :participant_sat_in)
+    Poker.TableEvents.broadcast_table(table_id, :participant_sat_in, %{participant_id: participant_id})
   end
 
   def after_update(
@@ -99,26 +99,20 @@ defmodule Poker.Tables.Projectors.TableParticipants do
         _metadata,
         _changes
       ) do
-    broadcast_participant(table_id, participant_id, :participant_busted)
+    Poker.TableEvents.broadcast_table(table_id, :participant_busted, %{participant_id: participant_id})
   end
 
-  def after_update(%HandFinished{table_id: table_id}, _metadata, _changes) do
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:participants",
-      {:participants_updated, :chips_updated}
-    )
-
-    :ok
-  end
-
-  defp broadcast_participant(table_id, participant_id, event) do
-    Phoenix.PubSub.broadcast(
-      Poker.PubSub,
-      "table:#{table_id}:participants",
-      {:participant_updated, participant_id, event}
-    )
-
-    :ok
+  def after_update(%HandFinished{table_id: table_id, hand_id: hand_id, payouts: payouts}, _metadata, _changes) do
+    Poker.TableEvents.broadcast_table(table_id, :payouts_distributed, %{
+      hand_id: hand_id,
+      payouts:
+        Enum.map(payouts, fn payout ->
+          %{
+            participant_id: payout.participant_id,
+            pot_id: payout.pot_id,
+            amount: payout.amount
+          }
+        end)
+    })
   end
 end
