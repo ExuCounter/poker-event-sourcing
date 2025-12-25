@@ -100,118 +100,129 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   end
 
   def handle(table, %ParticipantFold{} = command) do
-    participant = Helpers.find_participant_to_act(table)
+    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
+      participant_hand =
+        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
 
-    participant_hand =
-      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
-
-    %ParticipantFolded{
-      id: participant_hand.id,
-      participant_id: command.participant_id,
-      table_hand_id: table.hand.id,
-      table_id: table.id,
-      status: :folded,
-      round: table.round.type
-    }
-  end
-
-  def handle(table, %ParticipantCheck{} = command) do
-    participant = Helpers.find_participant_to_act(table)
-
-    participant_hand =
-      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
-
-    %ParticipantChecked{
-      id: participant_hand.id,
-      participant_id: command.participant_id,
-      table_hand_id: table.hand.id,
-      table_id: table.id,
-      status: :playing,
-      round: table.round.type
-    }
-  end
-
-  def handle(table, %ParticipantCall{} = command) do
-    participant = Helpers.find_participant_to_act(table)
-
-    last_bet_amount =
-      table.participant_hands
-      |> Enum.map(& &1.bet_this_round)
-      |> Enum.max()
-
-    participant_hand =
-      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
-
-    call_amount =
-      [last_bet_amount - participant_hand.bet_this_round, participant.chips]
-      |> Enum.filter(&(&1 >= 0))
-      |> Enum.min()
-
-    if participant.chips < call_amount do
-      {:error, :insufficient_chips}
-    else
-      %ParticipantCalled{
+      %ParticipantFolded{
         id: participant_hand.id,
-        participant_id: command.participant_id,
+        participant_id: participant.id,
         table_hand_id: table.hand.id,
         table_id: table.id,
-        status: :playing,
-        amount: call_amount,
+        status: :folded,
         round: table.round.type
       }
     end
   end
 
-  def handle(table, %ParticipantRaise{} = command) do
-    participant = Helpers.find_participant_to_act(table)
+  def handle(table, %ParticipantCheck{} = command) do
+    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
+      participant_hand =
+        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
 
-    participant_hand =
-      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+      %ParticipantChecked{
+        id: participant_hand.id,
+        participant_id: participant.id,
+        table_hand_id: table.hand.id,
+        table_id: table.id,
+        status: :playing,
+        round: table.round.type
+      }
+    end
+  end
 
-    raise_amount = command.amount - participant_hand.bet_this_round
+  def handle(table, %ParticipantCall{} = command) do
+    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
+      last_bet_amount =
+        table.participant_hands
+        |> Enum.map(& &1.bet_this_round)
+        |> Enum.max()
 
-    if participant.chips < raise_amount do
-      {:error, :insufficient_chips}
-    else
-      if participant.chips == raise_amount do
-        %ParticipantWentAllIn{
-          id: participant_hand.id,
-          participant_id: command.participant_id,
-          table_hand_id: table.hand.id,
-          table_id: table.id,
-          status: :all_in,
-          amount: participant.chips,
-          round: table.round.type
-        }
+      participant_hand =
+        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+      call_amount =
+        [last_bet_amount - participant_hand.bet_this_round, participant.chips]
+        |> Enum.filter(&(&1 >= 0))
+        |> Enum.min()
+
+      if participant.chips < call_amount do
+        {:error, :insufficient_chips}
       else
-        %ParticipantRaised{
+        %ParticipantCalled{
           id: participant_hand.id,
-          participant_id: command.participant_id,
-          table_hand_id: table.hand.id,
+          participant_id: participant.id,
+          table_hand_id: table.id,
           table_id: table.id,
           status: :playing,
-          amount: raise_amount,
+          amount: call_amount,
           round: table.round.type
         }
       end
     end
   end
 
+  def handle(table, %ParticipantRaise{} = command) do
+    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
+      participant_hand =
+        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+
+      raise_amount = command.amount - participant_hand.bet_this_round
+
+      if participant.chips < raise_amount do
+        {:error, :insufficient_chips}
+      else
+        if participant.chips == raise_amount do
+          %ParticipantWentAllIn{
+            id: participant_hand.id,
+            participant_id: participant.id,
+            table_hand_id: table.hand.id,
+            table_id: table.id,
+            status: :all_in,
+            amount: participant.chips,
+            round: table.round.type
+          }
+        else
+          %ParticipantRaised{
+            id: participant_hand.id,
+            participant_id: participant.id,
+            table_hand_id: table.hand.id,
+            table_id: table.id,
+            status: :playing,
+            amount: raise_amount,
+            round: table.round.type
+          }
+        end
+      end
+    end
+  end
+
   def handle(table, %ParticipantAllIn{} = command) do
-    participant = Helpers.find_participant_to_act(table)
+    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
+      participant_hand =
+        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
 
-    participant_hand =
-      Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+      %ParticipantWentAllIn{
+        id: participant_hand.id,
+        participant_id: participant.id,
+        table_hand_id: table.hand.id,
+        table_id: table.id,
+        status: :all_in,
+        amount: participant.chips,
+        round: table.round.type
+      }
+    end
+  end
 
-    %ParticipantWentAllIn{
-      id: participant_hand.id,
-      participant_id: command.participant_id,
-      table_hand_id: table.hand.id,
-      table_id: table.id,
-      status: :all_in,
-      amount: participant.chips,
-      round: table.round.type
-    }
+  defp find_participant_by_player_id(table, player_id) do
+    case Enum.find(table.participants, &(&1.player_id == player_id)) do
+      nil ->
+        {:error,
+         %{status: :participant_not_found, message: "You are not a participant at this table"}}
+
+      participant ->
+        {:ok, participant}
+    end
   end
 
   defp validate_not_already_joined(participants, player_id) do

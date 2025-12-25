@@ -1,11 +1,7 @@
 defmodule PokerWeb.PlayerLive.Game do
   use PokerWeb, :live_view
 
-  import Ecto.Query
-  import PokerWeb.PlayerLive.GameHelpers
-
   alias PokerWeb.Api.Tables
-  alias Poker.Tables.Projections.{TableParticipants, TableRounds, TableParticipantHands}
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
@@ -17,51 +13,21 @@ defmodule PokerWeb.PlayerLive.Game do
        |> put_flash(:error, "Table not found")
        |> push_navigate(to: ~p"/")}
     else
-      current_user_id = socket.assigns.current_scope.user.id
-
       if connected?(socket) do
         # Subscribe to unified table channel
         Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
       end
 
-      # Load initial table state using get_table
-      table_data = Tables.get_table(table_id)
-
-      # Find current user's participant
-      current_participant =
-        Enum.find(table_data.participants, &(&1.player_id == current_user_id))
-
-      # Get current round (most recent)
-      current_round =
-        table_data.hand && List.last(table_data.hand.rounds)
-
-      community_cards =
-        table_data.hand &&
-          Enum.flat_map(table_data.hand.rounds, fn round -> round.community_cards end)
-
-      # Filter hole cards to hide other players' cards
-      filtered_participant_hands =
-        filter_hole_cards(
-          (table_data.hand && table_data.hand.participant_hands) || [],
-          current_user_id,
-          table_data.participants
-        )
+      # Load complete player view (all calculations done server-side)
+      game_view =
+        Tables.get_player_game_view(socket.assigns.current_scope, table_id, 0)
 
       {:ok,
        assign(socket,
          table_id: table_id,
-         current_user_id: current_user_id,
          lobby: lobby,
-         table: table_data.table,
-         participants: table_data.participants,
-         hand: table_data.hand,
-         current_round: current_round,
-         participant_to_act_id: current_round && current_round.participant_to_act_id,
-         current_participant_id: current_participant && current_participant.id,
-         participant_hands: filtered_participant_hands,
-         community_cards: community_cards || [],
-         pots: (table_data.hand && table_data.hand.pots) || [],
-         event_queue: [],
+         game_view: game_view,
+         current_user_id: socket.assigns.current_scope.user.id,
          raise_amount: nil
        )}
     end
@@ -69,254 +35,18 @@ defmodule PokerWeb.PlayerLive.Game do
 
   # Handle unified table events
   @impl true
-  def handle_info({:table, event, data}, socket) do
-    socket = handle_table_event(event, data, socket)
+  def handle_info({:table, _event, _data}, socket) do
+    # Simply rebuild the view from events (events are already in event store)
+    game_view =
+      Tables.get_player_game_view(
+        socket.assigns.current_scope,
+        socket.assigns.table_id,
+        socket.assigns.game_view.latest_event_number
+      )
 
-    {:noreply, socket}
+    # Reset raise amount when round changes
+    {:noreply, assign(socket, game_view: game_view, raise_amount: nil)}
   end
-
-  # Event dispatcher - use event data directly when possible
-  defp handle_table_event(:participant_hand_given, participant_hand, socket) do
-    participant =
-      Enum.find(socket.assigns.participants, &(&1.id == participant_hand.participant_id))
-
-    participant_hand =
-      if participant && participant.player_id == socket.assigns.current_user_id do
-        participant_hand
-      else
-        %{participant_hand | hole_cards: []}
-      end
-
-    assign(socket,
-      participant_hands: socket.assigns.participant_hands ++ [participant_hand]
-    )
-  end
-
-  # Event dispatcher - use event data directly when possible
-  defp handle_table_event(:hand_started, %{hand_id: hand_id}, socket) do
-    assign(socket,
-      hand: %{
-        id: hand_id,
-        pots: [],
-        status: :active
-      }
-    )
-  end
-
-  defp handle_table_event(
-         :round_started,
-         %{id: round_id, community_cards: round_community_cards},
-         socket
-       ) do
-    assign(socket,
-      current_round: %{
-        id: round_id
-      },
-      community_cards: socket.assigns.community_cards ++ round_community_cards
-    )
-  end
-
-  defp handle_table_event(:round_finished, _data, socket) do
-    participant_hands = Enum.map(socket.assigns.participant_hands, &%{&1 | bet_this_round: 0})
-    assign(socket, participant_hands: participant_hands, raise_amount: nil)
-  end
-
-  defp handle_table_event(:participant_to_act_selected, %{participant_id: participant_id}, socket) do
-    assign(socket, participant_to_act_id: participant_id)
-  end
-
-  defp handle_table_event(
-         :participant_raised,
-         %{
-           participant_id: participant_id,
-           amount: amount
-         },
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | bet_this_round: participant_hand.bet_this_round + amount}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    participants =
-      Enum.map(socket.assigns.participants, fn
-        %{id: ^participant_id} = participant ->
-          %{participant | chips: participant.chips - amount}
-
-        participant ->
-          participant
-      end)
-
-    assign(socket, participant_hands: participant_hands, participants: participants)
-  end
-
-  defp handle_table_event(:participant_checked, %{participant_id: _participant_id}, socket),
-    do: socket
-
-  defp handle_table_event(
-         :small_blind_posted,
-         %{
-           participant_id: participant_id,
-           amount: amount
-         },
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | bet_this_round: participant_hand.bet_this_round + amount}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    participants =
-      Enum.map(socket.assigns.participants, fn
-        %{id: ^participant_id} = participant ->
-          %{participant | chips: participant.chips - amount}
-
-        participant ->
-          participant
-      end)
-
-    assign(socket, participant_hands: participant_hands, participants: participants)
-  end
-
-  defp handle_table_event(
-         :big_blind_posted,
-         %{
-           participant_id: participant_id,
-           amount: amount
-         },
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | bet_this_round: participant_hand.bet_this_round + amount}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    participants =
-      Enum.map(socket.assigns.participants, fn
-        %{id: ^participant_id} = participant ->
-          %{participant | chips: participant.chips - amount}
-
-        participant ->
-          participant
-      end)
-
-    assign(socket, participant_hands: participant_hands, participants: participants)
-  end
-
-  defp handle_table_event(
-         :participant_called,
-         %{
-           participant_id: participant_id,
-           amount: amount
-         },
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | bet_this_round: participant_hand.bet_this_round + amount}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    participants =
-      Enum.map(socket.assigns.participants, fn
-        %{id: ^participant_id} = participant ->
-          %{participant | chips: participant.chips - amount}
-
-        participant ->
-          participant
-      end)
-
-    assign(socket, participant_hands: participant_hands, participants: participants)
-  end
-
-  defp handle_table_event(
-         :participant_went_all_in,
-         %{
-           participant_id: participant_id,
-           amount: amount
-         },
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | bet_this_round: participant_hand.bet_this_round + amount}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    participants =
-      Enum.map(socket.assigns.participants, fn
-        %{id: ^participant_id} = participant ->
-          %{participant | chips: participant.chips - amount}
-
-        participant ->
-          participant
-      end)
-
-    assign(socket, participant_hands: participant_hands, participants: participants)
-  end
-
-  defp handle_table_event(
-         :participant_folded,
-         %{participant_id: participant_id, status: status},
-         socket
-       ) do
-    participant_hands =
-      Enum.map(socket.assigns.participant_hands, fn
-        %{participant_id: ^participant_id} = participant_hand ->
-          %{participant_hand | status: status}
-
-        participant_hand ->
-          participant_hand
-      end)
-
-    assign(socket, participant_hands: participant_hands)
-  end
-
-  defp handle_table_event(:pots_updated, %{pots: pots}, socket) do
-    assign(socket, pots: pots)
-  end
-
-  defp handle_table_event(:hand_finished, %{payouts: payouts}, socket) do
-    participants =
-      Enum.map(socket.assigns.participants, fn participant ->
-        amount =
-          payouts
-          |> Enum.filter(&(&1.participant_id == participant.id))
-          |> Enum.reduce(0, fn payout, acc -> acc + payout.amount end)
-
-        %{participant | chips: participant.chips + amount}
-      end)
-
-    assign(socket,
-      participants: participants,
-      hand: nil,
-      current_round: nil,
-      participant_to_act_id: nil,
-      participant_hands: [],
-      community_cards: [],
-      raise_amount: nil
-    )
-  end
-
-  defp handle_table_event(_event, _data, socket), do: socket
 
   # Action event handlers
   @impl true
@@ -369,19 +99,10 @@ defmodule PokerWeb.PlayerLive.Game do
 
   @impl true
   def render(assigns) do
-    # Calculate action state for button rendering
-    assigns = assign(assigns, :action_state, calculate_action_state(assigns))
-
-    # Calculate raise limits
-    {min_raise, max_raise} =
-      calculate_raise_limits(assigns.action_state, assigns.lobby.small_blind)
-
-    assigns = assign(assigns, min_raise: min_raise, max_raise: max_raise)
-
-    # Initialize raise_amount if not set
+    # Initialize raise_amount from game_view if not set
     assigns =
-      if is_nil(assigns.raise_amount) do
-        assign(assigns, raise_amount: min_raise)
+      if is_nil(assigns.raise_amount) && assigns.game_view.valid_actions.raise do
+        assign(assigns, raise_amount: assigns.game_view.valid_actions.raise.min)
       else
         assigns
       end
@@ -401,13 +122,13 @@ defmodule PokerWeb.PlayerLive.Game do
             Poker Table - {@lobby.table_type}
           </h1>
 
-          <%= if @hand && @hand.status == :active do %>
+          <%= if @game_view.hand_id do %>
             <!-- Active Hand -->
             <div class="mb-8">
               <!-- Community Cards -->
               <div class="flex justify-center gap-2 mb-6">
-                <%= if @current_round && !Enum.empty?(@community_cards) do %>
-                  <%= for card <- @community_cards do %>
+                <%= if !Enum.empty?(@game_view.community_cards) do %>
+                  <%= for card <- @game_view.community_cards do %>
                     <div class={[
                       "bg-white rounded p-2 w-20 h-24 flex items-center justify-center font-bold text-2xl",
                       suit_color(card)
@@ -424,57 +145,64 @@ defmodule PokerWeb.PlayerLive.Game do
               <div class="text-center mb-6">
                 <h3 class="text-white font-semibold">Total Pot:</h3>
                 <p class="text-yellow-400 text-2xl font-bold">
-                  {@action_state.pot_size}
+                  {@game_view.total_pot}
                 </p>
               </div>
               
     <!-- Players Grid -->
               <div class="grid grid-cols-3 gap-4 mt-8 mb-24">
-                <%= for participant_hand <- @participant_hands do %>
-                  <% participant_info = get_participant_info(participant_hand, @participants, @lobby) %>
+                <%= for participant <- @game_view.participants do %>
+                  <% lobby_participant =
+                    Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
 
                   <div class={[
                     "bg-gray-800 rounded-lg p-4",
-                    if(participant_hand.participant_id == @participant_to_act_id,
+                    if(participant.id == @game_view.current_participant_to_act_id,
                       do: "ring-4 ring-yellow-400 animate-pulse"
                     )
                   ]}>
                     <div class="text-white">
                       <div class="flex justify-between items-center mb-2">
-                        <p class="font-semibold">{participant_info.email}</p>
-                        <span class={[
-                          "text-xs px-2 py-1 rounded",
-                          case participant_info.hand_status do
-                            :playing -> "bg-green-600"
-                            :folded -> "bg-red-600"
-                            :all_in -> "bg-yellow-600"
-                            _ -> "bg-gray-600"
-                          end
-                        ]}>
-                          {participant_info.hand_status}
-                        </span>
-                      </div>
-
-                      <p class="text-sm text-gray-400 mb-1">
-                        {participant_info.position}
-                      </p>
-
-                      <div class="flex justify-between items-center mb-2">
-                        <p class="text-lg font-bold text-green-400">
-                          {participant_info.chips} chips
+                        <p class="font-semibold">
+                          {(lobby_participant && lobby_participant.email) || "Unknown"}
                         </p>
-
-                        <%= if participant_hand.bet_this_round > 0 do %>
-                          <div class="bg-yellow-500 text-gray-900 px-2 py-1 rounded-md font-bold text-sm">
-                            Bet: {participant_hand.bet_this_round}
-                          </div>
+                        <%= if participant.hand_status do %>
+                          <span class={[
+                            "text-xs px-2 py-1 rounded",
+                            case participant.hand_status do
+                              :playing -> "bg-green-600"
+                              :folded -> "bg-red-600"
+                              :all_in -> "bg-yellow-600"
+                              _ -> "bg-gray-600"
+                            end
+                          ]}>
+                            {participant.hand_status}
+                          </span>
                         <% end %>
                       </div>
 
-    <!-- Hole Cards -->
-                      <%= if !Enum.empty?(participant_info.hole_cards) do %>
+                      <%= if participant.position do %>
+                        <p class="text-sm text-gray-400 mb-1">
+                          {participant.position}
+                        </p>
+                      <% end %>
+
+                      <div class="flex justify-between items-center mb-2">
+                        <p class="text-lg font-bold text-green-400">
+                          {participant.chips} chips
+                        </p>
+
+                        <%= if participant.bet_this_round > 0 do %>
+                          <div class="bg-yellow-500 text-gray-900 px-2 py-1 rounded-md font-bold text-sm">
+                            Bet: {participant.bet_this_round}
+                          </div>
+                        <% end %>
+                      </div>
+                      
+    <!-- Hole Cards - only show for current player -->
+                      <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
                         <div class="flex gap-1 mt-2">
-                          <%= for card <- participant_info.hole_cards do %>
+                          <%= for card <- @game_view.hole_cards do %>
                             <div class={[
                               "bg-white rounded p-1 w-14 h-18 flex items-center justify-center font-bold text-md",
                               suit_color(card)
@@ -484,15 +212,17 @@ defmodule PokerWeb.PlayerLive.Game do
                           <% end %>
                         </div>
                       <% else %>
-                        <!-- Card backs for other players -->
-                        <div class="flex gap-1 mt-2">
-                          <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                            <span class="text-blue-400 text-xs">🂠</span>
+                        <%= if participant.hand_status do %>
+                          <!-- Card backs for other players -->
+                          <div class="flex gap-1 mt-2">
+                            <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
+                              <span class="text-blue-400 text-xs">🂠</span>
+                            </div>
+                            <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
+                              <span class="text-blue-400 text-xs">🂠</span>
+                            </div>
                           </div>
-                          <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                            <span class="text-blue-400 text-xs">🂠</span>
-                          </div>
-                        </div>
+                        <% end %>
                       <% end %>
                     </div>
                   </div>
@@ -505,17 +235,15 @@ defmodule PokerWeb.PlayerLive.Game do
               <h2 class="text-xl mb-4">Waiting for hand to start...</h2>
 
               <div class="grid grid-cols-3 gap-4 mt-8">
-                <%= for participant <- @lobby.participants do %>
-                  <% participant_data =
-                    Enum.find(@participants, &(&1.player_id == participant.player_id)) %>
+                <%= for participant <- @game_view.participants do %>
+                  <% lobby_participant =
+                    Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
                   <div class="bg-gray-800 rounded-lg p-4">
                     <div class="text-white">
-                      <p class="font-semibold">{participant.email}</p>
-                      <%= if participant_data do %>
-                        <p class="text-lg font-bold text-green-400">{participant_data.chips} chips</p>
-                      <% else %>
-                        <p class="text-sm text-gray-400">Ready to play</p>
-                      <% end %>
+                      <p class="font-semibold">
+                        {(lobby_participant && lobby_participant.email) || "Unknown"}
+                      </p>
+                      <p class="text-lg font-bold text-green-400">{participant.chips} chips</p>
                     </div>
                   </div>
                 <% end %>
@@ -524,9 +252,9 @@ defmodule PokerWeb.PlayerLive.Game do
           <% end %>
           
     <!-- Action Controls - Fixed to bottom -->
-          <%= if @hand && @hand.status == :active do %>
+          <%= if @game_view.hand_id do %>
             <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
-              <%= if @action_state.is_my_turn do %>
+              <%= if @game_view.valid_actions.fold do %>
                 <div class="flex gap-4 items-center">
                   <!-- Fold Button -->
                   <.button
@@ -537,7 +265,7 @@ defmodule PokerWeb.PlayerLive.Game do
                   </.button>
                   
     <!-- Check Button (only when no bet) -->
-                  <%= if @action_state.can_check do %>
+                  <%= if @game_view.valid_actions.check do %>
                     <.button
                       phx-click="check_hand"
                       class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg"
@@ -547,17 +275,17 @@ defmodule PokerWeb.PlayerLive.Game do
                   <% end %>
                   
     <!-- Call Button (only when there's a bet) -->
-                  <%= if @action_state.can_call do %>
+                  <%= if @game_view.valid_actions.call do %>
                     <.button
                       phx-click="call_hand"
                       class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg"
                     >
-                      Call {@action_state.call_amount}
+                      Call {@game_view.valid_actions.call.amount}
                     </.button>
                   <% end %>
                   
     <!-- Raise Controls -->
-                  <%= if @action_state.can_raise do %>
+                  <%= if @game_view.valid_actions.raise do %>
                     <div class="flex flex-row gap-3">
                       <div>
                         <!-- Slider -->
@@ -570,28 +298,28 @@ defmodule PokerWeb.PlayerLive.Game do
                             <input
                               type="range"
                               name="raise_amount"
-                              min={@min_raise}
-                              max={@max_raise}
+                              min={@game_view.valid_actions.raise.min}
+                              max={@game_view.valid_actions.raise.max}
                               value={@raise_amount}
                               phx-change="update_raise_amount"
                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
                             />
                           </form>
                           <div class="flex justify-between text-xs text-gray-500">
-                            <span>{@min_raise}</span>
-                            <span>{@max_raise}</span>
+                            <span>{@game_view.valid_actions.raise.min}</span>
+                            <span>{@game_view.valid_actions.raise.max}</span>
                           </div>
                         </div>
                         <!-- Quick Presets -->
                         <div class="flex gap-2 flex-wrap pt-4">
-                          <%= for {label, amount} <- calculate_raise_presets(@action_state) do %>
+                          <%= for preset <- @game_view.valid_actions.raise.presets do %>
                             <button
                               type="button"
                               phx-click="update_raise_amount"
-                              phx-value-raise_amount={amount}
+                              phx-value-raise_amount={preset.value}
                               class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
                             >
-                              {label}
+                              {preset.label}
                             </button>
                           <% end %>
                         </div>
@@ -610,22 +338,6 @@ defmodule PokerWeb.PlayerLive.Game do
                     </.button>
                   <% end %>
                 </div>
-                <!-- Info Display 
-                <div class="mt-4 flex gap-6 text-sm text-gray-400 justify-center">
-                  <span>
-                    Pot: <span class="text-yellow-400 font-bold">{@action_state.pot_size}</span>
-                  </span>
-                  <span>
-                    Your Chips: <span class="text-green-400 font-bold">{@action_state.my_chips}</span>
-                  </span>
-                  <%= if @action_state.current_bet > 0 do %>
-                    <span>
-                      Current Bet:
-                      <span class="text-red-400 font-bold">{@action_state.current_bet}</span>
-                    </span>
-                  <% end %>
-                </div>
-    -->
               <% else %>
                 <!-- Not your turn -->
                 <div class="text-gray-400 text-lg font-semibold px-6 text-center">

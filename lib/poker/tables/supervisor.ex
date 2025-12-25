@@ -10,15 +10,14 @@ defmodule Poker.Tables.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
+        # Event handlers (for broadcasting to LiveView)
+        Tables.EventHandlers.TableEventBroadcaster,
+        # Projectors (for lobby/list views only)
         Tables.Projectors.TableList,
         Tables.Projectors.TableLobby,
-        Tables.Projectors.Table,
-        Tables.Projectors.TableHands,
-        Tables.Projectors.TableRounds,
-        Tables.Projectors.TableParticipants,
-        Tables.Projectors.TableParticipantHands,
-        Tables.Projectors.TablePots,
-        # Tables.Projectors.TablePotWinners,
+        # Tables.Projectors.Table,
+        # Tables.Projectors.TableParticipants,
+        # Process manager (for workflow orchestration)
         Tables.ProcessManager
       ],
       strategy: :one_for_one

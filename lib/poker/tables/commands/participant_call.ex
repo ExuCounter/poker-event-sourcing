@@ -3,7 +3,7 @@ defmodule Poker.Tables.Commands.ParticipantCall do
 
   embedded_schema do
     field :hand_action_id, :binary_id
-    field :participant_id, :binary_id
+    field :player_id, :binary_id
     field :table_id, :binary_id
   end
 
@@ -11,12 +11,12 @@ defmodule Poker.Tables.Commands.ParticipantCall do
     %__MODULE__{}
     |> Ecto.Changeset.cast(attrs, [
       :hand_action_id,
-      :participant_id,
+      :player_id,
       :table_id
     ])
     |> Ecto.Changeset.validate_required([
       :hand_action_id,
-      :participant_id,
+      :player_id,
       :table_id
     ])
   end

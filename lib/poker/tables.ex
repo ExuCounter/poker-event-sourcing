@@ -67,12 +67,12 @@ defmodule Poker.Tables do
     end
   end
 
-  def fold_hand(table_id, participant_id) do
+  def fold_hand(table_id, player_id) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
-      participant_id: participant_id,
+      player_id: player_id,
       table_id: table_id
     }
 
@@ -83,12 +83,12 @@ defmodule Poker.Tables do
     end
   end
 
-  def check_hand(table_id, participant_id) do
+  def check_hand(table_id, player_id) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
-      participant_id: participant_id,
+      player_id: player_id,
       table_id: table_id
     }
 
@@ -99,12 +99,12 @@ defmodule Poker.Tables do
     end
   end
 
-  def call_hand(table_id, participant_id) do
+  def call_hand(table_id, player_id) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
-      participant_id: participant_id,
+      player_id: player_id,
       table_id: table_id
     }
 
@@ -115,12 +115,12 @@ defmodule Poker.Tables do
     end
   end
 
-  def raise_hand(table_id, participant_id, amount) do
+  def raise_hand(table_id, player_id, amount) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
-      participant_id: participant_id,
+      player_id: player_id,
       table_id: table_id,
       amount: amount
     }
@@ -132,12 +132,12 @@ defmodule Poker.Tables do
     end
   end
 
-  def all_in_hand(table_id, participant_id) do
+  def all_in_hand(table_id, player_id) do
     hand_action_id = Ecto.UUID.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
-      participant_id: participant_id,
+      player_id: player_id,
       table_id: table_id
     }
 
@@ -184,56 +184,19 @@ defmodule Poker.Tables do
     Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
   end
 
-  def get_table(table_id) do
-    table = Poker.Repo.get(Poker.Tables.Projections.Table, table_id)
-
-    participants =
-      Poker.Repo.all(
-        from p in Poker.Tables.Projections.TableParticipants, where: p.table_id == ^table_id
-      )
-
-    current_hand =
-      from(h in Poker.Tables.Projections.TableHands,
-        where: h.table_id == ^table_id,
-        order_by: [desc: h.inserted_at],
-        limit: 1,
-        preload: [:rounds, :participant_hands, :pots]
-      )
-      |> Poker.Repo.one()
-
-    %{
-      table: table,
-      participants: participants,
-      hand: current_hand,
-      pots: (current_hand && current_hand.pots) || [],
-      rounds: (current_hand && current_hand.rounds) || []
-    }
-  end
-
   def get_table_round(round_id) do
     Poker.Repo.get(Poker.Tables.Projections.TableRounds, round_id)
   end
 
-  def get_table_state(table_id, current_user_id) do
-    with {:ok, table_state} <- Poker.Repo.get(Poker.Tables.Projections.TableState, table_id) do
-      # filtered_hands =
-      #   Enum.map(state.participant_hands, fn hand ->
-      #     participant =
-      #       Enum.find(lobby.participants, &(&1.player_id == hand.participant_id))
-
-      #     if participant && participant.player_id == current_user_id do
-      #       hand
-      #     else
-      #       %{hand | hole_cards: []}
-      #     end
-      #   end)
-
-      # %{state | participant_hands: filtered_hands}
-      {:ok, table_state}
-    end
-  end
-
   def list_tables() do
     Poker.Repo.all(Poker.Tables.Projections.TableList)
+  end
+
+  @doc """
+  Get player-specific game view with all calculated state.
+  Use this instead of get_table for game UI.
+  """
+  def get_player_game_view(table_id, player_id, since_event_number) do
+    Poker.Tables.Views.PlayerGameView.build(table_id, player_id, since_event_number)
   end
 end
