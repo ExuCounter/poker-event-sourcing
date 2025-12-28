@@ -40,7 +40,6 @@ defmodule Poker.DataCase do
 
   setup tags do
     Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
-    Mox.stub_with(Poker.Services.HandEvaluatorMock, Poker.Services.HandEvaluatorStub)
 
     Poker.DataCase.setup_sandbox(tags)
 

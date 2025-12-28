@@ -1,9 +1,17 @@
-defmodule Poker.Services.HandEvaluatorStub do
-  @behaviour Poker.Services.HandEvaluator.Behaviour
+defmodule Poker.HandEvaluator do
+  @moduledoc """
+  Evaluates poker hands and determines winners.
+  Pure deterministic logic for hand evaluation.
+  """
 
   alias Poker.{Card, HandRank}
 
-  @impl true
+  @doc """
+  Determines the winners from a list of participant hands and community cards.
+
+  Returns a list of winner maps sorted by hand strength (strongest first).
+  In case of a tie, multiple participants are returned with the same hand value.
+  """
   def determine_winners(participant_hands, community_cards) do
     community_cards = Card.to_comparison_hand(community_cards)
 

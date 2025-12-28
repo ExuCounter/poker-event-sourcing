@@ -50,7 +50,6 @@ config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.DeckMock
-config :poker, Poker.Services.HandEvaluator, dispatcher: Poker.Services.HandEvaluatorMock
 
 config :commanded,
   assert_receive_event_timeout: 100,
