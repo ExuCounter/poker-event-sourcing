@@ -53,13 +53,11 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert participant1.player_id == player1.id
       assert participant1.chips == ctx.table.settings.starting_stack
-      assert participant1.seat_number == 1
       assert participant1.status == :active
       assert participant1.is_sitting_out == false
 
       assert participant2.player_id == player2.id
       assert participant2.chips == ctx.table.settings.starting_stack
-      assert participant2.seat_number == 2
       assert participant2.status == :active
       assert participant2.is_sitting_out == false
     end
@@ -305,7 +303,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
           assert payout.participant_id == expected_winner_participant.id
           assert payout.amount == ctx.table.settings.big_blind * 2
-          assert payout.hand_rank == [:straight_flush, :A]
+          assert payout.hand_rank == "straight_flush:A"
           assert event.finish_reason == :showdown
         end
       )

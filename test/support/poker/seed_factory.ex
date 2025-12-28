@@ -1,6 +1,5 @@
 defmodule Poker.SeedFactorySchema do
   use SeedFactory.Schema
-  import Commanded.Assertions.EventAssertions
 
   def aggregate_state(:table, table_id) do
     Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
@@ -125,10 +124,12 @@ defmodule Poker.SeedFactorySchema do
     param(:amount)
 
     resolve(fn args ->
+      acting_player_id = get_acting_player_id(args.table)
+
       :ok =
         Poker.Tables.raise_hand(
           args.table.id,
-          args.table.round.participant_to_act_id,
+          acting_player_id,
           args.amount
         )
 
@@ -146,7 +147,9 @@ defmodule Poker.SeedFactorySchema do
     param(:table, entity: :table)
 
     resolve(fn args ->
-      :ok = Poker.Tables.call_hand(args.table.id, args.table.round.participant_to_act_id)
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.call_hand(args.table.id, acting_player_id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
@@ -162,7 +165,9 @@ defmodule Poker.SeedFactorySchema do
     param(:table, entity: :table)
 
     resolve(fn args ->
-      :ok = Poker.Tables.all_in_hand(args.table.id, args.table.round.participant_to_act_id)
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.all_in_hand(args.table.id, acting_player_id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
@@ -178,7 +183,9 @@ defmodule Poker.SeedFactorySchema do
     param(:table, entity: :table)
 
     resolve(fn args ->
-      :ok = Poker.Tables.fold_hand(args.table.id, args.table.round.participant_to_act_id)
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.fold_hand(args.table.id, acting_player_id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)
@@ -196,13 +203,11 @@ defmodule Poker.SeedFactorySchema do
     resolve(fn args ->
       args.table.participants
       |> Enum.each(fn _participant ->
-        %{
-          round: %{
-            participant_to_act_id: participant_to_act_id
-          }
-        } = aggregate_state(:table, args.table.id)
+        table = aggregate_state(:table, args.table.id)
 
-        :ok = Poker.Tables.call_hand(args.table.id, participant_to_act_id)
+        acting_player_id = get_acting_player_id(table)
+
+        :ok = Poker.Tables.call_hand(args.table.id, acting_player_id)
       end)
 
       table = aggregate_state(:table, args.table.id)
@@ -218,14 +223,12 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       args.table.participants
-      |> Enum.each(fn _participant ->
-        %{
-          round: %{
-            participant_to_act_id: participant_to_act_id
-          }
-        } = aggregate_state(:table, args.table.id)
+      |> Enum.each(fn _ ->
+        table = aggregate_state(:table, args.table.id)
 
-        :ok = Poker.Tables.all_in_hand(args.table.id, participant_to_act_id)
+        acting_player_id = get_acting_player_id(table)
+
+        :ok = Poker.Tables.all_in_hand(args.table.id, acting_player_id)
       end)
 
       table = aggregate_state(:table, args.table.id)
@@ -234,5 +237,11 @@ defmodule Poker.SeedFactorySchema do
     end)
 
     update(:table)
+  end
+
+  def get_acting_player_id(table) do
+    table.participants
+    |> Enum.find(&(&1.id == table.round.participant_to_act_id))
+    |> then(& &1.player_id)
   end
 end

@@ -16,7 +16,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
         participant_hands: [],
         round: nil,
         pots: [],
-        remaining_deck: nil
+        remaining_deck: nil,
+        payouts: []
     }
   end
 
@@ -48,11 +49,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     %Table{
       table
       | participants: updated_participants,
-        community_cards: [],
-        participant_hands: [],
-        round: nil,
-        pots: [],
-        remaining_deck: nil
+        payouts: payouts
     }
   end
 end

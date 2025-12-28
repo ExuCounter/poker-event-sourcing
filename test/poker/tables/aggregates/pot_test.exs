@@ -49,7 +49,7 @@ defmodule Poker.Tables.Aggregates.PotTest do
   describe "recalculate_pots/1 - Single Side Pot" do
     test "one player all-in for less creates side pot" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 50, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 50, status: :playing},
         %{participant_id: "p2", total_bet_this_hand: 100, status: :playing},
         %{participant_id: "p3", total_bet_this_hand: 100, status: :playing}
       ]
@@ -75,7 +75,7 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
     test "heads-up with one all-in for less" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 30, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 30, status: :playing},
         %{participant_id: "p2", total_bet_this_hand: 100, status: :playing}
       ]
 
@@ -100,8 +100,8 @@ defmodule Poker.Tables.Aggregates.PotTest do
   describe "recalculate_pots/1 - Multiple Side Pots" do
     test "two players all-in at different amounts creates two side pots" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 50, status: :all_in},
-        %{participant_id: "p2", total_bet_this_hand: 100, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 50, status: :playing},
+        %{participant_id: "p2", total_bet_this_hand: 100, status: :playing},
         %{participant_id: "p3", total_bet_this_hand: 200, status: :playing},
         %{participant_id: "p4", total_bet_this_hand: 200, status: :playing}
       ]
@@ -134,8 +134,8 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
     test "three players all-in at different amounts" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 25, status: :all_in},
-        %{participant_id: "p2", total_bet_this_hand: 75, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 25, status: :playing},
+        %{participant_id: "p2", total_bet_this_hand: 75, status: :playing},
         %{participant_id: "p3", total_bet_this_hand: 150, status: :playing},
         %{participant_id: "p4", total_bet_this_hand: 150, status: :playing}
       ]
@@ -165,9 +165,9 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
     test "complex scenario with 6 players at different bet levels" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 10, status: :all_in},
-        %{participant_id: "p2", total_bet_this_hand: 20, status: :all_in},
-        %{participant_id: "p3", total_bet_this_hand: 30, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 10, status: :playing},
+        %{participant_id: "p2", total_bet_this_hand: 20, status: :playing},
+        %{participant_id: "p3", total_bet_this_hand: 30, status: :playing},
         %{participant_id: "p4", total_bet_this_hand: 100, status: :playing},
         %{participant_id: "p5", total_bet_this_hand: 100, status: :playing},
         %{participant_id: "p6", total_bet_this_hand: 100, status: :playing}
@@ -209,7 +209,7 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
       # Main pot includes folded player's bet but they're not eligible
       main_pot = Enum.at(pots, 0)
-      assert main_pot.amount == 100
+      assert main_pot.amount == 150
       assert main_pot.contributing_participant_ids == ["p2", "p3"]
 
       # Side pot only from active players
@@ -246,7 +246,7 @@ defmodule Poker.Tables.Aggregates.PotTest do
       pots = Pot.recalculate_pots(participant_hands)
 
       assert length(pots) == 1
-      assert hd(pots).amount == 50
+      assert hd(pots).amount == 150
       assert hd(pots).contributing_participant_ids == ["p3"]
     end
   end
@@ -361,7 +361,7 @@ defmodule Poker.Tables.Aggregates.PotTest do
 
     test "all-in showdown with varying stacks" do
       participant_hands = [
-        %{participant_id: "p1", total_bet_this_hand: 150, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 150, status: :playing},
         %{participant_id: "p2", total_bet_this_hand: 500, status: :playing},
         %{participant_id: "p3", total_bet_this_hand: 500, status: :playing}
       ]
@@ -384,9 +384,9 @@ defmodule Poker.Tables.Aggregates.PotTest do
     test "tournament bubble scenario with multiple all-ins" do
       participant_hands = [
         # short stack all-in
-        %{participant_id: "p1", total_bet_this_hand: 50, status: :all_in},
+        %{participant_id: "p1", total_bet_this_hand: 50, status: :playing},
         # medium stack all-in
-        %{participant_id: "p2", total_bet_this_hand: 100, status: :all_in},
+        %{participant_id: "p2", total_bet_this_hand: 100, status: :playing},
         # big stack all-in
         %{participant_id: "p3", total_bet_this_hand: 300, status: :playing},
         # big stack all-in

@@ -28,7 +28,9 @@ defmodule PokerWeb.PlayerLive.Game do
          lobby: lobby,
          game_view: game_view,
          current_user_id: socket.assigns.current_scope.user.id,
-         raise_amount: nil
+         raise_amount: nil,
+         showdown_delay: false,
+         animation_delay: false
        )}
     end
   end
@@ -36,7 +38,7 @@ defmodule PokerWeb.PlayerLive.Game do
   # Handle unified table events
   @impl true
   def handle_info({:table, _event, _data}, socket) do
-    # Simply rebuild the view from events (events are already in event store)
+    # Rebuild view and get new events since last update
     game_view =
       Tables.get_player_game_view(
         socket.assigns.current_scope,
@@ -44,8 +46,108 @@ defmodule PokerWeb.PlayerLive.Game do
         socket.assigns.game_view.latest_event_number
       )
 
-    # Reset raise amount when round changes
-    {:noreply, assign(socket, game_view: game_view, raise_amount: nil)}
+    # If we're in any delay (showdown or animation), update event number but keep old view visible
+    if socket.assigns.showdown_delay or socket.assigns.animation_delay do
+      {:noreply,
+       assign(socket,
+         game_view: %{
+           socket.assigns.game_view
+           | latest_event_number: game_view.latest_event_number
+         }
+       )}
+    else
+      # Check if HandFinished is in the new events
+      has_hand_finished =
+        Enum.any?(game_view.new_events, fn event ->
+          event.__struct__ |> Module.split() |> List.last() == "HandFinished"
+        end)
+
+      # Check if there are action events that need animation time
+      has_action_events =
+        Enum.any?(game_view.new_events, fn event ->
+          event_type = event.__struct__ |> Module.split() |> List.last()
+
+          event_type in [
+            "ParticipantFolded",
+            "ParticipantCalled",
+            "ParticipantChecked",
+            "ParticipantRaised",
+            "ParticipantWentAllIn"
+          ]
+        end)
+
+      # Push new events to frontend for animations
+      socket =
+        if length(game_view.new_events) > 0 do
+          push_event(socket, "table_events", %{events: serialize_events(game_view.new_events)})
+        else
+          socket
+        end
+
+      # Delay state updates for animations
+      cond do
+        has_hand_finished ->
+          # Schedule delayed update to show showdown for 3 seconds
+          Process.send_after(self(), {:delayed_update, game_view}, 3000)
+
+          # KEEP OLD game_view with cards visible, only update event number
+          {:noreply,
+           assign(socket,
+             game_view: %{
+               socket.assigns.game_view
+               | latest_event_number: game_view.latest_event_number
+             },
+             showdown_delay: true
+           )}
+
+        has_action_events ->
+          # Schedule delayed update to let action animations play (1.2 seconds)
+          Process.send_after(self(), {:delayed_update, game_view}, 1200)
+
+          # Keep old view visible during animation, only update event number
+          {:noreply,
+           assign(socket,
+             game_view: %{
+               socket.assigns.game_view
+               | latest_event_number: game_view.latest_event_number
+             },
+             animation_delay: true
+           )}
+
+        true ->
+          # Normal immediate update (no animations needed)
+          {:noreply, assign(socket, game_view: game_view, raise_amount: nil)}
+      end
+    end
+  end
+
+  # Handle delayed update after animations
+  @impl true
+  def handle_info({:delayed_update, game_view}, socket) do
+    game_view =
+      Tables.get_player_game_view(
+        socket.assigns.current_scope,
+        socket.assigns.table_id,
+        game_view.latest_event_number
+      )
+
+    {:noreply,
+     assign(socket,
+       game_view: game_view,
+       raise_amount: nil,
+       showdown_delay: false,
+       animation_delay: false
+     )}
+  end
+
+  # Serialize events for frontend
+  defp serialize_events(events) do
+    Enum.map(events, fn event ->
+      %{
+        type: event.__struct__ |> Module.split() |> List.last(),
+        data: Map.from_struct(event)
+      }
+    end)
   end
 
   # Action event handlers
@@ -109,7 +211,8 @@ defmodule PokerWeb.PlayerLive.Game do
 
     ~H"""
     <.flash kind={:error} flash={@flash} />
-    <div class="min-h-screen bg-green-800 p-8">
+    <.flash kind={:info} flash={@flash} />
+    <div id="game-container" phx-hook="TableEvents" class="min-h-screen bg-green-800 p-8">
       <div class="max-w-7xl mx-auto">
         <div class="mb-6">
           <.link navigate={~p"/"} class="text-white hover:text-gray-200">
@@ -120,17 +223,21 @@ defmodule PokerWeb.PlayerLive.Game do
         <div class="bg-green-900 rounded-3xl p-8 shadow-2xl">
           <h1 class="text-2xl font-bold text-white mb-6 text-center">
             Poker Table - {@lobby.table_type}
+
+            <%= if @game_view.table_status == :finished do %>
+              | Finished
+            <% end %>
           </h1>
 
           <%= if @game_view.hand_id do %>
             <!-- Active Hand -->
             <div class="mb-8">
               <!-- Community Cards -->
-              <div class="flex justify-center gap-2 mb-6">
+              <div class="community-cards-area flex justify-center gap-2 mb-6">
                 <%= if !Enum.empty?(@game_view.community_cards) do %>
                   <%= for card <- @game_view.community_cards do %>
                     <div class={[
-                      "bg-white rounded p-2 w-20 h-24 flex items-center justify-center font-bold text-2xl",
+                      "community-card bg-white rounded p-2 w-20 h-24 flex items-center justify-center font-bold text-2xl",
                       suit_color(card)
                     ]}>
                       {format_card(card)}
@@ -142,7 +249,7 @@ defmodule PokerWeb.PlayerLive.Game do
               </div>
               
     <!-- Pots -->
-              <div class="text-center mb-6">
+              <div class="pot-area text-center mb-6">
                 <h3 class="text-white font-semibold">Total Pot:</h3>
                 <p class="text-yellow-400 text-2xl font-bold">
                   {@game_view.total_pot}
@@ -155,12 +262,15 @@ defmodule PokerWeb.PlayerLive.Game do
                   <% lobby_participant =
                     Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
 
-                  <div class={[
-                    "bg-gray-800 rounded-lg p-4",
-                    if(participant.id == @game_view.current_participant_to_act_id,
-                      do: "ring-4 ring-yellow-400 animate-pulse"
-                    )
-                  ]}>
+                  <div
+                    class={[
+                      "bg-gray-800 rounded-lg p-4 relative",
+                      if(participant.id == @game_view.current_participant_to_act_id,
+                        do: "ring-4 ring-yellow-400 animate-pulse"
+                      )
+                    ]}
+                    data-participant-id={participant.id}
+                  >
                     <div class="text-white">
                       <div class="flex justify-between items-center mb-2">
                         <p class="font-semibold">

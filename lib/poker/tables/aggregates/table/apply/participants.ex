@@ -24,7 +24,6 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
       id: event.id,
       player_id: event.player_id,
       chips: event.chips,
-      seat_number: event.seat_number,
       status: event.status,
       is_sitting_out: event.is_sitting_out,
       initial_chips: event.initial_chips

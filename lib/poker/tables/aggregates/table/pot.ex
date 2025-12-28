@@ -48,6 +48,6 @@ defmodule Poker.Tables.Aggregates.Table.Pot do
   end
 
   defp filter_active_participant_hands(participant_hands) do
-    Enum.filter(participant_hands, &(&1.status == :playing or &1.status == :all_in))
+    Enum.filter(participant_hands, &(&1.status == :playing))
   end
 end

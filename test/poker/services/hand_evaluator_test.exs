@@ -28,7 +28,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight_flush, :A]
+      assert hd(winners).hand_rank == "straight_flush:A"
     end
 
     test "royal flush vs four of a kind" do
@@ -55,7 +55,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight_flush, :A]
+      assert hd(winners).hand_rank == "straight_flush:A"
     end
   end
 
@@ -84,7 +84,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight_flush, :K]
+      assert hd(winners).hand_rank == "straight_flush:K"
     end
 
     test "straight flush beats four of a kind" do
@@ -111,7 +111,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight_flush, 9]
+      assert hd(winners).hand_rank == "straight_flush:9"
     end
   end
 
@@ -140,7 +140,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:four_of_a_kind, :K, :Q]
+      assert hd(winners).hand_rank == "four_of_a_kind:K:Q"
     end
 
     test "higher four of a kind beats lower four of a kind" do
@@ -167,7 +167,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:four_of_a_kind, :A, :K]
+      assert hd(winners).hand_rank == "four_of_a_kind:A:K"
     end
   end
 
@@ -196,7 +196,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:full_house, :K, :Q]
+      assert hd(winners).hand_rank == "full_house:K:Q"
     end
 
     test "higher trips full house beats lower trips full house" do
@@ -223,7 +223,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:full_house, :A, :Q]
+      assert hd(winners).hand_rank == "full_house:A:Q"
     end
 
     test "same trips, higher pair full house wins" do
@@ -250,7 +250,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:full_house, :A, :K]
+      assert hd(winners).hand_rank == "full_house:A:K"
     end
   end
 
@@ -279,7 +279,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:flush, :h, :A, :K, :J, 7, 5]
+      assert hd(winners).hand_rank == "flush:h:A:K:J:7:5"
     end
 
     test "higher flush card wins" do
@@ -306,7 +306,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:flush, :h, :A, 9, 7, 5, 3]
+      assert hd(winners).hand_rank == "flush:h:A:9:7:5:3"
     end
   end
 
@@ -335,7 +335,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight, 9]
+      assert hd(winners).hand_rank == "straight:9"
     end
 
     test "higher straight beats lower straight" do
@@ -362,7 +362,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight, :J]
+      assert hd(winners).hand_rank == "straight:J"
     end
 
     test "ace low straight (wheel)" do
@@ -389,7 +389,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight, 5]
+      assert hd(winners).hand_rank == "straight:5"
     end
   end
 
@@ -418,7 +418,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:three_of_a_kind, :K, :Q, :J]
+      assert hd(winners).hand_rank == "three_of_a_kind:K:Q:J"
     end
 
     test "higher three of a kind wins" do
@@ -445,7 +445,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:three_of_a_kind, :A, :K, 7]
+      assert hd(winners).hand_rank == "three_of_a_kind:A:K:7"
     end
   end
 
@@ -474,7 +474,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:two_pair, :K, :Q, 7]
+      assert hd(winners).hand_rank == "two_pair:K:Q:7"
     end
 
     test "higher top pair wins" do
@@ -501,7 +501,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:two_pair, :A, :K, :Q]
+      assert hd(winners).hand_rank == "two_pair:A:K:Q"
     end
 
     test "same pairs, higher kicker wins" do
@@ -528,7 +528,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:two_pair, :Q, :J, 9]
+      assert hd(winners).hand_rank == "two_pair:Q:J:9"
     end
   end
 
@@ -557,7 +557,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:one_pair, :K, 9, 7, 5]
+      assert hd(winners).hand_rank == "one_pair:K:9:7:5"
     end
 
     test "higher pair wins" do
@@ -584,7 +584,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:one_pair, :A, 9, 7, 5]
+      assert hd(winners).hand_rank == "one_pair:A:9:7:5"
     end
 
     test "same pair, higher kicker wins" do
@@ -611,7 +611,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:one_pair, :K, :Q, 9, 7]
+      assert hd(winners).hand_rank == "one_pair:K:Q:9:7"
     end
   end
 
@@ -640,7 +640,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:high_card, :A, :K, 9, 7, 5]
+      assert hd(winners).hand_rank == "high_card:A:K:9:7:5"
     end
 
     test "same high card, second card wins" do
@@ -667,7 +667,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:high_card, :A, :Q, 9, 7, 5]
+      assert hd(winners).hand_rank == "high_card:A:Q:9:7:5"
     end
   end
 
@@ -697,7 +697,7 @@ defmodule Poker.Services.HandEvaluatorTest do
       assert length(winners) == 2
       assert Enum.any?(winners, &(&1.participant_id == "p1"))
       assert Enum.any?(winners, &(&1.participant_id == "p2"))
-      assert hd(winners).hand_rank == [:straight, 9]
+      assert hd(winners).hand_rank == "straight:9"
     end
 
     test "three players with same flush split pot" do
@@ -757,7 +757,7 @@ defmodule Poker.Services.HandEvaluatorTest do
       assert length(winners) == 2
       assert Enum.any?(winners, &(&1.participant_id == "p1"))
       assert Enum.any?(winners, &(&1.participant_id == "p2"))
-      assert hd(winners).hand_rank == [:two_pair, :K, :Q, 7]
+      assert hd(winners).hand_rank == "two_pair:K:Q:7"
     end
   end
 
@@ -794,7 +794,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == [:straight_flush, :A]
+      assert hd(winners).hand_rank == "straight_flush:A"
     end
 
     test "board plays with no improvement" do

@@ -9,8 +9,8 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     Enum.find(participants, &(&1.id == participant_id))
   end
 
-  def find_participant_by_seat(participants, seat_number) do
-    Enum.find(participants, &(&1.seat_number == seat_number))
+  def find_participant_index(participants, participant_id) do
+    Enum.find_index(participants, &(&1.id == participant_id))
   end
 
   def find_participant_hand_by_position(participant_hands, position) do
@@ -22,11 +22,22 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     find_participant_by_id(table.participants, hand.participant_id)
   end
 
-  def find_participant_to_act(%{round: %{type: :pre_flop, acted_participant_ids: []}} = table) do
-    big_blind_participant = find_participant_by_position(table, :big_blind)
-    seat_number = next_seat(big_blind_participant.seat_number, length(table.participants))
+  def find_participant_index_by_position(table, position) do
+    participant = find_participant_by_position(table, position)
+    find_participant_index(table.participants, participant.id)
+  end
 
-    find_participant_by_seat(table.participants, seat_number)
+  @doc """
+  Checks if a participant is all-in (not busted and has no chips remaining).
+  """
+  def is_all_in?(participants, participant_id) do
+    participant = find_participant_by_id(participants, participant_id)
+    participant.status == :active and participant.chips == 0
+  end
+
+  def find_participant_to_act(%{round: %{type: :pre_flop, acted_participant_ids: []}} = table) do
+    big_blind_index = find_participant_index_by_position(table, :big_blind)
+    find_next_active_participant(table.participants, big_blind_index)
   end
 
   def find_participant_to_act(%{
@@ -38,24 +49,32 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   def find_next_participant_to_act(table) do
     participant_to_act = find_participant_to_act(table)
-    active_participants = filter_active_participants(table.participants)
+    participant_index = find_participant_index(table.participants, participant_to_act.id)
 
-    next_participant_to_act_seat_number =
-      next_seat(participant_to_act.seat_number, length(active_participants))
+    find_next_active_participant(table.participants, participant_index)
+  end
 
-    find_participant_by_seat(table.participants, next_participant_to_act_seat_number)
+  defp find_next_active_participant(participants, start_index) do
+    total = length(participants)
+
+    # Generate indices for one full cycle starting from next position
+    indices = for offset <- 1..total, do: rem(start_index + offset, total)
+
+    Enum.find_value(indices, fn index ->
+      participant = Enum.at(participants, index)
+      # Can act if not busted and has chips remaining
+      if participant.status == :active and participant.chips > 0, do: participant
+    end)
   end
 
   def find_dealer_button_participant(table) do
     if is_nil(table.dealer_button_id) do
       hd(table.participants)
     else
-      dealer_button_participant =
-        find_participant_by_id(table.participants, table.dealer_button_id)
+      dealer_index = find_participant_index(table.participants, table.dealer_button_id)
+      next_dealer_index = next_participant_index(dealer_index, length(table.participants))
 
-      seat_number = next_seat(dealer_button_participant.seat_number, length(table.participants))
-
-      find_participant_by_seat(table.participants, seat_number)
+      Enum.at(table.participants, next_dealer_index)
     end
   end
 
@@ -110,7 +129,11 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   def runout?(table) do
     hands_in_play = Enum.reject(table.participant_hands, &(&1.status == :folded))
-    hands_that_can_act = Enum.filter(hands_in_play, &(&1.status == :playing))
+
+    hands_that_can_act =
+      Enum.filter(hands_in_play, fn hand ->
+        not is_all_in?(table.participants, hand.participant_id)
+      end)
 
     length(hands_in_play) >= 2 and length(hands_that_can_act) <= 1
   end
@@ -121,17 +144,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   # Utility functions
 
-  def next_seat(current_seat, total_seats) do
-    rem(current_seat, total_seats) + 1
-  end
-
-  def suit_abbreviation(suit) do
-    %{hearts: :h, diamonds: :d, clubs: :c, spades: :s} |> Map.get(suit)
-  end
-
-  def format_to_tuple(cards) do
-    cards
-    |> Enum.map(fn card -> {card.rank, suit_abbreviation(card.suit)} end)
-    |> List.to_tuple()
+  def next_participant_index(current_index, total_participants) do
+    rem(current_index + 1, total_participants)
   end
 end

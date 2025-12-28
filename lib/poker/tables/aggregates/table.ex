@@ -63,7 +63,8 @@ defmodule Poker.Tables.Aggregates.Table do
     :pots,
     :participant_hands,
     :remaining_deck,
-    :dealer_button_id
+    :dealer_button_id,
+    :payouts
   ]
 
   # COMMAND HANDLERS

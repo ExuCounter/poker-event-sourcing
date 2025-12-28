@@ -173,13 +173,25 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   def finish_hand(table, :all_folded = reason) do
     table
     |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      busted_participants =
+        Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
+
+      Enum.map(busted_participants, fn participant ->
+        %ParticipantBusted{
+          participant_id: participant.id,
+          hand_id: table.hand.id,
+          table_id: table.id
+        }
+      end)
+    end)
     |> Commanded.Aggregate.Multi.execute(fn %{
                                               hand: %{id: hand_id},
                                               pots: pots,
                                               participant_hands: participant_hands
                                             } ->
       active_participant_hand =
-        Enum.find(participant_hands, fn hand -> hand.status == :playing end)
+        Enum.find(participant_hands, fn hand -> hand.status != :folded end)
 
       payouts =
         Enum.reduce(pots, [], fn pot, acc ->
@@ -200,18 +212,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         finish_reason: reason,
         payouts: payouts
       }
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      busted_participants =
-        Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
-
-      Enum.map(busted_participants, fn participant ->
-        %ParticipantBusted{
-          participant_id: participant.id,
-          hand_id: table.hand.id,
-          table_id: table.id
-        }
-      end)
     end)
   end
 

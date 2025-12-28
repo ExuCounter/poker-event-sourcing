@@ -70,6 +70,7 @@ defmodule Poker.Tables.Views.PlayerGameView do
     current_participant = find_participant_by_player_id(aggregate, player_id)
 
     %{
+      table_status: aggregate.status,
       hand_id: get_hand_id(aggregate),
       total_pot: calculate_total_pot(aggregate),
       community_cards: aggregate.community_cards || [],
@@ -80,7 +81,8 @@ defmodule Poker.Tables.Views.PlayerGameView do
       small_blind: get_small_blind(aggregate),
       big_blind: get_big_blind(aggregate),
       latest_event_number: latest_event_number,
-      new_events: new_events
+      new_events: new_events,
+      payouts: aggregate.payouts || []
     }
   end
 
@@ -166,7 +168,7 @@ defmodule Poker.Tables.Views.PlayerGameView do
     # Check if it's player's turn
     is_my_turn = is_my_turn?(aggregate, current_participant)
 
-    unless is_my_turn do
+    unless is_my_turn and aggregate.status != :finished do
       default_actions()
     else
       current_bet = get_current_bet(aggregate)

@@ -43,8 +43,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
     with :ok <- validate_not_already_joined(table.participants, command.player_id),
          :ok <- validate_seat_available(table.participants, max_players) do
-      seat_number = length(table.participants) + 1
-
       initial_chips =
         if is_nil(command.starting_stack) do
           table.settings.starting_stack
@@ -58,7 +56,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         table_id: command.table_id,
         chips: initial_chips,
         initial_chips: initial_chips,
-        seat_number: seat_number,
         is_sitting_out: false,
         status: :active
       }
@@ -178,7 +175,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
             participant_id: participant.id,
             table_hand_id: table.hand.id,
             table_id: table.id,
-            status: :all_in,
+            status: :playing,
             amount: participant.chips,
             round: table.round.type
           }
@@ -207,7 +204,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         participant_id: participant.id,
         table_hand_id: table.hand.id,
         table_id: table.id,
-        status: :all_in,
+        status: :playing,
         amount: participant.chips,
         round: table.round.type
       }

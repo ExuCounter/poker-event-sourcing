@@ -1,14 +1,16 @@
 defmodule Poker.Services.HandEvaluatorStub do
   @behaviour Poker.Services.HandEvaluator.Behaviour
 
+  alias Poker.{Card, HandRank}
+
   @impl true
   def determine_winners(participant_hands, community_cards) do
-    community_cards = cast(community_cards)
+    community_cards = Card.to_comparison_hand(community_cards)
 
     values =
       participant_hands
       |> Enum.map(fn hand ->
-        hole_cards = hand |> Map.get(:hole_cards) |> cast()
+        hole_cards = hand |> Map.get(:hole_cards) |> then(&Card.to_comparison_hand/1)
 
         {hand_rank, best_hand} = Poker.Comparison.best_hand(hole_cards, community_cards)
 
@@ -17,7 +19,7 @@ defmodule Poker.Services.HandEvaluatorStub do
         %{
           participant_id: hand.participant_id,
           hole_cards: hand.hole_cards,
-          hand_rank: hand_rank |> Tuple.to_list(),
+          hand_rank: HandRank.encode(hand_rank),
           hand_value: hand_value
         }
       end)
@@ -28,29 +30,5 @@ defmodule Poker.Services.HandEvaluatorStub do
     values
     |> Enum.take_while(&(&1.hand_value == max_value))
     |> Enum.map(&Map.drop(&1, [:hand_value]))
-  end
-
-  defp cast(cards) when is_list(cards) do
-    Enum.map(cards, &cast/1) |> List.to_tuple()
-  end
-
-  defp cast(card) do
-    {card.rank, suit_abbreviation(card.suit)}
-  end
-
-  defp load(card) do
-    {card.rank, suit_full(card.suit)}
-  end
-
-  defp load(cards) when is_list(cards) do
-    Enum.map(cards, &load/1)
-  end
-
-  defp suit_abbreviation(suit) do
-    %{hearts: :h, diamonds: :d, clubs: :c, spades: :s} |> Map.get(suit)
-  end
-
-  defp suit_full(suit_abbr) do
-    %{h: :hearts, d: :diamonds, c: :clubs, s: :spades} |> Map.get(suit_abbr)
   end
 end

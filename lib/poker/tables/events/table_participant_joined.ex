@@ -6,7 +6,6 @@ defmodule Poker.Tables.Events.ParticipantJoined do
              :table_id,
              :chips,
              :initial_chips,
-             :seat_number,
              :status,
              :is_sitting_out
            ]}
@@ -16,7 +15,6 @@ defmodule Poker.Tables.Events.ParticipantJoined do
     :table_id,
     :chips,
     :initial_chips,
-    :seat_number,
     :status,
     :is_sitting_out
   ]

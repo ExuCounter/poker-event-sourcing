@@ -41,7 +41,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
       ) do
     table
     |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(&Participants.handle(&1, command))
     |> Commanded.Aggregate.Multi.execute(fn table ->
       next_participant = Helpers.find_next_participant_to_act(table)
 
@@ -51,6 +50,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
         participant_id: next_participant.id
       }
     end)
+    |> Commanded.Aggregate.Multi.execute(&Participants.handle(&1, command))
     |> Commanded.Aggregate.Multi.execute(fn table ->
       %PotsRecalculated{
         table_id: table.id,
