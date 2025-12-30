@@ -480,22 +480,10 @@ defmodule PokerWeb.PlayerLive.Game do
         "spades" -> "♠"
       end
 
-    rank_str =
-      case rank do
-        "A" -> "A"
-        "K" -> "K"
-        "Q" -> "Q"
-        "J" -> "J"
-        "T" -> "10"
-        n when is_integer(n) -> to_string(n)
-        _ -> to_string(rank)
-      end
-
-    "#{rank_str}#{suit_symbol}"
+    "#{rank}#{suit_symbol}"
   end
 
   defp format_card(card) when is_binary(card), do: card
-  defp format_card(_), do: "?"
 
   # Helper to get suit color class
   defp suit_color(%{suit: suit}) do

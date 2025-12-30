@@ -17,24 +17,25 @@ end
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.HandFinished do
   def decode(%Poker.Tables.Events.HandFinished{payouts: payouts} = event) do
     payouts =
-      Enum.map(
-        payouts,
-        fn payout ->
-          hand_rank =
-            if is_nil(payout.hand_rank) do
+      Enum.map(payouts, fn payout ->
+        hand_rank =
+          case payout.hand_rank do
+            nil ->
               nil
-            else
-              payout.hand_rank
-            end
 
-          %{payout | hand_rank: hand_rank}
-        end
-      )
+            hand_rank ->
+              hand_rank
+              |> Poker.HandRank.decode()
+              |> Poker.HandRank.to_map()
+          end
+
+        %{payout | hand_rank: hand_rank}
+      end)
 
     %Poker.Tables.Events.HandFinished{
       event
       | payouts: payouts,
-        finish_reason: String.to_atom(event.finish_reason)
+        finish_reason: String.to_existing_atom(event.finish_reason)
     }
   end
 end

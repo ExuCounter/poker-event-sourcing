@@ -25,14 +25,11 @@ defmodule Poker.Tables.Events.ParticipantHandGiven do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantHandGiven do
-  defp decode_status("playing"), do: :playing
-  defp decode_status("folded"), do: :folded
-
   def decode(%Poker.Tables.Events.ParticipantHandGiven{} = event) do
     %Poker.Tables.Events.ParticipantHandGiven{
       event
-      | status: decode_status(event.status),
-        position: String.to_atom(event.position)
+      | status: String.to_existing_atom(event.status),
+        position: String.to_existing_atom(event.position)
     }
   end
 end

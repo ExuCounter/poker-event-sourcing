@@ -79,7 +79,7 @@ defmodule Poker.HandRank do
       iex> Poker.HandRank.to_map({:flush, :h, :A, :K, :J, 7, 5})
       %{
         type: "flush",
-        suit: "h",
+        suit: "hearts",
         ranks: ["A", "K", "J", "7", "5"],
         display_name: "Flush"
       }
@@ -94,7 +94,7 @@ defmodule Poker.HandRank do
   def to_map({:flush, suit, r1, r2, r3, r4, r5} = hand_rank_tuple) do
     %{
       type: "flush",
-      suit: to_string(suit),
+      suit: suit_to_string(suit),
       ranks: Enum.map([r1, r2, r3, r4, r5], &to_string/1),
       display_name: to_display_name(hand_rank_tuple)
     }
@@ -116,4 +116,9 @@ defmodule Poker.HandRank do
       :error -> String.to_existing_atom(component)
     end
   end
+
+  defp suit_to_string(:h), do: "hearts"
+  defp suit_to_string(:d), do: "diamonds"
+  defp suit_to_string(:c), do: "clubs"
+  defp suit_to_string(:s), do: "spades"
 end

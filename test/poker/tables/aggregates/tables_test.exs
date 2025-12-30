@@ -303,7 +303,14 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
           assert payout.participant_id == expected_winner_participant.id
           assert payout.amount == ctx.table.settings.big_blind * 2
-          assert payout.hand_rank == "straight_flush:A"
+
+          assert payout.hand_rank ==
+                   %{
+                     display_name: "Straight Flush",
+                     ranks: ["A"],
+                     type: "straight_flush"
+                   }
+
           assert event.finish_reason == :showdown
         end
       )
