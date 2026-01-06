@@ -39,34 +39,50 @@ defmodule Poker.Tables.Views.PlayerGameView do
       }
     }
   """
-  def build(table_id, player_id, since_event_number) do
+  def build(table_id, player_id, since_event_id \\ nil) do
     # Replay events to build aggregate state
-    %{latest_event_number: latest_event_number, new_events: new_events, aggregate: aggregate} =
-      replay_events(table_id, since_event_number)
+    %{latest_event_id: latest_event_id, new_events: new_events, aggregate: aggregate} =
+      replay_events(table_id, since_event_id)
 
     # Build player-specific view
-    build_view(aggregate, player_id, new_events, latest_event_number)
+    build_view(aggregate, player_id, new_events, latest_event_id)
   end
 
-  defp replay_events(table_id, since_event_number) do
+  defp replay_events(table_id, since_event_id) do
     events =
       "table-#{table_id}"
       |> Poker.EventStore.stream_forward()
       |> Enum.to_list()
 
-    new_events =
-      events
-      |> Enum.filter(&(&1.event_number > since_event_number))
+    {events_for_aggregate, new_events, latest_event_id} =
+      if is_nil(since_event_id) do
+        {events, events, get_latest_event_id(events)}
+      else
+        index = Enum.find_index(events, &(&1.event_id == since_event_id))
+
+        events_for_aggregate = Enum.take(events, index + 1)
+        new_events_raw = Enum.drop(events, index + 1)
+        {events_for_aggregate, new_events_raw, since_event_id}
+      end
+
+    new_events_with_id = Enum.map(new_events, &(&1.data |> Map.put(:event_id, &1.event_id)))
+
+    aggregate =
+      events_for_aggregate
       |> Enum.map(& &1.data)
+      |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
 
-    latest_event_number = List.last(events).event_number
-
-    aggregate = events |> Enum.map(& &1.data) |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
-
-    %{latest_event_number: latest_event_number, new_events: new_events, aggregate: aggregate}
+    %{latest_event_id: latest_event_id, new_events: new_events_with_id, aggregate: aggregate}
   end
 
-  defp build_view(aggregate, player_id, new_events, latest_event_number) do
+  defp get_latest_event_id(events) do
+    case List.last(events) do
+      nil -> nil
+      event -> event.event_id
+    end
+  end
+
+  defp build_view(aggregate, player_id, new_events, latest_event_id) do
     current_participant = find_participant_by_player_id(aggregate, player_id)
 
     %{
@@ -80,7 +96,7 @@ defmodule Poker.Tables.Views.PlayerGameView do
       valid_actions: calculate_valid_actions(aggregate, current_participant),
       small_blind: get_small_blind(aggregate),
       big_blind: get_big_blind(aggregate),
-      latest_event_number: latest_event_number,
+      latest_event_id: latest_event_id,
       new_events: new_events,
       payouts: aggregate.payouts || []
     }
@@ -107,13 +123,14 @@ defmodule Poker.Tables.Views.PlayerGameView do
 
   defp get_player_hole_cards(_, _), do: []
 
-  defp build_participants_list(%{
-         participants: participants,
-         participant_hands: participant_hands
-       })
+  defp build_participants_list(%{participants: participants} = aggregate)
        when is_list(participants) do
+    participant_hands = Map.get(aggregate, :participant_hands, [])
+    revealed_cards = Map.get(aggregate, :revealed_cards, %{})
+
     Enum.map(participants, fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
+      showdown_cards = Map.get(revealed_cards, participant.id, [])
 
       %{
         id: participant.id,
@@ -122,7 +139,8 @@ defmodule Poker.Tables.Views.PlayerGameView do
         position: get_participant_position(participant_hand),
         status: participant.status,
         bet_this_round: get_bet_this_round(participant_hand),
-        hand_status: get_hand_status(participant_hand)
+        hand_status: get_hand_status(participant_hand),
+        showdown_cards: showdown_cards
       }
     end)
   end

@@ -19,7 +19,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     PotsRecalculated,
     HandFinished,
     TableFinished,
-    ParticipantBusted
+    ParticipantBusted,
+    ParticipantShowdownCardsRevealed
   }
 
   alias Poker.Tables.Aggregates.Table.Helpers
@@ -218,6 +219,22 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   def finish_hand(table, :showdown = reason) do
     table
     |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn %{
+                                              hand: %{id: hand_id},
+                                              participant_hands: participant_hands
+                                            } ->
+      # Emit showdown cards revealed events for all active participants
+      participant_hands
+      |> Enum.filter(&(&1.status != :folded))
+      |> Enum.map(fn participant_hand ->
+        %ParticipantShowdownCardsRevealed{
+          table_id: table.id,
+          hand_id: hand_id,
+          participant_id: participant_hand.participant_id,
+          hole_cards: participant_hand.hole_cards
+        }
+      end)
+    end)
     |> Commanded.Aggregate.Multi.execute(fn %{
                                               hand: %{id: hand_id},
                                               pots: pots,

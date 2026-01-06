@@ -206,6 +206,21 @@
   }
 }
 
+@keyframes cardReveal {
+  0% {
+    transform: rotateY(180deg) scale(0.9);
+    opacity: 0;
+  }
+  50% {
+    transform: rotateY(90deg) scale(0.95);
+    opacity: 0.5;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
 /* Animation classes */
 .flash-animation {
   animation: flash 500ms ease-in-out;
@@ -217,6 +232,10 @@
 
 .card-flip-in {
   animation: cardFlip 500ms ease-out forwards;
+}
+
+.card-reveal {
+  animation: cardReveal 500ms ease-out forwards;
 }
 
 .pulse-animation {

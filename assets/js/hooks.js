@@ -81,58 +81,58 @@ export const TableEvents = {
   },
 
   async animateEvent(event) {
-    console.log(event.type);
-    console.log("animation");
-    const { type, data } = event;
+    const { type, data, delay } = event;
 
     // Return a promise that resolves when animation completes
     return new Promise((resolve) => {
-      let duration = 400; // default animation duration in ms
+      // Use delay from server, default to 0 if not provided
+      const duration = delay || 0;
 
       switch (type) {
         case "RoundStarted":
-          duration = 1200; // Longer to allow card slide animations
           this.animateRoundStart(data);
           break;
         case "HandStarted":
-          duration = 1000;
           this.animateHandStart(data);
           break;
         case "HandFinished":
-          duration = 3000; // Much longer for showdown visibility
           this.animateHandFinish(data);
           break;
+        case "ParticipantShowdownCardsRevealed":
+          this.animateCardReveal(data.participant_id);
+          break;
         case "ParticipantFolded":
-          duration = 1200;
           this.animatePlayerAction(data.participant_id, "folded");
           break;
         case "ParticipantCalled":
-          duration = 1200;
           this.animatePlayerAction(data.participant_id, "called", data.amount);
           break;
         case "ParticipantChecked":
           console.log(data.participant_id);
-          duration = 1200;
           this.animatePlayerAction(data.participant_id, "checked");
           break;
         case "ParticipantRaised":
-          duration = 1200;
           this.animatePlayerAction(data.participant_id, "raised", data.amount);
           break;
         case "ParticipantWentAllIn":
-          duration = 800;
           this.animatePlayerAction(data.participant_id, "all-in", data.amount);
           break;
         case "PotsRecalculated":
-          duration = 400;
           this.animatePotUpdate(data);
           break;
         default:
-          duration = 0;
+          // Unknown event type, no animation
+          break;
       }
 
-      // Resolve after animation duration
-      setTimeout(resolve, duration);
+      // Resolve after animation duration from server
+      setTimeout(() => {
+        this.pushEvent("event_processed", { event_id: data.event_id });
+        console.log(event.type);
+        console.log("animation");
+        console.log(duration);
+        resolve();
+      }, duration);
     });
   },
 
@@ -187,6 +187,29 @@ export const TableEvents = {
         () => gameContainer.classList.remove("showdown-highlight"),
         3000,
       );
+    }
+  },
+
+  animateCardReveal(participantId) {
+    const playerCard = document.querySelector(
+      `[data-participant-id="${participantId}"]`,
+    );
+
+    if (!playerCard) return;
+
+    const showdownCards = playerCard.querySelector(".showdown-cards");
+    if (showdownCards && showdownCards.children.length > 0) {
+      Array.from(showdownCards.children).forEach((card, index) => {
+        card.style.opacity = "0";
+        card.style.transform = "rotateY(180deg) scale(0.9)";
+
+        setTimeout(() => {
+          card.classList.add("card-reveal");
+          setTimeout(() => {
+            card.classList.remove("card-reveal");
+          }, 500);
+        }, index * 100);
+      });
     }
   },
 

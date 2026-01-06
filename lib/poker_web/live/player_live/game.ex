@@ -2,6 +2,7 @@ defmodule PokerWeb.PlayerLive.Game do
   use PokerWeb, :live_view
 
   alias PokerWeb.Api.Tables
+  alias PokerWeb.AnimationDelays
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
@@ -14,13 +15,11 @@ defmodule PokerWeb.PlayerLive.Game do
        |> push_navigate(to: ~p"/")}
     else
       if connected?(socket) do
-        # Subscribe to unified table channel
         Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
       end
 
-      # Load complete player view (all calculations done server-side)
       game_view =
-        Tables.get_player_game_view(socket.assigns.current_scope, table_id, 0)
+        Tables.get_player_game_view(socket.assigns.current_scope, table_id)
 
       {:ok,
        assign(socket,
@@ -29,125 +28,72 @@ defmodule PokerWeb.PlayerLive.Game do
          game_view: game_view,
          current_user_id: socket.assigns.current_scope.user.id,
          raise_amount: nil,
-         showdown_delay: false,
-         animation_delay: false
+         current_animated_event_id: nil,
+         queue: []
        )}
     end
   end
 
-  # Handle unified table events
   @impl true
-  def handle_info({:table, _event, _data}, socket) do
-    # Rebuild view and get new events since last update
-    game_view =
-      Tables.get_player_game_view(
-        socket.assigns.current_scope,
-        socket.assigns.table_id,
-        socket.assigns.game_view.latest_event_number
-      )
+  def handle_info({:table, _event, data}, socket) do
+    socket = assign(socket, queue: socket.assigns.queue ++ [data])
 
-    # If we're in any delay (showdown or animation), update event number but keep old view visible
-    if socket.assigns.showdown_delay or socket.assigns.animation_delay do
-      {:noreply,
-       assign(socket,
-         game_view: %{
-           socket.assigns.game_view
-           | latest_event_number: game_view.latest_event_number
-         }
-       )}
+    if is_nil(socket.assigns.current_animated_event_id) do
+      socket = process_next_event(socket)
+      {:noreply, socket}
     else
-      # Check if HandFinished is in the new events
-      has_hand_finished =
-        Enum.any?(game_view.new_events, fn event ->
-          event.__struct__ |> Module.split() |> List.last() == "HandFinished"
-        end)
-
-      # Check if there are action events that need animation time
-      has_action_events =
-        Enum.any?(game_view.new_events, fn event ->
-          event_type = event.__struct__ |> Module.split() |> List.last()
-
-          event_type in [
-            "ParticipantFolded",
-            "ParticipantCalled",
-            "ParticipantChecked",
-            "ParticipantRaised",
-            "ParticipantWentAllIn"
-          ]
-        end)
-
-      # Push new events to frontend for animations
-      socket =
-        if length(game_view.new_events) > 0 do
-          push_event(socket, "table_events", %{events: serialize_events(game_view.new_events)})
-        else
-          socket
-        end
-
-      # Delay state updates for animations
-      cond do
-        has_hand_finished ->
-          # Schedule delayed update to show showdown for 3 seconds
-          Process.send_after(self(), {:delayed_update, game_view}, 3000)
-
-          # KEEP OLD game_view with cards visible, only update event number
-          {:noreply,
-           assign(socket,
-             game_view: %{
-               socket.assigns.game_view
-               | latest_event_number: game_view.latest_event_number
-             },
-             showdown_delay: true
-           )}
-
-        has_action_events ->
-          # Schedule delayed update to let action animations play (1.2 seconds)
-          Process.send_after(self(), {:delayed_update, game_view}, 1200)
-
-          # Keep old view visible during animation, only update event number
-          {:noreply,
-           assign(socket,
-             game_view: %{
-               socket.assigns.game_view
-               | latest_event_number: game_view.latest_event_number
-             },
-             animation_delay: true
-           )}
-
-        true ->
-          # Normal immediate update (no animations needed)
-          {:noreply, assign(socket, game_view: game_view, raise_amount: nil)}
-      end
+      {:noreply, socket}
     end
   end
 
-  # Handle delayed update after animations
-  @impl true
-  def handle_info({:delayed_update, game_view}, socket) do
-    game_view =
-      Tables.get_player_game_view(
-        socket.assigns.current_scope,
-        socket.assigns.table_id,
-        game_view.latest_event_number
-      )
+  def handle_event("event_processed", %{"event_id" => processed_event_id}, socket) do
+    remaining_queue =
+      Enum.reject(socket.assigns.queue, fn event -> event.event_id == processed_event_id end)
 
-    {:noreply,
-     assign(socket,
-       game_view: game_view,
-       raise_amount: nil,
-       showdown_delay: false,
-       animation_delay: false
-     )}
+    socket = assign(socket, queue: remaining_queue)
+    socket = process_next_event(socket)
+
+    {:noreply, socket}
   end
 
-  # Serialize events for frontend
+  defp process_next_event(socket) do
+    case socket.assigns.queue do
+      [] ->
+        assign(socket, current_animated_event_id: nil)
+
+      [next_event | _rest] ->
+        game_view =
+          Tables.get_player_game_view(
+            socket.assigns.current_scope,
+            socket.assigns.table_id,
+            next_event.event_id
+          )
+
+        socket = push_event(socket, "table_events", %{events: serialize_events([next_event])})
+
+        assign(socket,
+          current_animated_event_id: next_event.event_id,
+          game_view: game_view
+        )
+    end
+  end
+
+  # Serialize events for frontend with animation delays
   defp serialize_events(events) do
     Enum.map(events, fn event ->
+      event_type = event.__struct__ |> Module.split() |> List.last()
+
       %{
-        type: event.__struct__ |> Module.split() |> List.last(),
-        data: Map.from_struct(event)
+        type: event_type,
+        data: Map.from_struct(event),
+        delay: event_animation_delay(event_type)
       }
     end)
+  end
+
+  # Define animation delays for each event type (in milliseconds)
+  defp event_animation_delay(event_type) do
+    AnimationDelays.for_event_name(event_type)
   end
 
   # Action event handlers
@@ -226,6 +172,9 @@ defmodule PokerWeb.PlayerLive.Game do
 
             <%= if @game_view.table_status == :finished do %>
               | Finished
+            <% end %>
+            <%= if @game_view.hand_id do %>
+              {@game_view.hand_id}
             <% end %>
           </h1>
 
@@ -322,16 +271,28 @@ defmodule PokerWeb.PlayerLive.Game do
                           <% end %>
                         </div>
                       <% else %>
-                        <%= if participant.hand_status do %>
-                          <!-- Card backs for other players -->
-                          <div class="flex gap-1 mt-2">
-                            <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                              <span class="text-blue-400 text-xs">🂠</span>
-                            </div>
-                            <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                              <span class="text-blue-400 text-xs">🂠</span>
-                            </div>
+                        <%= if !Enum.empty?(participant.showdown_cards) do %>
+                          <div class="showdown-cards flex gap-1 mt-2">
+                            <%= for card <- participant.showdown_cards do %>
+                              <div class={[
+                                "bg-white rounded p-1 w-12 h-16 flex items-center justify-center font-bold text-sm",
+                                suit_color(card)
+                              ]}>
+                                {format_card(card)}
+                              </div>
+                            <% end %>
                           </div>
+                        <% else %>
+                          <%= if participant.hand_status do %>
+                            <div class="flex gap-1 mt-2">
+                              <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
+                                <span class="text-blue-400 text-xs">🂠</span>
+                              </div>
+                              <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
+                                <span class="text-blue-400 text-xs">🂠</span>
+                              </div>
+                            </div>
+                          <% end %>
                         <% end %>
                       <% end %>
                     </div>
@@ -362,7 +323,7 @@ defmodule PokerWeb.PlayerLive.Game do
           <% end %>
           
     <!-- Action Controls - Fixed to bottom -->
-          <%= if @game_view.hand_id do %>
+          <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
             <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
               <%= if @game_view.valid_actions.fold do %>
                 <div class="flex gap-4 items-center">

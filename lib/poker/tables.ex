@@ -195,8 +195,13 @@ defmodule Poker.Tables do
   @doc """
   Get player-specific game view with all calculated state.
   Use this instead of get_table for game UI.
+
+  Parameters:
+    - table_id: The table UUID
+    - player_id: The player UUID
+    - since_event_id: Optional UUID of last processed event (nil for full replay)
   """
-  def get_player_game_view(table_id, player_id, since_event_number) do
-    Poker.Tables.Views.PlayerGameView.build(table_id, player_id, since_event_number)
+  def get_player_game_view(table_id, player_id, since_event_id \\ nil) do
+    Poker.Tables.Views.PlayerGameView.build(table_id, player_id, since_event_id)
   end
 end
