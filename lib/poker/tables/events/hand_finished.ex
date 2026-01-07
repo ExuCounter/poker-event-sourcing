@@ -3,39 +3,20 @@ defmodule Poker.Tables.Events.HandFinished do
            only: [
              :table_id,
              :hand_id,
-             :finish_reason,
-             :payouts
+             :finish_reason
            ]}
   defstruct [
     :table_id,
     :hand_id,
-    :finish_reason,
-    :payouts
+    :finish_reason
   ]
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.HandFinished do
-  def decode(%Poker.Tables.Events.HandFinished{payouts: payouts} = event) do
-    payouts =
-      Enum.map(payouts, fn payout ->
-        hand_rank =
-          case payout.hand_rank do
-            nil ->
-              nil
-
-            hand_rank ->
-              hand_rank
-              |> Poker.HandRank.decode()
-              |> Poker.HandRank.to_map()
-          end
-
-        %{payout | hand_rank: hand_rank}
-      end)
-
+  def decode(%Poker.Tables.Events.HandFinished{} = event) do
     %Poker.Tables.Events.HandFinished{
       event
-      | payouts: payouts,
-        finish_reason: String.to_existing_atom(event.finish_reason)
+      | finish_reason: String.to_existing_atom(event.finish_reason)
     }
   end
 end

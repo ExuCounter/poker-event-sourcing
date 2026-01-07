@@ -20,7 +20,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     HandFinished,
     TableFinished,
     ParticipantBusted,
-    ParticipantShowdownCardsRevealed
+    ParticipantShowdownCardsRevealed,
+    PayoutDistributed
   }
 
   alias Poker.Tables.Aggregates.Table.Helpers
@@ -194,24 +195,23 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       active_participant_hand =
         Enum.find(participant_hands, fn hand -> hand.status != :folded end)
 
-      payouts =
-        Enum.reduce(pots, [], fn pot, acc ->
-          acc ++
-            [
-              %{
-                pot_id: pot.id,
-                participant_id: active_participant_hand.participant_id,
-                amount: pot.amount,
-                hand_rank: nil
-              }
-            ]
-        end)
-
+      Enum.map(pots, fn pot ->
+        %PayoutDistributed{
+          table_id: table.id,
+          hand_id: hand_id,
+          pot_id: pot.id,
+          participant_id: active_participant_hand.participant_id,
+          amount: pot.amount,
+          pot_type: pot.type,
+          hand_rank: nil
+        }
+      end)
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
       %HandFinished{
         table_id: table.id,
         hand_id: hand_id,
-        finish_reason: reason,
-        payouts: payouts
+        finish_reason: reason
       }
     end)
   end
@@ -241,37 +241,45 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
                                               participant_hands: participant_hands,
                                               community_cards: community_cards
                                             } ->
-      payouts =
-        Enum.reduce(pots, [], fn pot, acc ->
-          contributing_participant_hands =
-            participant_hands
-            |> Enum.filter(&(&1.participant_id in pot.contributing_participant_ids))
+      Enum.flat_map(pots, fn pot ->
+        contributing_participant_hands =
+          participant_hands
+          |> Enum.filter(&(&1.participant_id in pot.contributing_participant_ids))
 
-          winners =
-            Poker.HandEvaluator.determine_winners(
-              contributing_participant_hands,
-              community_cards
-            )
+        winners =
+          Poker.HandEvaluator.determine_winners(
+            contributing_participant_hands,
+            community_cards
+          )
 
-          payouts =
-            Enum.map(
-              winners,
-              &%{
-                pot_id: pot.id,
-                participant_id: &1.participant_id,
-                amount: pot.amount,
-                hand_rank: &1.hand_rank
-              }
-            )
+        # Split pot among winners
+        winner_count = length(winners)
+        split_amount = div(pot.amount, winner_count)
+        remainder = rem(pot.amount, winner_count)
 
-          acc ++ payouts
+        winners
+        |> Enum.with_index()
+        |> Enum.map(fn {winner, index} ->
+          # First winner gets remainder
+          amount = if index == 0, do: split_amount + remainder, else: split_amount
+
+          %PayoutDistributed{
+            table_id: table.id,
+            hand_id: hand_id,
+            pot_id: pot.id,
+            participant_id: winner.participant_id,
+            amount: amount,
+            pot_type: pot.type,
+            hand_rank: winner.hand_rank
+          }
         end)
-
+      end)
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
       %HandFinished{
         table_id: table.id,
-        hand_id: table.hand.id,
-        finish_reason: reason,
-        payouts: payouts
+        hand_id: hand_id,
+        finish_reason: reason
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->

@@ -9,7 +9,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     HandStarted,
     HandFinished,
     ParticipantHandGiven,
-    ParticipantShowdownCardsRevealed
+    ParticipantShowdownCardsRevealed,
+    PayoutDistributed
   }
 
   def apply(%Table{} = table, %HandStarted{} = event) do
@@ -53,21 +54,34 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     Map.put(table, :revealed_cards, updated_revealed_cards)
   end
 
-  def apply(%Table{} = table, %HandFinished{payouts: payouts}) do
+  def apply(%Table{participants: participants, payouts: payouts} = table, %PayoutDistributed{} = event) do
     updated_participants =
-      Enum.map(table.participants, fn participant ->
-        total_payout =
-          payouts
-          |> Enum.filter(&(&1.participant_id == participant.id))
-          |> Enum.sum_by(& &1.amount)
-
-        %{participant | chips: participant.chips + total_payout}
+      Enum.map(participants, fn participant ->
+        if participant.id == event.participant_id do
+          %{participant | chips: participant.chips + event.amount}
+        else
+          participant
+        end
       end)
+
+    # Build payout map to append to aggregate payouts
+    payout = %{
+      pot_id: event.pot_id,
+      participant_id: event.participant_id,
+      amount: event.amount,
+      hand_rank: event.hand_rank
+    }
 
     %Table{
       table
       | participants: updated_participants,
-        payouts: payouts
+        payouts: (payouts || []) ++ [payout]
     }
+  end
+
+  def apply(%Table{} = table, %HandFinished{}) do
+    # Chips already updated by PayoutDistributed events
+    # HandFinished just marks hand as complete
+    table
   end
 end

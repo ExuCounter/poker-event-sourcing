@@ -295,23 +295,28 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert_receive_event(
         Poker.App,
-        Poker.Tables.Events.HandFinished,
+        Poker.Tables.Events.PayoutDistributed,
         fn event ->
-          assert length(event.payouts) == 1
+          assert event.participant_id == expected_winner_participant.id
+          assert event.amount == ctx.table.settings.big_blind * 2
+          assert event.pot_type == :main
 
-          [payout] = event.payouts
-
-          assert payout.participant_id == expected_winner_participant.id
-          assert payout.amount == ctx.table.settings.big_blind * 2
-
-          assert payout.hand_rank ==
+          assert event.hand_rank ==
                    %{
                      display_name: "Straight Flush",
                      ranks: ["A"],
                      type: "straight_flush"
                    }
+        end
+      )
 
+      assert_receive_event(
+        Poker.App,
+        Poker.Tables.Events.HandFinished,
+        fn event ->
           assert event.finish_reason == :showdown
+          # Verify payouts field removed
+          refute Map.has_key?(event, :payouts)
         end
       )
     end
@@ -372,9 +377,20 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert_receive_event(
         Poker.App,
+        Poker.Tables.Events.PayoutDistributed,
+        fn event ->
+          assert event.amount > 0
+          assert event.pot_type == :main
+          assert event.hand_rank == nil
+        end
+      )
+
+      assert_receive_event(
+        Poker.App,
         Poker.Tables.Events.HandFinished,
         fn event ->
           assert event.finish_reason == :all_folded
+          refute Map.has_key?(event, :payouts)
         end
       )
 

@@ -28,8 +28,8 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.Participan
   def decode(%Poker.Tables.Events.ParticipantHandGiven{} = event) do
     %Poker.Tables.Events.ParticipantHandGiven{
       event
-      | status: String.to_existing_atom(event.status),
-        position: String.to_existing_atom(event.position)
+      | status: String.to_atom(event.status),
+        position: String.to_atom(event.position)
     }
   end
 end

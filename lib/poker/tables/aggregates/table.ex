@@ -49,7 +49,8 @@ defmodule Poker.Tables.Aggregates.Table do
     HandFinished,
     TableFinished,
     ParticipantBusted,
-    ParticipantShowdownCardsRevealed
+    ParticipantShowdownCardsRevealed,
+    PayoutDistributed
   }
 
   defstruct [
@@ -127,7 +128,13 @@ defmodule Poker.Tables.Aggregates.Table do
   end
 
   def apply(table, %evt{} = event)
-      when evt in [HandStarted, ParticipantHandGiven, ParticipantShowdownCardsRevealed, HandFinished] do
+      when evt in [
+             HandStarted,
+             ParticipantHandGiven,
+             ParticipantShowdownCardsRevealed,
+             HandFinished,
+             PayoutDistributed
+           ] do
     Apply.Hand.apply(table, event)
   end
 
