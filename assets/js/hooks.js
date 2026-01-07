@@ -259,6 +259,7 @@ export const TableEvents = {
       font-size: 14px;
       z-index: 100;
       animation: fadeInOut 1.5s ease-in-out;
+      min-width: 100px;
     `;
 
     // Make parent relative if it isn't

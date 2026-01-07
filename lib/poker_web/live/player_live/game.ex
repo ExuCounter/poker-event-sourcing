@@ -166,266 +166,250 @@ defmodule PokerWeb.PlayerLive.Game do
           </.link>
         </div>
 
-        <div class="bg-green-900 rounded-3xl p-8 shadow-2xl">
-          <h1 class="text-2xl font-bold text-white mb-6 text-center">
-            Poker Table - {@lobby.table_type}
+        <h1 class="text-2xl font-bold text-white mb-6 text-center">
+          Poker Table - {@lobby.table_type}
 
-            <%= if @game_view.table_status == :finished do %>
-              | Finished
-            <% end %>
-            <%= if @game_view.hand_id do %>
-              {@game_view.hand_id}
-            <% end %>
-          </h1>
-
+          <%= if @game_view.table_status == :finished do %>
+            | Finished
+          <% end %>
           <%= if @game_view.hand_id do %>
-            <!-- Active Hand -->
-            <div class="mb-8">
-              <!-- Community Cards -->
-              <div class="community-cards-area flex justify-center gap-2 mb-6">
-                <%= if !Enum.empty?(@game_view.community_cards) do %>
-                  <%= for card <- @game_view.community_cards do %>
-                    <div class={[
-                      "community-card bg-white rounded p-2 w-20 h-24 flex items-center justify-center font-bold text-2xl",
-                      suit_color(card)
-                    ]}>
-                      {format_card(card)}
-                    </div>
-                  <% end %>
-                <% else %>
-                  <span class="text-gray-400">No cards yet</span>
-                <% end %>
-              </div>
-              
-    <!-- Pots -->
-              <div class="pot-area text-center mb-6">
-                <h3 class="text-white font-semibold">Total Pot:</h3>
-                <p class="text-yellow-400 text-2xl font-bold">
-                  {@game_view.total_pot}
-                </p>
-              </div>
-              
-    <!-- Players Grid -->
-              <div class="grid grid-cols-3 gap-4 mt-8 mb-24">
-                <%= for participant <- @game_view.participants do %>
-                  <% lobby_participant =
-                    Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
+            {@game_view.hand_id}
+          <% end %>
+        </h1>
 
-                  <div
-                    class={[
-                      "bg-gray-800 rounded-lg p-4 relative",
-                      if(participant.id == @game_view.current_participant_to_act_id,
-                        do: "ring-4 ring-yellow-400 animate-pulse"
-                      )
-                    ]}
-                    data-participant-id={participant.id}
-                  >
-                    <div class="text-white">
-                      <div class="flex justify-between items-center mb-2">
-                        <p class="font-semibold">
-                          {(lobby_participant && lobby_participant.email) || "Unknown"}
-                        </p>
-                        <%= if participant.hand_status do %>
-                          <span class={[
-                            "text-xs px-2 py-1 rounded",
-                            case participant.hand_status do
-                              :playing -> "bg-green-600"
-                              :folded -> "bg-red-600"
-                              :all_in -> "bg-yellow-600"
-                              _ -> "bg-gray-600"
-                            end
+        <%= if @game_view.hand_id do %>
+          <!-- Active Hand -->
+            <!-- Poker Table Container -->
+          <div class="relative w-full h-[600px] mb-32 flex items-center justify-center">
+            <!-- Oval Table -->
+            <div class="relative max-h-[500px] max-w-[800px] w-[100%] h-[100%] bg-green-700 rounded-[50%] border-8 border-amber-900 shadow-2xl">
+              
+    <!-- Community Cards in center -->
+              <div class="absolute top-2/5 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4">
+                <div class="community-cards-area flex justify-center gap-2">
+                  <%= if !Enum.empty?(@game_view.community_cards) do %>
+                    <%= for card <- @game_view.community_cards do %>
+                      <div class={[
+                        "community-card bg-white rounded p-2 w-16 h-20 flex items-center justify-center font-bold text-xl shadow-lg",
+                        suit_color(card)
+                      ]}>
+                        {format_card(card)}
+                      </div>
+                    <% end %>
+                  <% else %>
+                    <span class="text-green-200 text-sm">Waiting for cards...</span>
+                  <% end %>
+                </div>
+                
+    <!-- Pot -->
+                <div class="pot-area text-center bg-amber-900/50 rounded-lg px-4 py-2">
+                  <p class="text-yellow-300 text-xl font-bold">
+                    Pot: {@game_view.total_pot}
+                  </p>
+                </div>
+              </div>
+
+              <%= for participant <- @game_view.participants do %>
+                <% lobby_participant =
+                  Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
+
+                <div
+                  class={[
+                    "absolute flex flex-col items-center",
+                    seat_position(participant, @current_user_id, @game_view.participants)
+                  ]}
+                  data-participant-id={participant.id}
+                >
+                  <!-- Cards at top (bigger) - will overlap player info -->
+                  <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
+                    <div class="flex gap-1 relative mb-[-19px]">
+                      <%= for card <- @game_view.hole_cards do %>
+                        <div class={[
+                          "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
+                          suit_color(card)
+                        ]}>
+                          {format_card(card)}
+                        </div>
+                      <% end %>
+                    </div>
+                  <% else %>
+                    <%= if !Enum.empty?(participant.showdown_cards) do %>
+                      <div class="showdown-cards flex gap-1 relative mb-[-29px]">
+                        <%= for card <- participant.showdown_cards do %>
+                          <div class={[
+                            "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
+                            suit_color(card)
                           ]}>
-                            {participant.hand_status}
-                          </span>
+                            {format_card(card)}
+                          </div>
                         <% end %>
                       </div>
-
-                      <%= if participant.position do %>
-                        <p class="text-sm text-gray-400 mb-1">
-                          {participant.position}
-                        </p>
-                      <% end %>
-
-                      <div class="flex justify-between items-center mb-2">
-                        <p class="text-lg font-bold text-green-400">
-                          {participant.chips} chips
-                        </p>
-
-                        <%= if participant.bet_this_round > 0 do %>
-                          <div class="bg-yellow-500 text-gray-900 px-2 py-1 rounded-md font-bold text-sm">
-                            Bet: {participant.bet_this_round}
+                    <% else %>
+                      <%= if participant.hand_status do %>
+                        <div class="flex gap-1 relative mb-[-29px]">
+                          <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
+                            <span class="text-blue-400 text-2xl">🂠</span>
                           </div>
+                          <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
+                            <span class="text-blue-400 text-2xl">🂠</span>
+                          </div>
+                        </div>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                  
+    <!-- Compact player info below cards - overlapped by cards -->
+                  <div class={[
+                    "bg-gray-900/95 backdrop-blur rounded-lg px-3 pt-7 pb-2 shadow-xl border border-gray-700 min-w-[140px] relative z-0",
+                    if(participant.id == @game_view.current_participant_to_act_id,
+                      do: "ring-2 ring-yellow-400"
+                    )
+                  ]}>
+                    <div class="text-white text-center">
+                      <!-- Name and status -->
+                      <div class="flex items-center justify-center gap-2 mb-1 z-2">
+                        <p class="font-semibold text-sm truncate max-w-[100px]">
+                          {(lobby_participant && lobby_participant.email) || "Unknown"}
+                        </p>
+                        <%= if participant.hand_status == :folded do %>
+                          <span class="text-xs px-1 py-0.5 rounded bg-red-600">F</span>
+                        <% end %>
+                        <%= if participant.hand_status == :all_in do %>
+                          <span class="text-xs px-1 py-0.5 rounded bg-yellow-600">AI</span>
                         <% end %>
                       </div>
                       
-    <!-- Hole Cards - only show for current player -->
-                      <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
-                        <div class="flex gap-1 mt-2">
-                          <%= for card <- @game_view.hole_cards do %>
-                            <div class={[
-                              "bg-white rounded p-1 w-14 h-18 flex items-center justify-center font-bold text-md",
-                              suit_color(card)
-                            ]}>
-                              {format_card(card)}
-                            </div>
-                          <% end %>
+    <!-- Chips -->
+                      <p class="text-xs font-bold text-green-400">
+                        ${participant.chips}
+                      </p>
+                      
+    <!-- Bet amount (if any) -->
+                      <%= if participant.bet_this_round > 0 do %>
+                        <div class="mt-1 bg-yellow-500 text-gray-900 px-2 py-0.5 rounded text-xs font-bold inline-block">
+                          ${participant.bet_this_round}
                         </div>
-                      <% else %>
-                        <%= if !Enum.empty?(participant.showdown_cards) do %>
-                          <div class="showdown-cards flex gap-1 mt-2">
-                            <%= for card <- participant.showdown_cards do %>
-                              <div class={[
-                                "bg-white rounded p-1 w-12 h-16 flex items-center justify-center font-bold text-sm",
-                                suit_color(card)
-                              ]}>
-                                {format_card(card)}
-                              </div>
-                            <% end %>
-                          </div>
-                        <% else %>
-                          <%= if participant.hand_status do %>
-                            <div class="flex gap-1 mt-2">
-                              <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                                <span class="text-blue-400 text-xs">🂠</span>
-                              </div>
-                              <div class="bg-blue-900 border-2 border-blue-700 rounded p-1 w-12 h-16 flex items-center justify-center">
-                                <span class="text-blue-400 text-xs">🂠</span>
-                              </div>
-                            </div>
-                          <% end %>
-                        <% end %>
+                      <% end %>
+                      
+    <!-- Position badge -->
+                      <%= if participant.position do %>
+                        <div class="text-xs text-gray-400 mt-0.5">
+                          {participant.position}
+                        </div>
                       <% end %>
                     </div>
                   </div>
-                <% end %>
-              </div>
-            </div>
-          <% else %>
-            <!-- No Active Hand -->
-            <div class="text-center text-white">
-              <h2 class="text-xl mb-4">Waiting for hand to start...</h2>
-
-              <div class="grid grid-cols-3 gap-4 mt-8">
-                <%= for participant <- @game_view.participants do %>
-                  <% lobby_participant =
-                    Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
-                  <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="text-white">
-                      <p class="font-semibold">
-                        {(lobby_participant && lobby_participant.email) || "Unknown"}
-                      </p>
-                      <p class="text-lg font-bold text-green-400">{participant.chips} chips</p>
-                    </div>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-          
-    <!-- Action Controls - Fixed to bottom -->
-          <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
-            <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
-              <%= if @game_view.valid_actions.fold do %>
-                <div class="flex gap-4 items-center">
-                  <!-- Fold Button -->
-                  <.button
-                    phx-click="fold_hand"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg"
-                  >
-                    Fold
-                  </.button>
-                  
-    <!-- Check Button (only when no bet) -->
-                  <%= if @game_view.valid_actions.check do %>
-                    <.button
-                      phx-click="check_hand"
-                      class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg"
-                    >
-                      Check
-                    </.button>
-                  <% end %>
-                  
-    <!-- Call Button (only when there's a bet) -->
-                  <%= if @game_view.valid_actions.call do %>
-                    <.button
-                      phx-click="call_hand"
-                      class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg"
-                    >
-                      Call {@game_view.valid_actions.call.amount}
-                    </.button>
-                  <% end %>
-                  
-    <!-- Raise Controls -->
-                  <%= if @game_view.valid_actions.raise do %>
-                    <div class="flex flex-row gap-3">
-                      <div>
-                        <!-- Slider -->
-                        <div class="flex flex-col gap-1 min-w-[250px] mt-[-4]">
-                          <div class="flex justify-between items-center">
-                            <span class="text-gray-400 text-xs">Raise Amount:</span>
-                            <span class="text-yellow-400 font-bold text-sm">{@raise_amount}</span>
-                          </div>
-                          <form phx-change="update_raise_amount">
-                            <input
-                              type="range"
-                              name="raise_amount"
-                              min={@game_view.valid_actions.raise.min}
-                              max={@game_view.valid_actions.raise.max}
-                              value={@raise_amount}
-                              phx-change="update_raise_amount"
-                              class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                            />
-                          </form>
-                          <div class="flex justify-between text-xs text-gray-500">
-                            <span>{@game_view.valid_actions.raise.min}</span>
-                            <span>{@game_view.valid_actions.raise.max}</span>
-                          </div>
-                        </div>
-                        <!-- Quick Presets -->
-                        <div class="flex gap-2 flex-wrap pt-4">
-                          <%= for preset <- @game_view.valid_actions.raise.presets do %>
-                            <button
-                              type="button"
-                              phx-click="update_raise_amount"
-                              phx-value-raise_amount={preset.value}
-                              class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
-                            >
-                              {preset.label}
-                            </button>
-                          <% end %>
-                        </div>
-                      </div>
-                    </div>
-                    
-    <!-- Custom Raise Button -->
-                    <.button
-                      phx-click="raise_hand"
-                      phx-value-amount={@raise_amount}
-                      class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-6 py-3 rounded-lg"
-                    >
-                      <div class="w-[100px] text-center">
-                        Raise {@raise_amount}
-                      </div>
-                    </.button>
-                  <% end %>
-                </div>
-              <% else %>
-                <!-- Not your turn -->
-                <div class="text-gray-400 text-lg font-semibold px-6 text-center">
-                  Waiting for other players...
                 </div>
               <% end %>
             </div>
-          <% end %>
-        </div>
-        <div
-          id="connection-status"
-          phx-disconnected={JS.show()}
-          phx-connected={JS.hide()}
-          class="hidden"
-        >
-          ⚠️ Disconnected - trying to reconnect...
-        </div>
+            
+    <!-- Players positioned around table -->
+          </div>
+        <% end %>
+        
+    <!-- Action Controls - Fixed to bottom -->
+        <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
+          <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
+            <%= if @game_view.valid_actions.fold do %>
+              <div class="flex gap-4 items-center">
+                <!-- Fold Button -->
+                <.button
+                  phx-click="fold_hand"
+                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg"
+                >
+                  Fold
+                </.button>
+                
+    <!-- Check Button (only when no bet) -->
+                <%= if @game_view.valid_actions.check do %>
+                  <.button
+                    phx-click="check_hand"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg"
+                  >
+                    Check
+                  </.button>
+                <% end %>
+                
+    <!-- Call Button (only when there's a bet) -->
+                <%= if @game_view.valid_actions.call do %>
+                  <.button
+                    phx-click="call_hand"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg"
+                  >
+                    Call {@game_view.valid_actions.call.amount}
+                  </.button>
+                <% end %>
+                
+    <!-- Raise Controls -->
+                <%= if @game_view.valid_actions.raise do %>
+                  <div class="flex flex-row gap-3">
+                    <div>
+                      <!-- Slider -->
+                      <div class="flex flex-col gap-1 min-w-[250px] mt-[-4]">
+                        <div class="flex justify-between items-center">
+                          <span class="text-gray-400 text-xs">Raise Amount:</span>
+                          <span class="text-yellow-400 font-bold text-sm">{@raise_amount}</span>
+                        </div>
+                        <form phx-change="update_raise_amount">
+                          <input
+                            type="range"
+                            name="raise_amount"
+                            min={@game_view.valid_actions.raise.min}
+                            max={@game_view.valid_actions.raise.max}
+                            value={@raise_amount}
+                            phx-change="update_raise_amount"
+                            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                          />
+                        </form>
+                        <div class="flex justify-between text-xs text-gray-500">
+                          <span>{@game_view.valid_actions.raise.min}</span>
+                          <span>{@game_view.valid_actions.raise.max}</span>
+                        </div>
+                      </div>
+                      <!-- Quick Presets -->
+                      <div class="flex gap-2 flex-wrap pt-4">
+                        <%= for preset <- @game_view.valid_actions.raise.presets do %>
+                          <button
+                            type="button"
+                            phx-click="update_raise_amount"
+                            phx-value-raise_amount={preset.value}
+                            class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
+                          >
+                            {preset.label}
+                          </button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                  
+    <!-- Custom Raise Button -->
+                  <.button
+                    phx-click="raise_hand"
+                    phx-value-amount={@raise_amount}
+                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-6 py-3 rounded-lg"
+                  >
+                    <div class="w-[100px] text-center">
+                      Raise {@raise_amount}
+                    </div>
+                  </.button>
+                <% end %>
+              </div>
+            <% else %>
+              <!-- Not your turn -->
+              <div class="text-gray-400 text-lg font-semibold px-6 text-center">
+                Waiting for other players...
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+      <div
+        id="connection-status"
+        phx-disconnected={JS.show()}
+        phx-connected={JS.hide()}
+        class="hidden"
+      >
+        ⚠️ Disconnected - trying to reconnect...
       </div>
     </div>
     """
@@ -453,6 +437,44 @@ defmodule PokerWeb.PlayerLive.Game do
       "diamonds" -> "text-red-600"
       "clubs" -> "text-gray-900"
       "spades" -> "text-gray-900"
+    end
+  end
+
+  # Get seat position styling for oval table layout
+  # Current player is always at bottom center, others arranged by position
+  defp seat_position(participant, current_user_id, participants) do
+    if participant.player_id == current_user_id do
+      # Current player always at bottom center
+      "bottom-[-16%] left-1/2 -translate-x-1/2"
+    else
+      # Position other players around the table based on their position
+      position_index(participant, current_user_id, participants)
+    end
+  end
+
+  # Calculate position around table for non-current players
+  defp position_index(participant, current_user_id, participants) do
+    # Find current player and this participant in the list
+    current_idx = Enum.find_index(participants, &(&1.player_id == current_user_id)) || 0
+    participant_idx = Enum.find_index(participants, &(&1.id == participant.id)) || 0
+
+    # Calculate relative position (clockwise from current player)
+    relative_pos = rem(participant_idx - current_idx + length(participants), length(participants))
+
+    # Map relative positions to CSS classes (6-max table)
+    case relative_pos do
+      # Right of hero
+      1 -> "bottom-0 right-0"
+      # Middle right
+      2 -> "top-1/2 right-4 -translate-y-1/2"
+      # Top right
+      3 -> "top-24 right-12"
+      # Top left
+      4 -> "top-24 left-12"
+      # Middle left
+      5 -> "top-1/2 left-4 -translate-y-1/2"
+      # Left of hero
+      _ -> "bottom-24 left-12"
     end
   end
 end
