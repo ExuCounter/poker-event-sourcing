@@ -469,4 +469,89 @@ defmodule PokerWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  @doc """
+  Renders a stack of poker chips representing a dollar amount.
+
+  ## Examples
+
+      <.chip_stack amount={250} />
+      <.chip_stack amount={1500} size={:large} />
+  """
+  attr :amount, :integer, required: true, doc: "Dollar amount to display as chips"
+  attr :size, :atom, default: :normal, values: [:small, :normal, :large], doc: "Size of chips"
+  attr :class, :string, default: nil, doc: "Additional CSS classes"
+
+  def chip_stack(assigns) do
+    # Calculate chip breakdown
+    chips = calculate_chips(assigns.amount)
+    assigns = assign(assigns, :chips, chips)
+
+    ~H"""
+    <div class={["chip-stack", size_class(@size), @class]}>
+      <%= for {denomination, count} <- @chips do %>
+        <%= for i <- 1..min(count, 5) do %>
+          <div
+            class={[
+              "poker-chip",
+              chip_color(denomination)
+            ]}
+            style={"z-index: #{i * 5}"}
+            data-value={denomination}
+          >
+            <span class="chip-value">{format_denomination(denomination)}</span>
+          </div>
+        <% end %>
+        <%= if count > 5 do %>
+          <div class="chip-overflow text-yellow-300 text-xs font-bold bg-gray-900/80 px-1.5 py-0.5 rounded">
+            +{count - 5}
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Chip calculation and helper functions
+
+  defp calculate_chips(amount) when amount <= 0, do: []
+
+  defp calculate_chips(amount) do
+    denominations = [1000, 500, 100, 25, 10, 5, 1]
+
+    {_remaining, chips} =
+      Enum.reduce(denominations, {amount, []}, fn denom, {remaining, chips} ->
+        count = div(remaining, denom)
+
+        if count > 0 do
+          {rem(remaining, denom), [{denom, count} | chips]}
+        else
+          {remaining, chips}
+        end
+      end)
+
+    Enum.reverse(chips)
+  end
+
+  defp chip_color(1), do: "chip-white"
+  defp chip_color(5), do: "chip-red"
+  defp chip_color(10), do: "chip-blue"
+  defp chip_color(25), do: "chip-green"
+  defp chip_color(100), do: "chip-black"
+  defp chip_color(500), do: "chip-purple"
+  defp chip_color(1000), do: "chip-yellow"
+  defp chip_color(_), do: "chip-white"
+
+  defp format_denomination(1), do: "1"
+  defp format_denomination(5), do: "5"
+  defp format_denomination(10), do: "10"
+  defp format_denomination(25), do: "25"
+  defp format_denomination(100), do: "100"
+  defp format_denomination(500), do: "500"
+  defp format_denomination(1000), do: "1K"
+  defp format_denomination(amount), do: "$#{amount}"
+
+  defp size_class(:small), do: "chip-stack-small"
+  defp size_class(:normal), do: "chip-stack-normal"
+  defp size_class(:large), do: "chip-stack-large"
 end

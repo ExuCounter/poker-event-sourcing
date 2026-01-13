@@ -163,13 +163,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         participant_id: participant_to_act.id
       }
     end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      %PotsRecalculated{
-        table_id: table.id,
-        hand_id: hand_id,
-        pots: Pot.recalculate_pots(table.participant_hands)
-      }
-    end)
   end
 
   def finish_hand(table, :all_folded = reason) do
@@ -195,17 +188,18 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       active_participant_hand =
         Enum.find(participant_hands, fn hand -> hand.status != :folded end)
 
-      Enum.map(pots, fn pot ->
-        %PayoutDistributed{
-          table_id: table.id,
-          hand_id: hand_id,
-          pot_id: pot.id,
-          participant_id: active_participant_hand.participant_id,
-          amount: pot.amount,
-          pot_type: pot.type,
-          hand_rank: nil
-        }
-      end)
+      # Aggregate total winnings for the winner across all pots
+      total_amount = Enum.reduce(pots, 0, fn pot, acc -> acc + pot.amount end)
+
+      %PayoutDistributed{
+        table_id: table.id,
+        hand_id: hand_id,
+        pot_id: nil,
+        participant_id: active_participant_hand.participant_id,
+        amount: total_amount,
+        pot_type: :combined,
+        hand_rank: nil
+      }
     end)
     |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
       %HandFinished{

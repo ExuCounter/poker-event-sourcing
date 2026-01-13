@@ -227,7 +227,7 @@
 }
 
 .card-slide-in {
-  animation: slideIn 400ms ease-out forwards;
+  animation: slideIn 200ms ease-out forwards;
 }
 
 .card-flip-in {
@@ -287,13 +287,241 @@
 }
 
 .showdown-highlight::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 191, 36, 0.1) 0%,
+    transparent 70%
+  );
   pointer-events: none;
   animation: glow 3000ms ease-in-out;
+}
+
+/* Poker Chip Styles */
+.poker-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-weight: bold;
+  font-size: 10px;
+  transition: all 0.3s ease;
+}
+
+.chip-value {
+  position: relative;
+  z-index: 2;
+}
+
+/* Add subtle stripe pattern to chips */
+.poker-chip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+/* Casino denomination colors */
+.chip-white {
+  background: linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%);
+  color: #333;
+  border-color: rgba(200, 200, 200, 0.8);
+}
+
+.chip-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.chip-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.chip-green {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.chip-black {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: white;
+  border-color: rgba(200, 200, 200, 0.6);
+}
+
+.chip-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.chip-yellow {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #333;
+  border-color: rgba(200, 150, 0, 0.6);
+}
+
+/* Chip Stack Container */
+.chip-stack {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  position: relative;
+  min-height: 40px;
+}
+
+.chip-stack .poker-chip {
+  margin-right: -30px;
+}
+
+.chip-stack .poker-chip:first-child {
+  margin-bottom: 0;
+}
+
+/* Size variants */
+.chip-stack-small .poker-chip {
+  width: 32px;
+  height: 32px;
+  font-size: 8px;
+  margin-right: -24px;
+}
+
+.chip-stack-small .poker-chip:first-child {
+  margin-right: 0;
+}
+
+.chip-stack-small .poker-chip::before {
+  width: 27px;
+  height: 27px;
+}
+
+.chip-stack-normal .poker-chip {
+  width: 40px;
+  height: 40px;
+  font-size: 10px;
+}
+
+.chip-stack-large .poker-chip {
+  width: 48px;
+  height: 48px;
+  font-size: 11px;
+  margin-right: -36px;
+}
+
+.chip-stack-large .poker-chip:first-child {
+  margin-bottom: 0;
+}
+
+.chip-stack-large .poker-chip::before {
+  width: 41px;
+  height: 41px;
+}
+
+/* Chip overflow indicator */
+.chip-overflow {
+  margin-top: 4px;
+}
+
+/* Chip Animation Keyframes */
+@keyframes chipSlide {
+  0% {
+    opacity: 1;
+    transform: translate(var(--start-x), var(--start-y)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(var(--end-x), var(--end-y)) scale(1);
+  }
+}
+
+@keyframes chipAppear {
+  0% {
+    transform: translateY(30px) scale(0.85);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chipCollect {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* Chip Animation Classes */
+.chip-slide {
+  animation: chipSlide 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.chip-appear {
+  animation: chipAppear 400ms ease-out forwards;
+}
+
+.chip-collect {
+  animation: chipCollect 600ms ease-in forwards;
+}
+
+/* Dealer Button Styles */
+.dealer-button {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 10;
+}
+
+/* Dealer button chip styling */
+.dealer-button .poker-chip {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+  border: 3px solid #333;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.dealer-button .poker-chip span {
+  position: relative;
+  z-index: 2;
+  color: #333;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }

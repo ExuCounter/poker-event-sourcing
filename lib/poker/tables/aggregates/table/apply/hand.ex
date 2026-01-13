@@ -25,6 +25,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     |> Map.put(:remaining_deck, nil)
     |> Map.put(:payouts, [])
     |> Map.put(:revealed_cards, %{})
+    |> Map.put(:status, :live)
   end
 
   def apply(%Table{participant_hands: participant_hands} = table, %ParticipantHandGiven{} = event) do
@@ -54,7 +55,10 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     Map.put(table, :revealed_cards, updated_revealed_cards)
   end
 
-  def apply(%Table{participants: participants, payouts: payouts} = table, %PayoutDistributed{} = event) do
+  def apply(
+        %Table{participants: participants, payouts: payouts} = table,
+        %PayoutDistributed{} = event
+      ) do
     updated_participants =
       Enum.map(participants, fn participant ->
         if participant.id == event.participant_id do
@@ -80,8 +84,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
   end
 
   def apply(%Table{} = table, %HandFinished{}) do
-    # Chips already updated by PayoutDistributed events
-    # HandFinished just marks hand as complete
-    table
+    hand = Map.put(table.hand, :status, :finished)
+
+    %{table | hand: hand}
   end
 end

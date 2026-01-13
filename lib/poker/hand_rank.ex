@@ -113,7 +113,7 @@ defmodule Poker.HandRank do
   defp parse_component(component) do
     case Integer.parse(component) do
       {int, ""} -> int
-      :error -> String.to_existing_atom(component)
+      :error -> String.to_atom(component)
     end
   end
 

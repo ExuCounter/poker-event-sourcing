@@ -26,7 +26,8 @@ defmodule Poker.Tables.Projectors.TableLobby do
       table_type: table_type,
       small_blind: small_blind,
       big_blind: big_blind,
-      starting_stack: starting_stack
+      starting_stack: starting_stack,
+      creator_id: creator_id
     },
     fn multi ->
       seats_count = max_seats(table_type)
@@ -39,7 +40,8 @@ defmodule Poker.Tables.Projectors.TableLobby do
         table_type: table_type,
         seated_count: 0,
         seats_count: seats_count,
-        status: status
+        status: status,
+        creator_id: creator_id
       })
     end
   )

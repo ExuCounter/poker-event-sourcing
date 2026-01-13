@@ -98,9 +98,13 @@ defmodule Poker.Tables.Views.PlayerGameView do
       big_blind: get_big_blind(aggregate),
       latest_event_id: latest_event_id,
       new_events: new_events,
-      payouts: aggregate.payouts || []
+      payouts: aggregate.payouts || [],
+      hand_status: get_hand_status(aggregate)
     }
   end
+
+  defp get_hand_status(%{hand: %{status: status}}), do: status
+  defp get_hand_status(_), do: nil
 
   defp get_hand_id(%{hand: %{id: id}}), do: id
   defp get_hand_id(_), do: nil
@@ -110,6 +114,15 @@ defmodule Poker.Tables.Views.PlayerGameView do
   end
 
   defp calculate_total_pot(_), do: 0
+
+  defp calculate_total_bets(%{participant_hands: participant_hands})
+       when is_list(participant_hands) do
+    Enum.reduce(participant_hands, 0, fn participant_hand, acc ->
+      acc + participant_hand.bet_this_round
+    end)
+  end
+
+  defp calculate_total_bets(_), do: 0
 
   defp get_player_hole_cards(%{participant_hands: participant_hands}, %{id: participant_id})
        when is_list(participant_hands) do
@@ -139,8 +152,9 @@ defmodule Poker.Tables.Views.PlayerGameView do
         position: get_participant_position(participant_hand),
         status: participant.status,
         bet_this_round: get_bet_this_round(participant_hand),
-        hand_status: get_hand_status(participant_hand),
-        showdown_cards: showdown_cards
+        hand_status: get_participant_hand_status(participant_hand),
+        showdown_cards: showdown_cards,
+        received_hole_cards?: not is_nil(get_participant_hand_hole_cards(participant_hand))
       }
     end)
   end
@@ -159,8 +173,11 @@ defmodule Poker.Tables.Views.PlayerGameView do
   defp get_bet_this_round(%{bet_this_round: bet}), do: bet
   defp get_bet_this_round(_), do: 0
 
-  defp get_hand_status(%{status: status}), do: status
-  defp get_hand_status(_), do: nil
+  defp get_participant_hand_status(%{status: status}), do: status
+  defp get_participant_hand_status(_), do: nil
+
+  defp get_participant_hand_hole_cards(%{hole_cards: hole_cards}), do: hole_cards
+  defp get_participant_hand_hole_cards(_), do: nil
 
   defp get_participant_to_act_id(%{round: %{participant_to_act_id: id}}), do: id
   defp get_participant_to_act_id(_), do: nil
@@ -240,12 +257,12 @@ defmodule Poker.Tables.Views.PlayerGameView do
 
   defp calculate_raise_options(aggregate, current_participant, call_amount, my_chips) do
     current_bet = get_current_bet(aggregate)
-    small_blind = get_small_blind(aggregate)
-    total_pot = calculate_total_pot(aggregate)
+    big_blind = get_big_blind(aggregate)
+    total_bets = calculate_total_bets(aggregate)
     my_bet = get_my_bet(aggregate, current_participant)
 
     # Min raise is current bet + small blind (or last raise amount)
-    min_raise = max(current_bet + small_blind, small_blind)
+    min_raise = max(current_bet + big_blind, big_blind)
 
     # Max raise is all remaining chips
     max_raise = my_chips + my_bet
@@ -255,20 +272,29 @@ defmodule Poker.Tables.Views.PlayerGameView do
       %{
         min: min_raise,
         max: max_raise,
-        presets: build_raise_presets(total_pot, max_raise, call_amount, current_bet)
+        presets: build_raise_presets(total_bets, min_raise, max_raise, call_amount, current_bet)
       }
     else
       false
     end
   end
 
-  defp build_raise_presets(pot, max_chips, call_amount, current_bet) do
-    presets = [
-      %{label: "½ Pot", value: div(pot, 2)},
-      %{label: "Pot", value: pot},
-      %{label: "2x Pot", value: pot * 2},
-      %{label: "3x Pot", value: pot * 3}
-    ]
+  defp build_raise_presets(pot, min_chips, max_chips, call_amount, current_bet) do
+    presets =
+      if pot == 0 do
+        [
+          %{label: "1BB", value: min_chips},
+          %{label: "2BB", value: min_chips * 2},
+          %{label: "3BB", value: min_chips * 3}
+        ]
+      else
+        [
+          %{label: "½ Pot", value: div(pot, 2)},
+          %{label: "Pot", value: pot},
+          %{label: "2x Pot", value: pot * 2},
+          %{label: "3x Pot", value: pot * 3}
+        ]
+      end
 
     # Filter presets that are valid (within chip range and above current bet)
     presets

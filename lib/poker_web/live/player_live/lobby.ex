@@ -17,7 +17,12 @@ defmodule PokerWeb.PlayerLive.Lobby do
           Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:lobby")
         end
 
-        {:ok, assign(socket, lobby: lobby, table_id: table_id)}
+        {:ok,
+         assign(socket,
+           lobby: lobby,
+           table_id: table_id,
+           user_id: socket.assigns.current_scope.user.id
+         )}
     end
   end
 
@@ -143,18 +148,16 @@ defmodule PokerWeb.PlayerLive.Lobby do
               <div class="text-gray-500">Table is full ({@lobby.seats_count} max)</div>
             <% end %>
 
-            <%= if @lobby.status == :waiting && @lobby.seated_count >= 2 do %>
-              <.button phx-click="start_table" class="bg-green-600 hover:bg-green-700">
+            <%= if @lobby.status == :waiting && @lobby.seated_count >= 2 && @lobby.creator_id == @user_id do %>
+              <.button phx-click="start_table">
                 Start Game
               </.button>
             <% end %>
 
             <%= if @lobby.status == :live do %>
-              <.link navigate={~p"/tables/#{@lobby.id}/game"}>
-                <.button>
-                  Play the game
-                </.button>
-              </.link>
+              <.button navigate={~p"/tables/#{@lobby.id}/game"}>
+                Play the game
+              </.button>
             <% end %>
           </div>
         </div>

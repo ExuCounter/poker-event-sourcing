@@ -73,7 +73,8 @@ defmodule PokerWeb.PlayerLive.Game do
 
         assign(socket,
           current_animated_event_id: next_event.event_id,
-          game_view: game_view
+          game_view: game_view,
+          raise_amount: nil
         )
     end
   end
@@ -86,14 +87,9 @@ defmodule PokerWeb.PlayerLive.Game do
       %{
         type: event_type,
         data: Map.from_struct(event),
-        delay: event_animation_delay(event_type)
+        delay: AnimationDelays.for_event(event)
       }
     end)
-  end
-
-  # Define animation delays for each event type (in milliseconds)
-  defp event_animation_delay(event_type) do
-    AnimationDelays.for_event_name(event_type)
   end
 
   # Action event handlers
@@ -166,47 +162,42 @@ defmodule PokerWeb.PlayerLive.Game do
           </.link>
         </div>
 
-        <h1 class="text-2xl font-bold text-white mb-6 text-center">
-          Poker Table - {@lobby.table_type}
-
-          <%= if @game_view.table_status == :finished do %>
-            | Finished
-          <% end %>
-          <%= if @game_view.hand_id do %>
-            {@game_view.hand_id}
-          <% end %>
-        </h1>
-
         <%= if @game_view.hand_id do %>
           <!-- Active Hand -->
             <!-- Poker Table Container -->
           <div class="relative w-full h-[600px] mb-32 flex items-center justify-center">
             <!-- Oval Table -->
             <div class="relative max-h-[500px] max-w-[800px] w-[100%] h-[100%] bg-green-700 rounded-[50%] border-8 border-amber-900 shadow-2xl">
+              <h1 class="text-2xl font-bold text-white mb-6 text-center absolute top-[52%] left-1/2 -translate-x-1/2 z-1 opacity-[0.3] text-md">
+                Poker Table | NL - Holdem | {normalized_table_type(@lobby.table_type)}
+
+                <%= if @game_view.table_status == :finished do %>
+                  | Finished
+                <% end %>
+              </h1>
               
     <!-- Community Cards in center -->
-              <div class="absolute top-2/5 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4">
-                <div class="community-cards-area flex justify-center gap-2">
-                  <%= if !Enum.empty?(@game_view.community_cards) do %>
-                    <%= for card <- @game_view.community_cards do %>
-                      <div class={[
-                        "community-card bg-white rounded p-2 w-16 h-20 flex items-center justify-center font-bold text-xl shadow-lg",
-                        suit_color(card)
-                      ]}>
-                        {format_card(card)}
-                      </div>
-                    <% end %>
-                  <% else %>
-                    <span class="text-green-200 text-sm">Waiting for cards...</span>
+              <div class="community-cards-area flex justify-center mt-[15%] gap-2 h-20">
+                <%= if !Enum.empty?(@game_view.community_cards) do %>
+                  <%= for card <- @game_view.community_cards do %>
+                    <div class={[
+                      "community-card bg-white rounded p-2 w-16 h-20 flex items-center justify-center font-bold text-xl shadow-lg",
+                      suit_color(card)
+                    ]}>
+                      {format_card(card)}
+                    </div>
                   <% end %>
-                </div>
-                
-    <!-- Pot -->
-                <div class="pot-area text-center bg-amber-900/50 rounded-lg px-4 py-2">
-                  <p class="text-yellow-300 text-xl font-bold">
-                    Pot: {@game_view.total_pot}
+                <% end %>
+              </div>
+              <div class="pot-area text-center flex flex-row items-center gap-2 justify-center mt-3">
+                <%= if @game_view.hand_status != :finished && @game_view.total_pot > 0 do %>
+                  <p class="text-yellow-300 text-sm font-semibold total-pot-amount">
+                    $<span class="inline total-pot">{@game_view.total_pot}</span>
                   </p>
-                </div>
+                  <div data-pot-area>
+                    <.chip_stack amount={@game_view.total_pot} size={:small} class="pot-chips" />
+                  </div>
+                <% end %>
               </div>
 
               <%= for participant <- @game_view.participants do %>
@@ -215,27 +206,16 @@ defmodule PokerWeb.PlayerLive.Game do
 
                 <div
                   class={[
-                    "absolute flex flex-col items-center",
+                    "absolute flex flex-col items-center z-2",
                     seat_position(participant, @current_user_id, @game_view.participants)
                   ]}
                   data-participant-id={participant.id}
                 >
-                  <!-- Cards at top (bigger) - will overlap player info -->
-                  <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
-                    <div class="flex gap-1 relative mb-[-19px]">
-                      <%= for card <- @game_view.hole_cards do %>
-                        <div class={[
-                          "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
-                          suit_color(card)
-                        ]}>
-                          {format_card(card)}
-                        </div>
-                      <% end %>
-                    </div>
-                  <% else %>
-                    <%= if !Enum.empty?(participant.showdown_cards) do %>
-                      <div class="showdown-cards flex gap-1 relative mb-[-29px]">
-                        <%= for card <- participant.showdown_cards do %>
+                  <div data-cards-area>
+                    <!-- Cards at top (bigger) - will overlap player info -->
+                    <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
+                      <div class="flex gap-1 relative mb-[-19px]">
+                        <%= for card <- @game_view.hole_cards do %>
                           <div class={[
                             "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
                             suit_color(card)
@@ -245,22 +225,62 @@ defmodule PokerWeb.PlayerLive.Game do
                         <% end %>
                       </div>
                     <% else %>
-                      <%= if participant.hand_status do %>
-                        <div class="flex gap-1 relative mb-[-29px]">
-                          <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
-                            <span class="text-blue-400 text-2xl">🂠</span>
-                          </div>
-                          <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
-                            <span class="text-blue-400 text-2xl">🂠</span>
-                          </div>
+                      <%= if !Enum.empty?(participant.showdown_cards) do %>
+                        <div class="showdown-cards flex gap-1 relative mb-[-29px]">
+                          <%= for card <- participant.showdown_cards do %>
+                            <div class={[
+                              "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
+                              suit_color(card)
+                            ]}>
+                              {format_card(card)}
+                            </div>
+                          <% end %>
                         </div>
+                      <% else %>
+                        <%= if participant.received_hole_cards? do %>
+                          <div class="flex gap-1 relative mb-[-29px]">
+                            <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
+                              <span class="text-blue-400 text-2xl">🂠</span>
+                            </div>
+                            <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
+                              <span class="text-blue-400 text-2xl">🂠</span>
+                            </div>
+                          </div>
+                        <% end %>
                       <% end %>
                     <% end %>
+                  </div>
+                  
+    <!-- Dealer Button Indicator -->
+                  <%= if participant.position == :dealer do %>
+                    <div class="dealer-button">
+                      <div class="poker-chip">
+                        <span>D</span>
+                      </div>
+                    </div>
+                  <% end %>
+                  
+    <!-- Bet area with chips (positioned above player info) -->
+                  <%= if participant.bet_this_round > 0 do %>
+                    <div
+                      class="bet-area absolute bottom-[160px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10"
+                      data-bet-area
+                      data-participant-id={participant.id}
+                    >
+                      <.chip_stack
+                        amount={participant.bet_this_round}
+                        size={:small}
+                        class="bet-chips"
+                      />
+                      <span class="text-yellow-300 text-xs font-bold bet-amount">
+                        ${participant.bet_this_round}
+                      </span>
+                    </div>
                   <% end %>
                   
     <!-- Compact player info below cards - overlapped by cards -->
                   <div class={[
-                    "bg-gray-900/95 backdrop-blur rounded-lg px-3 pt-7 pb-2 shadow-xl border border-gray-700 min-w-[140px] relative z-0",
+                    "bg-gray-900/95 backdrop-blur rounded-2xl px-7 py-4 shadow-xl border border-gray-700 min-w-[140px] relative z-0",
                     if(participant.id == @game_view.current_participant_to_act_id,
                       do: "ring-2 ring-yellow-400"
                     )
@@ -283,20 +303,6 @@ defmodule PokerWeb.PlayerLive.Game do
                       <p class="text-xs font-bold text-green-400">
                         ${participant.chips}
                       </p>
-                      
-    <!-- Bet amount (if any) -->
-                      <%= if participant.bet_this_round > 0 do %>
-                        <div class="mt-1 bg-yellow-500 text-gray-900 px-2 py-0.5 rounded text-xs font-bold inline-block">
-                          ${participant.bet_this_round}
-                        </div>
-                      <% end %>
-                      
-    <!-- Position badge -->
-                      <%= if participant.position do %>
-                        <div class="text-xs text-gray-400 mt-0.5">
-                          {participant.position}
-                        </div>
-                      <% end %>
                     </div>
                   </div>
                 </div>
@@ -464,9 +470,9 @@ defmodule PokerWeb.PlayerLive.Game do
     # Map relative positions to CSS classes (6-max table)
     case relative_pos do
       # Right of hero
-      1 -> "bottom-0 right-0"
+      1 -> "bottom-0 right-[10%]"
       # Middle right
-      2 -> "top-1/2 right-4 -translate-y-1/2"
+      2 -> "top-1/2 right-[-14%] -translate-y-1/2"
       # Top right
       3 -> "top-24 right-12"
       # Top left
@@ -477,4 +483,6 @@ defmodule PokerWeb.PlayerLive.Game do
       _ -> "bottom-24 left-12"
     end
   end
+
+  def normalized_table_type(:six_max), do: "6-max"
 end

@@ -1,5 +1,113 @@
 // LiveView Hooks for poker game animations
 
+// Animation timing constants (match server-side AnimationDelays)
+const ANIMATION_TIMINGS = {
+  ACTION_BOUNCE: 600,
+  ACTION_BADGE: 1500,
+  PULSE: 600,
+  GLOW: 600,
+  POT_PULSE: 400,
+  POT_WIN: 800,
+  CARD_STAGGER: 150,
+  CARD_SLIDE_IN: 400,
+  CARD_REVEAL: 500,
+  CARD_DEAL: 500,
+  CARD_DEAL_STAGGER: 50,
+  CHIP_APPEAR: 50,
+  CHIP_SLIDE: 400,
+  CHIP_COLLECT: 400,
+  CHIP_STAGGER_PER_PLAYER: 150,
+  CHIP_STAGGER_PER_CHIP: 25,
+  SHOWDOWN_GLOW: 2000,
+  FLASH: 500,
+  NEW_HAND_GLOW: 1000,
+};
+
+/**
+ * Animates element by adding CSS class with animationend tracking
+ * @param {HTMLElement} element - Target element
+ * @param {string} className - CSS class to add
+ * @param {number} duration - Duration in milliseconds
+ * @returns {Promise<void>} Resolves when animation completes
+ */
+async function animateWithClass(element, className, duration) {
+  return new Promise((resolve) => {
+    element.classList.add(className);
+
+    const handleAnimationEnd = (e) => {
+      if (e.target === element) {
+        element.removeEventListener("animationend", handleAnimationEnd);
+        element.classList.remove(className);
+        resolve();
+      }
+    };
+
+    element.addEventListener("animationend", handleAnimationEnd);
+  });
+}
+
+/**
+ * Run animations sequentially with stagger delay
+ * @param {Array} items - Array of items to animate
+ * @param {Function} animateFn - Async function that animates one item
+ * @param {number} staggerDelay - Delay between each animation start (ms)
+ * @returns {Promise<void>} Resolves when all animations complete
+ */
+async function animateStaggered(items, animateFn, staggerDelay) {
+  for (let i = 0; i < items.length; i++) {
+    const animationPromise = animateFn(items[i], i);
+
+    if (i < items.length - 1) {
+      // Wait for stagger delay or animation completion, whichever comes first
+      await Promise.race([
+        animationPromise,
+        new Promise((resolve) => setTimeout(resolve, staggerDelay)),
+      ]);
+    } else {
+      // Wait for last animation to complete fully
+      await animationPromise;
+    }
+  }
+}
+
+/**
+ * Create temporary animated element that auto-removes
+ * @param {Object} config - Element configuration
+ * @returns {Promise<void>} Resolves when animation completes and element is removed
+ */
+async function createAnimatedElement(config) {
+  const {
+    tag = "div",
+    className,
+    styles,
+    innerHTML,
+    parent = document.body,
+    keyframes,
+    duration,
+    easing = "ease-out",
+  } = config;
+
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (innerHTML) element.innerHTML = innerHTML;
+  if (styles) Object.assign(element.style, styles);
+
+  parent.appendChild(element);
+
+  try {
+    if (keyframes) {
+      const animation = element.animate(keyframes, {
+        duration,
+        easing,
+        fill: "forwards",
+      });
+      await animation.finished;
+    }
+  } finally {
+    element.remove();
+  }
+}
+
 export const TableEvents = {
   mounted() {
     // Initialize event queue
@@ -24,40 +132,27 @@ export const TableEvents = {
     });
   },
 
-  updated() {
-    // This runs after LiveView updates the DOM
+  async animateNewCards() {
     const cardsContainer = document.querySelector(".community-cards-area");
-    if (!cardsContainer) return;
 
     const currentCards = cardsContainer.querySelectorAll(".community-card");
+
     const currentCardCount = currentCards.length;
 
-    // Check if new cards were added
     if (currentCardCount > this.previousCardCount) {
-      const newCardCount = currentCardCount - this.previousCardCount;
+      const newCards = Array.from(currentCards).slice(this.previousCardCount);
 
-      // Animate only the newly added cards with stagger
-      currentCards.forEach((card, index) => {
-        if (index >= this.previousCardCount) {
-          // This is a new card
-          const delay = (index - this.previousCardCount) * 150;
-
-          // Start invisible
-          card.style.opacity = "0";
-          card.style.transform = "translateY(-20px) scale(0.9)";
-
-          setTimeout(() => {
-            card.classList.add("card-slide-in");
-            // Remove inline styles to let animation take over
-            card.style.opacity = "";
-            card.style.transform = "";
-
-            setTimeout(() => {
-              card.classList.remove("card-slide-in");
-            }, 400);
-          }, delay);
-        }
-      });
+      await animateStaggered(
+        newCards,
+        async (card) => {
+          await animateWithClass(
+            card,
+            "card-slide-in",
+            ANIMATION_TIMINGS.CARD_SLIDE_IN,
+          );
+        },
+        5000,
+      );
     }
 
     // Update the count for next comparison
@@ -82,115 +177,55 @@ export const TableEvents = {
 
   async animateEvent(event) {
     const { type, data, delay } = event;
+    const duration = delay || 0;
+    const animationStart = Date.now();
 
-    // Return a promise that resolves when animation completes
-    return new Promise((resolve) => {
-      // Use delay from server, default to 0 if not provided
-      const duration = delay || 0;
+    console.log(type);
 
+    try {
+      // Execute animation (now returns promise)
       switch (type) {
+        case "ParticipantHandGiven":
+          await this.animateCardDeal(data);
+          break;
         case "RoundStarted":
-          this.animateRoundStart(data);
-          break;
-        case "HandStarted":
-          this.animateHandStart(data);
-          break;
-        case "HandFinished":
-          this.animateHandFinish(data);
+          await this.animateNewCards();
           break;
         case "ParticipantShowdownCardsRevealed":
-          this.animateCardReveal(data.participant_id);
+          await this.animateCardReveal(data.participant_id);
           break;
-        case "ParticipantFolded":
-          this.animatePlayerAction(data.participant_id, "folded");
+        case "SmallBlindPosted":
+          await this.animateBetChipsAppear(data.participant_id);
+          break;
+        case "BigBlindPosted":
+          await this.animateBetChipsAppear(data.participant_id);
           break;
         case "ParticipantCalled":
-          this.animatePlayerAction(data.participant_id, "called", data.amount);
-          break;
-        case "ParticipantChecked":
-          console.log(data.participant_id);
-          this.animatePlayerAction(data.participant_id, "checked");
+          await this.animateBetChipsAppear(data.participant_id);
           break;
         case "ParticipantRaised":
-          this.animatePlayerAction(data.participant_id, "raised", data.amount);
+          await this.animateBetChipsAppear(data.participant_id);
           break;
         case "ParticipantWentAllIn":
-          this.animatePlayerAction(data.participant_id, "all-in", data.amount);
+          await this.animateBetChipsAppear(data.participant_id);
           break;
         case "PotsRecalculated":
-          this.animatePotUpdate(data);
+          await this.animateChipsToPot();
+          break;
+        case "PayoutDistributed":
+          await this.animatePayoutToWinner(data);
           break;
         default:
           // Unknown event type, no animation
           break;
       }
-
-      // Resolve after animation duration from server
-      setTimeout(() => {
-        this.pushEvent("event_processed", { event_id: data.event_id });
-        console.log(event.type);
-        console.log("animation");
-        console.log(duration);
-        resolve();
-      }, duration);
-    });
-  },
-
-  animateRoundComplete(data) {
-    // Flash the community cards area
-    const cards = document.querySelector(".community-cards-area");
-    if (cards) {
-      cards.classList.add("flash-animation");
-      setTimeout(() => cards.classList.remove("flash-animation"), 500);
+    } finally {
+      // Always notify server that event is processed
+      this.pushEvent("event_processed", { event_id: data.event_id });
     }
   },
 
-  animateRoundStart(data) {
-    // Cards are now animated in the updated() hook
-    // Just add a subtle pulse to container
-    const cardsContainer = document.querySelector(".community-cards-area");
-    if (cardsContainer) {
-      cardsContainer.classList.add("pulse-animation");
-      setTimeout(() => cardsContainer.classList.remove("pulse-animation"), 800);
-    }
-  },
-
-  animateHandStart(data) {
-    // Subtle glow animation on the table
-    const container = document.getElementById("game-container");
-    if (container) {
-      container.classList.add("new-hand-glow");
-      setTimeout(() => container.classList.remove("new-hand-glow"), 1000);
-    }
-  },
-
-  animateHandFinish(data) {
-    // Celebration animation for pot area
-    const pot = document.querySelector(".pot-area");
-    if (pot) {
-      pot.classList.add("pot-win-animation");
-      setTimeout(() => pot.classList.remove("pot-win-animation"), 800);
-    }
-
-    // Flash the community cards area to draw attention to showdown
-    const cardsArea = document.querySelector(".community-cards-area");
-    if (cardsArea) {
-      cardsArea.classList.add("flash-animation");
-      setTimeout(() => cardsArea.classList.remove("flash-animation"), 500);
-    }
-
-    // Add a special showdown highlight effect
-    const gameContainer = document.getElementById("game-container");
-    if (gameContainer) {
-      gameContainer.classList.add("showdown-highlight");
-      setTimeout(
-        () => gameContainer.classList.remove("showdown-highlight"),
-        3000,
-      );
-    }
-  },
-
-  animateCardReveal(participantId) {
+  async animateCardReveal(participantId) {
     const playerCard = document.querySelector(
       `[data-participant-id="${participantId}"]`,
     );
@@ -198,92 +233,252 @@ export const TableEvents = {
     if (!playerCard) return;
 
     const showdownCards = playerCard.querySelector(".showdown-cards");
-    if (showdownCards && showdownCards.children.length > 0) {
-      Array.from(showdownCards.children).forEach((card, index) => {
+    if (!showdownCards || showdownCards.children.length === 0) return;
+
+    const cards = Array.from(showdownCards.children);
+
+    await animateStaggered(
+      cards,
+      async (card) => {
         card.style.opacity = "0";
         card.style.transform = "rotateY(180deg) scale(0.9)";
+        await animateWithClass(
+          card,
+          "card-reveal",
+          ANIMATION_TIMINGS.CARD_REVEAL,
+        );
 
-        setTimeout(() => {
-          card.classList.add("card-reveal");
-          setTimeout(() => {
-            card.classList.remove("card-reveal");
-          }, 500);
-        }, index * 100);
-      });
-    }
-  },
-
-  animatePlayerAction(participantId, action, amount = null) {
-    // Find the player card by participant ID
-    const playerCard = document.querySelector(
-      `[data-participant-id="${participantId}"]`,
+        card.style.transform = "rotateY(0deg) scale(1)";
+        card.style.opacity = "1";
+      },
+      100,
     );
-
-    if (!playerCard) return;
-
-    // Add action-specific animation class
-    playerCard.classList.add(`action-${action}`);
-
-    console.log(playerCard);
-
-    // Show action badge
-    this.showActionBadge(playerCard, action, amount);
-
-    // Remove animation class after it completes
-    setTimeout(() => {
-      playerCard.classList.remove(`action-${action}`);
-    }, 600);
   },
 
-  showActionBadge(playerCard, action, amount) {
-    // Create temporary badge element
-    const badge = document.createElement("div");
-    badge.className = "action-badge";
-
-    let badgeText = action.toUpperCase();
-    if (amount) {
-      badgeText += ` ${amount}`;
-    }
-
-    badge.textContent = badgeText;
-    badge.style.cssText = `
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 14px;
-      z-index: 100;
-      animation: fadeInOut 1.5s ease-in-out;
-      min-width: 100px;
-    `;
-
-    // Make parent relative if it isn't
-    const position = window.getComputedStyle(playerCard).position;
-    if (position === "static") {
-      playerCard.style.position = "relative";
-    }
-
-    console.log(badge);
-
-    playerCard.appendChild(badge);
-
-    // Remove badge after animation
-    setTimeout(() => {
-      badge.remove();
-    }, 1500);
-  },
-
-  animatePotUpdate(data) {
+  async animatePotUpdate(data) {
     // Subtle pulse on pot amount
     const pot = document.querySelector(".pot-area");
     if (pot) {
-      pot.classList.add("pot-update-pulse");
-      setTimeout(() => pot.classList.remove("pot-update-pulse"), 400);
+      await animateWithClass(
+        pot,
+        "pot-update-pulse",
+        ANIMATION_TIMINGS.POT_PULSE,
+      );
     }
+  },
+
+  async animateBetChipsAppear(participantId) {
+    // Animate chips appearing in bet area with stagger
+    const betArea = document.querySelector(
+      `[data-bet-area][data-participant-id="${participantId}"]`,
+    );
+
+    if (!betArea) return;
+
+    const chips = Array.from(betArea.querySelectorAll(".poker-chip"));
+
+    await animateStaggered(
+      chips,
+      async (chip) => {
+        await animateWithClass(
+          chip,
+          "chip-appear",
+          ANIMATION_TIMINGS.CHIP_APPEAR,
+        );
+      },
+      ANIMATION_TIMINGS.CHIP_STAGGER_PER_CHIP,
+    );
+  },
+
+  async animateChipsToPot() {
+    // Animate chips sliding from bet areas to pot center
+    const potArea = document.querySelector("[data-pot-area]");
+
+    if (!potArea) return;
+
+    const betAreas = Array.from(document.querySelectorAll(".bet-area"));
+
+    const potRect = potArea.getBoundingClientRect();
+
+    await animateStaggered(
+      betAreas,
+      async (betArea) => {
+        const chips = Array.from(
+          betArea.querySelectorAll(".bet-chips .poker-chip"),
+        );
+
+        const betAmount = betArea.querySelector(".bet-amount");
+
+        betAmount.classList.add("!hidden");
+
+        const betRect = betArea.getBoundingClientRect();
+
+        // Calculate delta from bet area to pot center
+        const deltaX =
+          potRect.left + potRect.width / 2 - (betRect.left + betRect.width / 2);
+        const deltaY =
+          potRect.top + potRect.height / 2 - (betRect.top + betRect.height / 2);
+
+        // Animate chips within this bet area with stagger
+        await animateStaggered(
+          chips,
+          async (chip) => {
+            chip.style.setProperty("--start-x", "0px");
+            chip.style.setProperty("--start-y", "0px");
+            chip.style.setProperty("--end-x", `${deltaX}px`);
+            chip.style.setProperty("--end-y", `${deltaY}px`);
+
+            await animateWithClass(
+              chip,
+              "chip-slide",
+              ANIMATION_TIMINGS.CHIP_SLIDE,
+            );
+
+            chip.style.transform = `translateY(${deltaY}px) translateX(${deltaX}px)`;
+          },
+          ANIMATION_TIMINGS.CHIP_STAGGER_PER_CHIP,
+        );
+
+        console.log("ENDDD");
+      },
+      ANIMATION_TIMINGS.CHIP_STAGGER_PER_PLAYER,
+    );
+  },
+
+  async animatePayoutToWinner(data) {
+    // Animate chips sliding from pot to winner and collecting
+    const { participant_id } = data;
+    const potArea = document.querySelector("[data-pot-area]");
+    const totalPotAmount = document.querySelector(".total-pot-amount");
+    const winnerCard = document.querySelector(
+      `[data-participant-id="${participant_id}"]`,
+    );
+
+    if (!potArea || !winnerCard || !totalPotAmount) return;
+
+    const potRect = potArea.getBoundingClientRect();
+    const winnerRect = winnerCard.getBoundingClientRect();
+
+    // Calculate delta from pot to winner
+    const deltaX =
+      winnerRect.left +
+      winnerRect.width / 2 -
+      (potRect.left + potRect.width / 2);
+    const deltaY =
+      winnerRect.top +
+      winnerRect.height / 2 -
+      (potRect.top + potRect.height / 2);
+
+    const potChips = Array.from(
+      potArea.querySelectorAll(".pot-chips .poker-chip"),
+    );
+
+    totalPotAmount.remove();
+
+    const gameContainer = document.getElementById("game-container");
+
+    return Promise.all([
+      animateWithClass(
+        gameContainer,
+        "showdown-highlight",
+        ANIMATION_TIMINGS.SHOWDOWN_GLOW,
+      ),
+
+      animateStaggered(
+        potChips,
+        async (chip) => {
+          chip.style.setProperty("--start-x", "0px");
+          chip.style.setProperty("--start-y", "0px");
+          chip.style.setProperty("--end-x", `${deltaX}px`);
+          chip.style.setProperty("--end-y", `${deltaY}px`);
+
+          await animateWithClass(
+            chip,
+            "chip-slide",
+            ANIMATION_TIMINGS.CHIP_SLIDE,
+          );
+
+          chip.style.transform = `translateY(${deltaY}px) translateX(${deltaX}px)`;
+        },
+        100,
+      ),
+    ]);
+  },
+
+  async animateCardDeal(data) {
+    // Animate cards flying from dealer position to participant
+    const { participant_id } = data;
+
+    const participantCard = document.querySelector(
+      `[data-participant-id="${participant_id}"]`,
+    );
+
+    const cardsArea = document.querySelector(
+      `[data-participant-id="${participant_id}"] > [data-cards-area]`,
+    );
+
+    cardsArea.classList.add("hidden");
+
+    // Find dealer position (center of table/pot area)
+    const dealerPosition = document.querySelector(".community-cards-area");
+
+    const dealerRect = dealerPosition.getBoundingClientRect();
+    const participantRect = participantCard.getBoundingClientRect();
+
+    // Calculate starting position (dealer) and ending position (participant cards area)
+    const startX = dealerRect.left + dealerRect.width / 2;
+    const startY = dealerRect.top + dealerRect.height / 2;
+    const endX = participantRect.left + participantRect.width / 2;
+    const endY = participantRect.top + 10; // Position near top of participant card
+
+    console.log("Card deal animation:", {
+      startX,
+      startY,
+      endX,
+      endY,
+      dealerRect,
+      participantRect,
+    });
+
+    // Create and animate 2 flying cards with stagger
+    await animateStaggered(
+      [0, 1], // Two cards
+      async (cardIndex) => {
+        await createAnimatedElement({
+          className:
+            "flying-card bg-blue-900 border-2 border-blue-700 rounded shadow-lg w-16 h-20 flex items-center justify-center",
+          styles: {
+            position: "fixed",
+            left: `${startX - 32}px`,
+            top: `${startY - 40}px`,
+            zIndex: "1",
+            pointerEvents: "none",
+          },
+          innerHTML: '<span class="text-blue-400 text-2xl">🂠</span>',
+          parent: document.body,
+          keyframes: [
+            {
+              left: `${startX - 32}px`,
+              top: `${startY - 40}px`,
+              transform: "rotate(0deg)",
+              offset: 0,
+            },
+            {
+              left: `${endX - 32 + cardIndex * 10}px`,
+              top: `${endY - 40}px`,
+              transform: "rotate(5deg)",
+              offset: 1,
+            },
+          ],
+          duration: ANIMATION_TIMINGS.CARD_DEAL,
+          easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        });
+
+        console.log(`Animated and removed flying card ${cardIndex + 1}`);
+      },
+      ANIMATION_TIMINGS.CARD_DEAL_STAGGER,
+    );
+
+    cardsArea.classList.remove("hidden");
   },
 };

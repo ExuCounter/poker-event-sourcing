@@ -19,6 +19,7 @@ defmodule Poker.Tables.Projections.TableLobby do
     field :seated_count, :integer
     field :seats_count, :integer
     field :status, Ecto.Enum, values: [:waiting, :live, :finished]
+    field :creator_id, :binary_id
 
     embeds_many :participants, Participant, on_replace: :delete
 

@@ -52,34 +52,41 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
     end)
     |> Commanded.Aggregate.Multi.execute(&Participants.handle(&1, command))
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      %PotsRecalculated{
-        table_id: table.id,
-        hand_id: table_hand_id,
-        pots: Pot.recalculate_pots(table.participant_hands)
-      }
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
       all_acted? = Helpers.all_acted?(table)
       all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
 
       cond do
         all_folded_except_one? ->
-          %RoundCompleted{
-            id: round_id,
-            hand_id: table_hand_id,
-            type: round_type,
-            table_id: table.id,
-            reason: :all_folded
-          }
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_folded
+            }
+          ]
 
         all_acted? ->
-          %RoundCompleted{
-            id: round_id,
-            hand_id: table_hand_id,
-            type: round_type,
-            table_id: table.id,
-            reason: :all_acted
-          }
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_acted
+            }
+          ]
 
         true ->
           :ok

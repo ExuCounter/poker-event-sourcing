@@ -35,7 +35,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.PayoutDist
 
     %Poker.Tables.Events.PayoutDistributed{
       event
-      | pot_type: String.to_existing_atom(event.pot_type),
+      | pot_type: String.to_atom(event.pot_type),
         hand_rank: hand_rank
     }
   end

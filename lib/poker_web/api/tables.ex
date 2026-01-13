@@ -19,8 +19,10 @@ defmodule PokerWeb.Api.Tables do
     Poker.Tables.join_participant(table_id, user.id)
   end
 
-  def start_table(%{user: _user} = _scope, table_id) do
-    Poker.Tables.start_table(table_id)
+  def start_table(scope, table_id) do
+    with :ok <- Poker.Tables.Policy.authorize(:start_table, scope, table_id) do
+      Poker.Tables.start_table(table_id)
+    end
   end
 
   # Player Actions
