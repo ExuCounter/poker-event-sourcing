@@ -121,4 +121,5 @@ defmodule Poker.HandRank do
   defp suit_to_string(:d), do: "diamonds"
   defp suit_to_string(:c), do: "clubs"
   defp suit_to_string(:s), do: "spades"
+  defp suit_to_string(:""), do: ""
 end

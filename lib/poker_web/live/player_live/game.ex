@@ -14,12 +14,17 @@ defmodule PokerWeb.PlayerLive.Game do
        |> put_flash(:error, "Table not found")
        |> push_navigate(to: ~p"/")}
     else
-      if connected?(socket) do
-        Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
-      end
-
       game_view =
         Tables.get_player_game_view(socket.assigns.current_scope, table_id)
+
+      socket =
+        if connected?(socket) do
+          IO.inspect("CONNECTED - pushing init_state")
+          Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
+          socket |> push_event("init_state", game_view)
+        else
+          socket
+        end
 
       {:ok,
        assign(socket,
@@ -50,10 +55,17 @@ defmodule PokerWeb.PlayerLive.Game do
     remaining_queue =
       Enum.reject(socket.assigns.queue, fn event -> event.event_id == processed_event_id end)
 
+    game_view =
+      Tables.get_player_game_view(
+        socket.assigns.current_scope,
+        socket.assigns.table_id,
+        processed_event_id
+      )
+
     socket = assign(socket, queue: remaining_queue)
     socket = process_next_event(socket)
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :game_view, game_view)}
   end
 
   defp process_next_event(socket) do
@@ -69,14 +81,24 @@ defmodule PokerWeb.PlayerLive.Game do
             next_event.event_id
           )
 
-        socket = push_event(socket, "table_events", %{events: serialize_events([next_event])})
+        # socket = push_event(socket, "table_events", %{events: serialize_events([next_event])})
+        socket =
+          push_event(socket, "table_event", %{
+            event: next_event |> Map.from_struct() |> Map.put(:type, event_type(next_event)),
+            new_state: game_view
+          })
 
         assign(socket,
           current_animated_event_id: next_event.event_id,
-          game_view: game_view,
           raise_amount: nil
         )
     end
+  end
+
+  defp event_type(event) do
+    event.__struct__
+    |> Module.split()
+    |> List.last()
   end
 
   # Serialize events for frontend with animation delays
@@ -154,166 +176,18 @@ defmodule PokerWeb.PlayerLive.Game do
     ~H"""
     <.flash kind={:error} flash={@flash} />
     <.flash kind={:info} flash={@flash} />
-    <div id="game-container" phx-hook="TableEvents" class="min-h-screen bg-green-800 p-8">
-      <div class="max-w-7xl mx-auto">
-        <div class="mb-6">
-          <.link navigate={~p"/"} class="text-white hover:text-gray-200">
-            &larr; Back to Lobby
-          </.link>
-        </div>
+    <canvas
+      id="poker-canvas"
+      phx-hook="PokerCanvas"
+      phx-update="ignore"
+      data-state={Jason.encode!(@game_view)}
+      data-current-user-id={@current_user_id}
+    >
+    </canvas>
 
-        <%= if @game_view.hand_id do %>
-          <!-- Active Hand -->
-            <!-- Poker Table Container -->
-          <div class="relative w-full h-[600px] mb-32 flex items-center justify-center">
-            <!-- Oval Table -->
-            <div class="relative max-h-[500px] max-w-[800px] w-[100%] h-[100%] bg-green-700 rounded-[50%] border-8 border-amber-900 shadow-2xl">
-              <h1 class="text-2xl font-bold text-white mb-6 text-center absolute top-[52%] left-1/2 -translate-x-1/2 z-1 opacity-[0.3] text-md">
-                Poker Table | NL - Holdem | {normalized_table_type(@lobby.table_type)}
-
-                <%= if @game_view.table_status == :finished do %>
-                  | Finished
-                <% end %>
-              </h1>
-              
-    <!-- Community Cards in center -->
-              <div class="community-cards-area flex justify-center mt-[15%] gap-2 h-20">
-                <%= if !Enum.empty?(@game_view.community_cards) do %>
-                  <%= for card <- @game_view.community_cards do %>
-                    <div class={[
-                      "community-card bg-white rounded p-2 w-16 h-20 flex items-center justify-center font-bold text-xl shadow-lg",
-                      suit_color(card)
-                    ]}>
-                      {format_card(card)}
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
-              <div class="pot-area text-center flex flex-row items-center gap-2 justify-center mt-3">
-                <%= if @game_view.hand_status != :finished && @game_view.total_pot > 0 do %>
-                  <p class="text-yellow-300 text-sm font-semibold total-pot-amount">
-                    $<span class="inline total-pot">{@game_view.total_pot}</span>
-                  </p>
-                  <div data-pot-area>
-                    <.chip_stack amount={@game_view.total_pot} size={:small} class="pot-chips" />
-                  </div>
-                <% end %>
-              </div>
-
-              <%= for participant <- @game_view.participants do %>
-                <% lobby_participant =
-                  Enum.find(@lobby.participants, &(&1.player_id == participant.player_id)) %>
-
-                <div
-                  class={[
-                    "absolute flex flex-col items-center z-2",
-                    seat_position(participant, @current_user_id, @game_view.participants)
-                  ]}
-                  data-participant-id={participant.id}
-                >
-                  <div data-cards-area>
-                    <!-- Cards at top (bigger) - will overlap player info -->
-                    <%= if participant.player_id == @current_user_id && !Enum.empty?(@game_view.hole_cards) do %>
-                      <div class="flex gap-1 relative mb-[-19px]">
-                        <%= for card <- @game_view.hole_cards do %>
-                          <div class={[
-                            "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
-                            suit_color(card)
-                          ]}>
-                            {format_card(card)}
-                          </div>
-                        <% end %>
-                      </div>
-                    <% else %>
-                      <%= if !Enum.empty?(participant.showdown_cards) do %>
-                        <div class="showdown-cards flex gap-1 relative mb-[-29px]">
-                          <%= for card <- participant.showdown_cards do %>
-                            <div class={[
-                              "bg-white rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center font-bold text-xl border-2 border-gray-200",
-                              suit_color(card)
-                            ]}>
-                              {format_card(card)}
-                            </div>
-                          <% end %>
-                        </div>
-                      <% else %>
-                        <%= if participant.received_hole_cards? do %>
-                          <div class="flex gap-1 relative mb-[-29px]">
-                            <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
-                              <span class="text-blue-400 text-2xl">🂠</span>
-                            </div>
-                            <div class="bg-blue-900 border-2 border-blue-700 rounded shadow-lg p-2 w-16 h-20 flex items-center justify-center">
-                              <span class="text-blue-400 text-2xl">🂠</span>
-                            </div>
-                          </div>
-                        <% end %>
-                      <% end %>
-                    <% end %>
-                  </div>
-                  
-    <!-- Dealer Button Indicator -->
-                  <%= if participant.position == :dealer do %>
-                    <div class="dealer-button">
-                      <div class="poker-chip">
-                        <span>D</span>
-                      </div>
-                    </div>
-                  <% end %>
-                  
-    <!-- Bet area with chips (positioned above player info) -->
-                  <%= if participant.bet_this_round > 0 do %>
-                    <div
-                      class="bet-area absolute bottom-[160px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10"
-                      data-bet-area
-                      data-participant-id={participant.id}
-                    >
-                      <.chip_stack
-                        amount={participant.bet_this_round}
-                        size={:small}
-                        class="bet-chips"
-                      />
-                      <span class="text-yellow-300 text-xs font-bold bet-amount">
-                        ${participant.bet_this_round}
-                      </span>
-                    </div>
-                  <% end %>
-                  
-    <!-- Compact player info below cards - overlapped by cards -->
-                  <div class={[
-                    "bg-gray-900/95 backdrop-blur rounded-2xl px-7 py-4 shadow-xl border border-gray-700 min-w-[140px] relative z-0",
-                    if(participant.id == @game_view.current_participant_to_act_id,
-                      do: "ring-2 ring-yellow-400"
-                    )
-                  ]}>
-                    <div class="text-white text-center">
-                      <!-- Name and status -->
-                      <div class="flex items-center justify-center gap-2 mb-1 z-2">
-                        <p class="font-semibold text-sm truncate max-w-[100px]">
-                          {(lobby_participant && lobby_participant.email) || "Unknown"}
-                        </p>
-                        <%= if participant.hand_status == :folded do %>
-                          <span class="text-xs px-1 py-0.5 rounded bg-red-600">F</span>
-                        <% end %>
-                        <%= if participant.hand_status == :all_in do %>
-                          <span class="text-xs px-1 py-0.5 rounded bg-yellow-600">AI</span>
-                        <% end %>
-                      </div>
-                      
-    <!-- Chips -->
-                      <p class="text-xs font-bold text-green-400">
-                        ${participant.chips}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-            
-    <!-- Players positioned around table -->
-          </div>
-        <% end %>
-        
-    <!-- Action Controls - Fixed to bottom -->
+    <div>
+      <div>
+        <!-- Action Controls - Fixed to bottom -->
         <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
           <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
             <%= if @game_view.valid_actions.fold do %>

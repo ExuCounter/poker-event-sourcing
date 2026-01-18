@@ -91,7 +91,7 @@ defmodule Poker.Tables.Views.PlayerGameView do
       total_pot: calculate_total_pot(aggregate),
       community_cards: aggregate.community_cards || [],
       hole_cards: get_player_hole_cards(aggregate, current_participant),
-      participants: build_participants_list(aggregate),
+      participants: build_participants_list(aggregate, player_id),
       current_participant_to_act_id: get_participant_to_act_id(aggregate),
       valid_actions: calculate_valid_actions(aggregate, current_participant),
       small_blind: get_small_blind(aggregate),
@@ -136,7 +136,7 @@ defmodule Poker.Tables.Views.PlayerGameView do
 
   defp get_player_hole_cards(_, _), do: []
 
-  defp build_participants_list(%{participants: participants} = aggregate)
+  defp build_participants_list(%{participants: participants} = aggregate, current_player_id)
        when is_list(participants) do
     participant_hands = Map.get(aggregate, :participant_hands, [])
     revealed_cards = Map.get(aggregate, :revealed_cards, %{})
@@ -154,7 +154,13 @@ defmodule Poker.Tables.Views.PlayerGameView do
         bet_this_round: get_bet_this_round(participant_hand),
         hand_status: get_participant_hand_status(participant_hand),
         showdown_cards: showdown_cards,
-        received_hole_cards?: not is_nil(get_participant_hand_hole_cards(participant_hand))
+        received_hole_cards?: not is_nil(get_participant_hand_hole_cards(participant_hand)),
+        hole_cards:
+          if participant.player_id == current_player_id do
+            get_player_hole_cards(aggregate, participant)
+          else
+            [nil, nil]
+          end
       }
     end)
   end
