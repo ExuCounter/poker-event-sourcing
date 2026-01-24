@@ -1,40 +1,25 @@
 defmodule PokerWeb.AnimationDelays do
   @moduledoc """
   Centralized animation delay configuration.
-
-  Delays must exactly match frontend animation durations in:
-  - assets/css/app.css (CSS animations)
-  - assets/js/hooks.js (JS animation processing)
   """
 
-  # Base animation durations from hooks.js ANIMATION_TIMINGS
-  @action_bounce_duration 600
-  @action_badge_duration 1500
-  @pulse_duration 600
-  @glow_duration 600
-  @pot_pulse_duration 400
-  @pot_win_duration 800
-  @card_stagger 150
-  @card_slide_in_duration 400
-  @card_reveal_duration 500
+  @action_bounce_duration 300
+  @action_badge_duration 500
+  @card_stagger 50
+  @card_slide_in_duration 200
+  @card_reveal_duration 200
   @card_deal_duration 500
   @card_deal_stagger 50
   @chip_appear_duration 50
-  @chip_slide_duration 400
-  @chip_collect_duration 400
-  @chip_stagger_per_player 150
-  @chip_stagger_per_chip 25
-  @showdown_glow_duration 2000
-  @flash_duration 500
+  @chip_slide_duration 100
+  @chip_stagger_per_player 100
+  @chip_stagger_per_chip 50
+  @showdown_glow_duration 1000
   @new_hand_glow_duration 1000
 
   @doc """
-  Returns animation delay in milliseconds for an event struct.
-
-  Can return either a single delay value or a map of multiple delays
-  depending on the event type and its properties.
+  Returns animation delay in milliseconds for an event.
   """
-  @spec for_event(struct()) :: non_neg_integer() | map()
   def for_event(%Poker.Tables.Events.HandStarted{}), do: @new_hand_glow_duration
 
   def for_event(%Poker.Tables.Events.ParticipantHandGiven{}),

@@ -2,7 +2,7 @@ defmodule PokerWeb.PlayerLive.Game do
   use PokerWeb, :live_view
 
   alias PokerWeb.Api.Tables
-  alias PokerWeb.AnimationDelays
+  alias PokerWeb.JsonEncoder
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
@@ -19,9 +19,8 @@ defmodule PokerWeb.PlayerLive.Game do
 
       socket =
         if connected?(socket) do
-          IO.inspect("CONNECTED - pushing init_state")
           Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
-          socket |> push_event("init_state", game_view)
+          socket
         else
           socket
         end
@@ -51,7 +50,7 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  def handle_event("event_processed", %{"event_id" => processed_event_id}, socket) do
+  def handle_event("event_processed", %{"eventId" => processed_event_id}, socket) do
     remaining_queue =
       Enum.reject(socket.assigns.queue, fn event -> event.event_id == processed_event_id end)
 
@@ -81,11 +80,27 @@ defmodule PokerWeb.PlayerLive.Game do
             next_event.event_id
           )
 
-        # socket = push_event(socket, "table_events", %{events: serialize_events([next_event])})
+        next_event =
+          if next_event.type == "ParticipantHandGiven" do
+            participant =
+              Enum.find(game_view.participants, &(&1.player_id == socket.assigns.current_user_id))
+
+            if participant.id != next_event.participant_id do
+              %{
+                next_event
+                | hole_cards: [nil, nil]
+              }
+            else
+              next_event
+            end
+          else
+            next_event
+          end
+
         socket =
           push_event(socket, "table_event", %{
-            event: next_event |> Map.from_struct() |> Map.put(:type, event_type(next_event)),
-            new_state: game_view
+            event: JsonEncoder.transform_keys(next_event),
+            new_state: JsonEncoder.transform_keys(game_view)
           })
 
         assign(socket,
@@ -93,25 +108,6 @@ defmodule PokerWeb.PlayerLive.Game do
           raise_amount: nil
         )
     end
-  end
-
-  defp event_type(event) do
-    event.__struct__
-    |> Module.split()
-    |> List.last()
-  end
-
-  # Serialize events for frontend with animation delays
-  defp serialize_events(events) do
-    Enum.map(events, fn event ->
-      event_type = event.__struct__ |> Module.split() |> List.last()
-
-      %{
-        type: event_type,
-        data: Map.from_struct(event),
-        delay: AnimationDelays.for_event(event)
-      }
-    end)
   end
 
   # Action event handlers
@@ -173,44 +169,88 @@ defmodule PokerWeb.PlayerLive.Game do
         assigns
       end
 
+    dbg(assigns)
+
     ~H"""
     <.flash kind={:error} flash={@flash} />
     <.flash kind={:info} flash={@flash} />
-    <canvas
-      id="poker-canvas"
-      phx-hook="PokerCanvas"
-      phx-update="ignore"
-      data-state={Jason.encode!(@game_view)}
-      data-current-user-id={@current_user_id}
-    >
-    </canvas>
-
-    <div>
-      <div>
-        <!-- Action Controls - Fixed to bottom -->
+    <div style="height: 100vh; position: relative; overflow: hidden;">
+      <canvas
+        id="poker-canvas"
+        phx-hook="PokerCanvas"
+        phx-update="ignore"
+        data-lobby={JsonEncoder.transform_keys(@lobby) |> Jason.encode!()}
+        data-state={JsonEncoder.transform_keys(@game_view) |> Jason.encode!()}
+        data-current-user-id={@current_user_id}
+      />
+      
+    <!-- Action Controls - positioned and scaled -->
+      <div class="origin-bottom-right" style=" transform: scale(var(--game-scale, 0));">
         <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
-          <div class="fixed bottom-8 right-7 bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700">
-            <%= if @game_view.valid_actions.fold do %>
+          <div class="absolute bottom-[10px] right-[10px]">
+            <div class="bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700 flex flex-col">
+              
+    <!-- Raise Controls -->
+              <%= if @game_view.valid_actions.raise do %>
+                <div class="flex flex-row gap-3 mt-[-10px] mb-4">
+                  <div class="flex gap-2 flex-wrap py-2">
+                    <%= for preset <- @game_view.valid_actions.raise.presets do %>
+                      <button
+                        type="button"
+                        phx-click="update_raise_amount"
+                        phx-value-raise_amount={preset.value}
+                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
+                      >
+                        {preset.label}
+                      </button>
+                    <% end %>
+                  </div>
+                  <div>
+                    <div class="flex flex-col gap-1 min-w-[150px]">
+                      <form phx-change="update_raise_amount">
+                        <input
+                          type="range"
+                          name="raise_amount"
+                          min={@game_view.valid_actions.raise.min}
+                          max={@game_view.valid_actions.raise.max}
+                          value={@raise_amount}
+                          class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                        />
+                      </form>
+                      <div class="flex justify-between text-xs text-gray-500">
+                        <span>{@game_view.valid_actions.raise.min}</span>
+                        <span>{@game_view.valid_actions.raise.max}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% else %>
+                <div class="text-gray-400 text-lg font-semibold px-6 text-center">
+                  Waiting for other players...
+                </div>
+              <% end %>
+
               <div class="flex gap-4 items-center">
                 <!-- Fold Button -->
-                <.button
-                  phx-click="fold_hand"
-                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg"
-                >
-                  Fold
-                </.button>
-                
-    <!-- Check Button (only when no bet) -->
+                <%= if @game_view.valid_actions.fold do %>
+                  <.button
+                    phx-click="fold_hand"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-7 py-3 rounded-lg"
+                  >
+                    Fold
+                  </.button>
+                <% end %>
+                <!-- Check Button -->
                 <%= if @game_view.valid_actions.check do %>
                   <.button
                     phx-click="check_hand"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-3 rounded-lg"
                   >
                     Check
                   </.button>
                 <% end %>
                 
-    <!-- Call Button (only when there's a bet) -->
+    <!-- Call Button -->
                 <%= if @game_view.valid_actions.call do %>
                   <.button
                     phx-click="call_hand"
@@ -222,47 +262,6 @@ defmodule PokerWeb.PlayerLive.Game do
                 
     <!-- Raise Controls -->
                 <%= if @game_view.valid_actions.raise do %>
-                  <div class="flex flex-row gap-3">
-                    <div>
-                      <!-- Slider -->
-                      <div class="flex flex-col gap-1 min-w-[250px] mt-[-4]">
-                        <div class="flex justify-between items-center">
-                          <span class="text-gray-400 text-xs">Raise Amount:</span>
-                          <span class="text-yellow-400 font-bold text-sm">{@raise_amount}</span>
-                        </div>
-                        <form phx-change="update_raise_amount">
-                          <input
-                            type="range"
-                            name="raise_amount"
-                            min={@game_view.valid_actions.raise.min}
-                            max={@game_view.valid_actions.raise.max}
-                            value={@raise_amount}
-                            phx-change="update_raise_amount"
-                            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                          />
-                        </form>
-                        <div class="flex justify-between text-xs text-gray-500">
-                          <span>{@game_view.valid_actions.raise.min}</span>
-                          <span>{@game_view.valid_actions.raise.max}</span>
-                        </div>
-                      </div>
-                      <!-- Quick Presets -->
-                      <div class="flex gap-2 flex-wrap pt-4">
-                        <%= for preset <- @game_view.valid_actions.raise.presets do %>
-                          <button
-                            type="button"
-                            phx-click="update_raise_amount"
-                            phx-value-raise_amount={preset.value}
-                            class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
-                          >
-                            {preset.label}
-                          </button>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                  
-    <!-- Custom Raise Button -->
                   <.button
                     phx-click="raise_hand"
                     phx-value-amount={@raise_amount}
@@ -274,88 +273,21 @@ defmodule PokerWeb.PlayerLive.Game do
                   </.button>
                 <% end %>
               </div>
-            <% else %>
-              <!-- Not your turn -->
-              <div class="text-gray-400 text-lg font-semibold px-6 text-center">
-                Waiting for other players...
-              </div>
-            <% end %>
+            </div>
           </div>
         <% end %>
-      </div>
-      <div
-        id="connection-status"
-        phx-disconnected={JS.show()}
-        phx-connected={JS.hide()}
-        class="hidden"
-      >
-        ⚠️ Disconnected - trying to reconnect...
+
+        <div
+          id="connection-status"
+          phx-disconnected={JS.show()}
+          phx-connected={JS.hide()}
+          class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-4 py-2 rounded-lg"
+        >
+          ⚠️ Disconnected - trying to reconnect...
+        </div>
       </div>
     </div>
     """
-  end
-
-  # Helper for formatting cards
-  defp format_card(%{rank: rank, suit: suit}) do
-    suit_symbol =
-      case suit do
-        "hearts" -> "♥"
-        "diamonds" -> "♦"
-        "clubs" -> "♣"
-        "spades" -> "♠"
-      end
-
-    "#{rank}#{suit_symbol}"
-  end
-
-  defp format_card(card) when is_binary(card), do: card
-
-  # Helper to get suit color class
-  defp suit_color(%{suit: suit}) do
-    case suit do
-      "hearts" -> "text-red-600"
-      "diamonds" -> "text-red-600"
-      "clubs" -> "text-gray-900"
-      "spades" -> "text-gray-900"
-    end
-  end
-
-  # Get seat position styling for oval table layout
-  # Current player is always at bottom center, others arranged by position
-  defp seat_position(participant, current_user_id, participants) do
-    if participant.player_id == current_user_id do
-      # Current player always at bottom center
-      "bottom-[-16%] left-1/2 -translate-x-1/2"
-    else
-      # Position other players around the table based on their position
-      position_index(participant, current_user_id, participants)
-    end
-  end
-
-  # Calculate position around table for non-current players
-  defp position_index(participant, current_user_id, participants) do
-    # Find current player and this participant in the list
-    current_idx = Enum.find_index(participants, &(&1.player_id == current_user_id)) || 0
-    participant_idx = Enum.find_index(participants, &(&1.id == participant.id)) || 0
-
-    # Calculate relative position (clockwise from current player)
-    relative_pos = rem(participant_idx - current_idx + length(participants), length(participants))
-
-    # Map relative positions to CSS classes (6-max table)
-    case relative_pos do
-      # Right of hero
-      1 -> "bottom-0 right-[10%]"
-      # Middle right
-      2 -> "top-1/2 right-[-14%] -translate-y-1/2"
-      # Top right
-      3 -> "top-24 right-12"
-      # Top left
-      4 -> "top-24 left-12"
-      # Middle left
-      5 -> "top-1/2 left-4 -translate-y-1/2"
-      # Left of hero
-      _ -> "bottom-24 left-12"
-    end
   end
 
   def normalized_table_type(:six_max), do: "6-max"

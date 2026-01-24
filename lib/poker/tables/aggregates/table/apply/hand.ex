@@ -76,10 +76,13 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
       hand_rank: event.hand_rank
     }
 
+    pots = Enum.reject(table.pots, &(&1.id === event.pot_id or is_nil(event.pot_id)))
+
     %Table{
       table
       | participants: updated_participants,
-        payouts: (payouts || []) ++ [payout]
+        payouts: (payouts || []) ++ [payout],
+        pots: pots
     }
   end
 
