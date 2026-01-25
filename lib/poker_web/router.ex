@@ -44,13 +44,19 @@ defmodule PokerWeb.Router do
   scope "/", PokerWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    live_session :require_authenticated_user,
+    live_session :common,
       on_mount: [{PokerWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
       live "/", PlayerLive.Dashboard, :render
       live "/tables/:id/lobby", PlayerLive.Lobby, :show
+    end
+
+    live_session :table,
+      on_mount: [{PokerWeb.UserAuth, :require_authenticated}],
+      root_layout: {PokerWeb.Layouts, :table} do
       live "/tables/:id/game", PlayerLive.Game, :play
+      live "/tables/:id/replay", PlayerLive.Replay, :play
     end
 
     post "/users/update-password", UserSessionController, :update_password

@@ -21,6 +21,7 @@ export class TotalPotRenderer {
       style: { fontSize: 24 },
       anchor: 0.5,
     });
+
     text.position.set(0, 40);
     this.container.addChild(text);
 

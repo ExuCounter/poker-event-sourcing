@@ -1,25 +1,23 @@
 import * as PIXI from "pixi.js";
 import gsap from "gsap";
 import { Howl } from "howler";
-import { CARD_Y_POSITION, BET_AREA_OFFSET } from "./constants.js";
 import { ParticipantRenderer } from "./renderers/ParticipantRenderer.js";
 import { CommunityCardsRenderer } from "./renderers/CommunityCardsRenderer.js";
 import { TotalPotRenderer } from "./renderers/TotalPotRenderer.js";
 import { ChipsRenderer } from "./renderers/ChipsRenderer.js";
-
-// Design dimensions - everything is built to these dimensions
-const BASE_WIDTH = 1300;
-const BASE_HEIGHT = 800;
-
-// Table dimensions relative to base (not screen!)
-const TABLE_RADIUS_X = 450;
-const TABLE_RADIUS_Y = 300;
+import {
+  BASE_WIDTH,
+  BASE_HEIGHT,
+  TABLE_RADIUS_X,
+  TABLE_RADIUS_Y,
+} from "./constants.js";
 
 export const PokerCanvas = {
   async mounted() {
     const serverState = JSON.parse(this.el.dataset.state);
     const lobbyState = JSON.parse(this.el.dataset.lobby);
     const currentUserId = this.el.dataset.currentUserId;
+    const mode = this.el.dataset.mode || "live";
 
     this.app = new PIXI.Application();
 
@@ -27,6 +25,9 @@ export const PokerCanvas = {
     this.state = serverState;
     this.lobbyState = lobbyState;
     this.currentUserId = currentUserId;
+    this.isReplayMode = mode === "replay";
+
+    console.log(this.state);
 
     await this.app.init({
       canvas: this.el,
@@ -48,12 +49,30 @@ export const PokerCanvas = {
       "table_event",
       async ({ event: event, new_state: serverState }) => {
         this.state = serverState;
+
+        console.log(event);
+        console.log(this.state);
+
+        // if (this.isReplayMode) {
+        //   this.pushEvent("event_processed", {
+        //     eventId: event.eventId || event.event_id,
+        //   });
+        // }
+
         await this.runAnimation(event);
-        this.pushEvent("event_processed", {
-          eventId: event.eventId || event.event_id,
-        });
+
+        if (!this.isReplayMode) {
+          this.pushEvent("event_processed", {
+            eventId: event.eventId || event.event_id,
+          });
+        }
       },
     );
+
+    this.handleEvent("rebuild_state", async ({ state }) => {
+      this.state = state;
+      await this.rebuildCanvas();
+    });
 
     this.loadSounds();
     await this.createTable();
@@ -77,42 +96,48 @@ export const PokerCanvas = {
       case "ParticipantRaised":
         this.sounds.raise.play();
         await this.animateBetChipsUpdated(event, timing);
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "RoundStarted":
         await this.animateCommunityCardsAppear(event, timing);
+
+        this.state.participants.forEach((p) => {
+          const renderer = this.renderers.participants.get(p.id);
+          renderer.render();
+        });
+
         break;
       case "ParticipantHandGiven":
         await this.animateParticipantHandGiven(event, timing);
         break;
       case "ParticipantFolded":
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantCalled":
         await this.animateBetChipsUpdated(event, timing);
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "SmallBlindPosted":
         await this.animateBetChipsUpdated(event, timing);
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "BigBlindPosted":
         await this.animateBetChipsUpdated(event, timing);
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantWentAllIn":
         await this.animateBetChipsUpdated(event, timing);
-        this.rerender();
+        this.rerenderParticipant(event.participantId);
         break;
       case "PayoutDistributed":
         await this.animateBetChipsCollectToPlayer(event, timing);
+        this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantShowdownCardsRevealed":
         await this.showdownParticipantCards(event, timing);
         break;
       case "HandFinished":
-        await this.wait(timing.duration || 2000);
-        await this.rerender();
+        await this.wait(timing.duration);
         await this.handleHandFinish(event, timing);
         break;
       case "PotsRecalculated":
@@ -134,11 +159,9 @@ export const PokerCanvas = {
     }
   },
 
-  async rerender() {
-    this.state.participants.forEach((p) => {
-      const renderer = this.renderers.participants.get(p.id);
-      renderer.render();
-    });
+  async rerenderParticipant(participantId) {
+    const renderer = this.renderers.participants.get(participantId);
+    renderer.render();
   },
 
   async animateBetChipsCollectToPlayer(event, timing) {
@@ -320,6 +343,7 @@ export const PokerCanvas = {
     this.renderers.communityCards = new CommunityCardsRenderer(
       () => this.state,
     );
+
     this.containers.tableContainer.addChild(
       this.renderers.communityCards.getContainer(),
     );
@@ -340,41 +364,11 @@ export const PokerCanvas = {
     });
   },
 
-  getPlayerPosition(
-    participantIndex,
-    totalPlayers,
-    currentUserId,
-    participants,
-  ) {
-    const currentUserIndex = participants.findIndex(
-      (p) => p.playerId === currentUserId,
-    );
-
-    console.log(participants);
-    console.log(currentUserId);
-    console.log(currentUserIndex);
-    console.log(participantIndex);
-
-    const relativePos =
-      (participantIndex - currentUserIndex + totalPlayers) % totalPlayers;
-
-    console.log(relativePos);
-
-    // Use fixed table dimensions, not screen size!
-    const radiusX = TABLE_RADIUS_X;
-    const radiusY = TABLE_RADIUS_Y;
-
-    // 6-max positions around the oval table
-    const positions = {
-      0: { x: -45, y: radiusY + 45 }, // Hero - bottom center
-      1: { x: radiusX - 45, y: radiusY * 0.4 }, // Bottom right
-      2: { x: radiusX + 60, y: -radiusY * 0.4 }, // Top right
-      3: { x: 0, y: -radiusY - 80 }, // Top center
-      4: { x: -radiusX - 60, y: -radiusY * 0.4 }, // Top left
-      5: { x: -radiusX - 60, y: radiusY * 0.4 }, // Bottom left
-    };
-
-    return positions[relativePos];
+  async rebuildCanvas() {
+    this.clear();
+    await this.createTable();
+    this.renderCommunityCards();
+    this.resize();
   },
 
   wait(ms) {
@@ -386,23 +380,26 @@ export const PokerCanvas = {
     const height = window.innerHeight;
     const resolution = window.devicePixelRatio || 1;
 
-    // Update renderer resolution and size
     this.app.renderer.resolution = resolution;
-
-    // Resize the renderer to fill window
     this.app.renderer.resize(width, height);
 
-    // Calculate scale to fit base dimensions in window
-    let scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
+    const scaleX = width / BASE_WIDTH;
+    const scaleY = height / BASE_HEIGHT;
 
-    // scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+    // Use min for uniform scaling, but set a minimum based on width
+    const uniformScale = Math.min(scaleX, scaleY);
+    const minScale = scaleX * 0.6; // Don't go below 60% of width-based scale
+
+    const scale = Math.max(uniformScale, minScale);
 
     this.containers.container.scale.set(scale);
-
-    // Center the scaled content
     this.containers.container.x = width / 2;
     this.containers.container.y = height / 2;
 
     document.documentElement.style.setProperty("--game-scale", scale);
+  },
+
+  clear() {
+    this.containers.container.removeChildren();
   },
 };

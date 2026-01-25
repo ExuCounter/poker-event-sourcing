@@ -1,6 +1,11 @@
 import * as PIXI from "pixi.js";
 import gsap from "gsap";
 import { CardRenderer } from "./CardRenderer.js";
+import {
+  COMMUNITY_CARD_SPACING,
+  BASE_HEIGHT,
+  ANIMATION_START_Y,
+} from "../constants.js";
 
 export class CommunityCardsRenderer {
   constructor(getState) {
@@ -13,16 +18,15 @@ export class CommunityCardsRenderer {
 
     const cardRenderer = new CardRenderer();
     communityCards.forEach((card, index) => {
-      const cardSprite = cardRenderer.render(card);
-      cardSprite.position.set(index * 80, 0);
+      const cardSprite = cardRenderer.renderCommunityCard(card);
+      cardSprite.position.set(index * COMMUNITY_CARD_SPACING, 0);
       this.container.addChild(cardSprite);
     });
 
     // Center the cards on the table
-    const maxWidth = 5 * 80;
-    const tableHeight = 800; // Base table height
+    const maxWidth = 5 * COMMUNITY_CARD_SPACING;
 
-    this.container.position.set(-(maxWidth / 2), -(tableHeight / 4));
+    this.container.position.set(-(maxWidth / 2), -(BASE_HEIGHT / 6));
 
     return this.container;
   }
@@ -33,13 +37,13 @@ export class CommunityCardsRenderer {
 
     const cardRenderer = new CardRenderer();
     newCards.forEach((card, index) => {
-      const cardSprite = cardRenderer.render(card);
-      cardSprite.position.set(0, 200);
+      const cardSprite = cardRenderer.renderCommunityCard(card);
+      cardSprite.position.set(0, ANIMATION_START_Y);
       cardSprite.alpha = 0;
 
       const targetIndex = state.communityCards.length - newCards.length + index;
 
-      const targetX = targetIndex * 80;
+      const targetX = targetIndex * COMMUNITY_CARD_SPACING;
 
       this.container.addChild(cardSprite);
 

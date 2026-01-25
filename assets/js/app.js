@@ -24,7 +24,6 @@ import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import { hooks as colocatedHooks } from "phoenix-colocated/poker";
 import topbar from "../vendor/topbar";
-import * as customHooks from "./hooks";
 import { PokerCanvas } from "./poker_canvas.js";
 
 const csrfToken = document
@@ -33,7 +32,7 @@ const csrfToken = document
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, ...customHooks, PokerCanvas },
+  hooks: { ...colocatedHooks, PokerCanvas },
 });
 
 // Show progress bar on live navigation and form submits
@@ -45,9 +44,9 @@ window.addEventListener("phx:page-loading-stop", (_info) => topbar.hide());
 liveSocket.connect();
 
 // expose liveSocket on window for web console debug logs and latency simulation:
-// >> liveSocket.enableDebug()
-// >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
-// >> liveSocket.disableLatencySim()
+// liveSocket.enableDebug();
+// liveSocket.enableLatencySim(1000); // enabled for duration of browser session
+liveSocket.disableLatencySim();
 window.liveSocket = liveSocket;
 
 // The lines below enable quality of life phoenix_live_reload

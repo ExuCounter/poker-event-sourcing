@@ -3,7 +3,7 @@ defmodule Poker.Tables.EventHandlers.TableEventBroadcaster do
   Event handler that broadcasts table events to connected clients via PubSub.
 
   This module subscribes to all table events and broadcasts them to the appropriate
-  topic for LiveView updates with event_id from metadata injected into the payload.
+  topic for LiveView updates. Uses EventTransformer for consistent event formatting.
   """
 
   use Commanded.Event.Handler,
@@ -11,32 +11,23 @@ defmodule Poker.Tables.EventHandlers.TableEventBroadcaster do
     name: __MODULE__,
     consistency: :strong
 
-  alias PokerWeb.AnimationDelays
+  alias Poker.Tables.EventTransformer
 
   # Generic handler for all table events
-  def handle(event, %{event_id: event_id})
-      when is_map(event) and is_map_key(event, :table_id) and not is_nil(event_id) do
-    event_type = derive_event_type(event)
+  def handle(event, metadata)
+      when is_map(event) and is_map_key(event, :table_id) and is_map_key(metadata, :event_id) do
+    # Use EventTransformer for consistent formatting
+    transformed_event = EventTransformer.transform(event, metadata)
 
-    # Convert to map but keep __struct__ field and add event_id
-    event_data =
-      event
-      |> Map.from_struct()
-      |> Map.put(:type, event_type)
-      |> Map.put(:event_id, event_id)
-      |> Map.put(:timing, %{
-        duration: AnimationDelays.for_event(event)
-      })
+    # Broadcast to PubSub
+    Poker.TableEvents.broadcast_table(
+      event.table_id,
+      transformed_event.type,
+      transformed_event
+    )
 
-    Poker.TableEvents.broadcast_table(event.table_id, event_type, event_data)
     :ok
   end
 
-  # Derive event name from struct module name
-  # Example: Poker.Tables.Events.HandStarted -> :hand_started
-  defp derive_event_type(event) do
-    event.__struct__
-    |> Module.split()
-    |> List.last()
-  end
+  def handle(_, _), do: :ok
 end

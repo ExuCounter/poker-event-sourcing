@@ -1,84 +1,139 @@
 import * as PIXI from "pixi.js";
+import {
+  CARD_WIDTH,
+  CARD_HEIGHT,
+  CARD_BORDER_RADIUS,
+  CARD_PATTERN,
+  CARD_DIAMOND_COORDS,
+  CARD_FONT_SIZES,
+  CARD_TEXT_POSITIONS,
+  CARD_COLORS,
+  CARD_SUIT_SYMBOLS,
+} from "../constants.js";
 
 export class CardRenderer {
-  render(card) {
+  renderHoleCard(card) {
+    const container = this.#createCardBase(card);
+
+    if (!card) {
+      return container;
+    }
+
+    const { color, suitSymbols } = this.#getCardStyle(card);
+
+    this.#addRankAndSmallSuit(container, card, color, suitSymbols);
+
+    return container;
+  }
+
+  renderCommunityCard(card) {
+    const container = this.#createCardBase(card);
+
+    if (!card) {
+      return container;
+    }
+
+    const { color, suitSymbols } = this.#getCardStyle(card);
+
+    this.#addRankAndSmallSuit(container, card, color, suitSymbols);
+    this.#addCenterSuit(container, card, color, suitSymbols);
+
+    return container;
+  }
+
+  #createCardBase(card) {
     const container = new PIXI.Container();
     const bg = new PIXI.Graphics();
-    bg.roundRect(0, 0, 70, 100, 8);
+    bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_BORDER_RADIUS);
 
     if (!card) {
       // Face down card with nicer styling
-      bg.fill(0x1a365d);
-      bg.stroke({ width: 2, color: 0x2d4a6f });
+      bg.fill(CARD_COLORS.backBg);
+      bg.stroke({ width: 2, color: CARD_COLORS.backBorder });
       container.addChild(bg);
 
       const pattern = new PIXI.Graphics();
-      pattern.roundRect(5, 5, 60, 90, 6);
-      pattern.fill(0x152951);
+      pattern.roundRect(
+        CARD_PATTERN.x,
+        CARD_PATTERN.y,
+        CARD_PATTERN.width,
+        CARD_PATTERN.height,
+        CARD_PATTERN.borderRadius,
+      );
+      pattern.fill(CARD_COLORS.backPattern);
       container.addChild(pattern);
 
       // Diamond pattern on back
       const diamond = new PIXI.Graphics();
-      diamond.moveTo(35, 15);
-      diamond.lineTo(50, 50);
-      diamond.lineTo(35, 85);
-      diamond.lineTo(20, 50);
+      diamond.moveTo(CARD_DIAMOND_COORDS.center.x, CARD_DIAMOND_COORDS.center.y);
+      diamond.lineTo(CARD_DIAMOND_COORDS.right.x, CARD_DIAMOND_COORDS.right.y);
+      diamond.lineTo(CARD_DIAMOND_COORDS.bottom.x, CARD_DIAMOND_COORDS.bottom.y);
+      diamond.lineTo(CARD_DIAMOND_COORDS.left.x, CARD_DIAMOND_COORDS.left.y);
       diamond.closePath();
-      diamond.stroke({ width: 1.5, color: 0x3b5998, alpha: 0.6 });
+      diamond.stroke({ width: 1.5, color: CARD_COLORS.backDiamond, alpha: 0.6 });
       container.addChild(diamond);
 
       return container;
     }
 
     // Face up card
-    bg.fill(0xffffff);
-    bg.stroke({ width: 2, color: 0x333333 });
+    bg.fill(CARD_COLORS.faceBg);
+    bg.stroke({ width: 2, color: CARD_COLORS.faceBorder });
     container.addChild(bg);
 
+    return container;
+  }
+
+  #getCardStyle(card) {
     const isRed = card.suit === "hearts" || card.suit === "diamonds";
-    const color = isRed ? 0xdc2626 : 0x1f2937;
+    const color = isRed ? CARD_COLORS.red : CARD_COLORS.black;
 
-    const suitSymbols = {
-      hearts: "♥",
-      diamonds: "♦",
-      clubs: "♣",
-      spades: "♠",
-    };
+    return { color, suitSymbols: CARD_SUIT_SYMBOLS };
+  }
 
+  #addRankAndSmallSuit(container, card, color, suitSymbols) {
     const rankText = new PIXI.Text({
       text: card.rank,
       style: {
-        fontSize: 20,
+        fontSize: CARD_FONT_SIZES.rank,
         fill: color,
         fontWeight: "bold",
         fontFamily: "Arial, sans-serif",
       },
-      resolution: 2,
     });
-    rankText.position.set(6, 4);
+
+    rankText.position.set(CARD_TEXT_POSITIONS.rank.x, CARD_TEXT_POSITIONS.rank.y);
     container.addChild(rankText);
 
     const suitSmall = new PIXI.Text({
       text: suitSymbols[card.suit],
       style: {
-        fontSize: 16,
+        fontSize: CARD_FONT_SIZES.smallSuit,
         fill: color,
       },
     });
-    suitSmall.position.set(8, 24);
-    container.addChild(suitSmall);
 
+    suitSmall.position.set(
+      CARD_TEXT_POSITIONS.smallSuit.x,
+      CARD_TEXT_POSITIONS.smallSuit.y,
+    );
+    container.addChild(suitSmall);
+  }
+
+  #addCenterSuit(container, card, color, suitSymbols) {
     const suitBig = new PIXI.Text({
       text: suitSymbols[card.suit],
       style: {
-        fontSize: 32,
+        fontSize: CARD_FONT_SIZES.bigSuit,
         fill: color,
       },
       anchor: 0.5,
     });
-    suitBig.position.set(35, 55);
-    container.addChild(suitBig);
 
-    return container;
+    suitBig.position.set(
+      CARD_TEXT_POSITIONS.bigSuit.x,
+      CARD_TEXT_POSITIONS.bigSuit.y,
+    );
+    container.addChild(suitBig);
   }
 }

@@ -1,24 +1,28 @@
 import * as PIXI from "pixi.js";
+import {
+  CHIP_RADIUS,
+  CHIP_SHADOW_OFFSET,
+  CHIP_STACK_OFFSET,
+  CHIP_NOTCH_COUNT,
+  CHIP_NOTCH_RADIUS,
+  CHIP_NOTCH_SIZE,
+  CHIP_INNER_RING_RADIUS,
+  CHIP_VALUES,
+  CHIP_COLORS,
+} from "../constants.js";
 
 export class ChipsRenderer {
   render(amount) {
     const container = new PIXI.Container();
     const chips = [];
-    const chipValues = [100, 25, 5, 1];
-    const chipColors = {
-      100: 0x1a1a1a, // Black with slight grey
-      25: 0x059669, // Emerald green
-      5: 0xdc2626, // Red
-      1: 0xf5f5f5, // Off-white
-    };
 
     let remaining = amount;
     let stackOffset = 0;
 
-    for (const value of chipValues) {
+    for (const value of CHIP_VALUES) {
       while (remaining >= value) {
-        const chip = this.#createSingleChip(value, chipColors[value]);
-        chip.y = -stackOffset * 4;
+        const chip = this.#createSingleChip(value, CHIP_COLORS[value]);
+        chip.y = -stackOffset * CHIP_STACK_OFFSET;
         container.addChild(chip);
         chips.push(chip);
 
@@ -35,31 +39,31 @@ export class ChipsRenderer {
 
     // Chip shadow
     const shadow = new PIXI.Graphics();
-    shadow.circle(2, 2, 20);
+    shadow.circle(CHIP_SHADOW_OFFSET.x, CHIP_SHADOW_OFFSET.y, CHIP_RADIUS);
     shadow.fill({ color: 0x000000, alpha: 0.3 });
     chip.addChild(shadow);
 
     // Main chip
     const circle = new PIXI.Graphics();
-    circle.circle(0, 0, 20);
+    circle.circle(0, 0, CHIP_RADIUS);
     circle.fill(color);
     circle.stroke({ width: 2, color: 0xffffff, alpha: 0.3 });
     chip.addChild(circle);
 
     // Edge notches (classic poker chip style)
     const notches = new PIXI.Graphics();
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const x = Math.cos(angle) * 16;
-      const y = Math.sin(angle) * 16;
-      notches.circle(x, y, 3);
+    for (let i = 0; i < CHIP_NOTCH_COUNT; i++) {
+      const angle = (i / CHIP_NOTCH_COUNT) * Math.PI * 2;
+      const x = Math.cos(angle) * CHIP_NOTCH_RADIUS;
+      const y = Math.sin(angle) * CHIP_NOTCH_RADIUS;
+      notches.circle(x, y, CHIP_NOTCH_SIZE);
     }
     notches.fill(0xffffff, 0.4);
     chip.addChild(notches);
 
     // Inner ring
     const innerRing = new PIXI.Graphics();
-    innerRing.circle(0, 0, 12);
+    innerRing.circle(0, 0, CHIP_INNER_RING_RADIUS);
     innerRing.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
     chip.addChild(innerRing);
 
@@ -69,7 +73,7 @@ export class ChipsRenderer {
       style: {
         fontSize: 11,
         fontWeight: "bold",
-        fill: color === 0xf5f5f5 ? 0x1a1a1a : 0xffffff,
+        fill: color === CHIP_COLORS[1] ? 0x1a1a1a : 0xffffff,
         fontFamily: "Arial, sans-serif",
       },
       anchor: 0.5,

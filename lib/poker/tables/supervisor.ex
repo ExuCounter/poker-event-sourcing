@@ -15,6 +15,7 @@ defmodule Poker.Tables.Supervisor do
         # Projectors (for lobby/list views only)
         Tables.Projectors.TableList,
         Tables.Projectors.TableLobby,
+        Tables.Projectors.HandHistory,
         # Tables.Projectors.Table,
         # Tables.Projectors.TableParticipants,
         # Process manager (for workflow orchestration)

@@ -2,38 +2,19 @@ import * as PIXI from "pixi.js";
 import gsap from "gsap";
 import { CardRenderer } from "./CardRenderer.js";
 import { ChipsRenderer } from "./ChipsRenderer.js";
-
-// Table dimensions relative to base (not screen!)
-const TABLE_RADIUS_X = 450;
-const TABLE_RADIUS_Y = 300;
-
-// Layout constants
-const HOOD_WIDTH = 140;
-const HOOD_HEIGHT = 74;
-const HOOD_BORDER_RADIUS = 20;
-const HOOD_PADDING = 14;
-
-const CARD_OVERLAP = 50; // How much the hood covers the cards
-const CARD_SPACING = 70;
-const CARD_OFFSET_X = 0; // Center cards relative to hood
-
-// Colors
-const COLORS = {
-  hoodBg: 0x1a1a1a,
-  hoodBgFolded: 0x2a2a2a,
-  border: 0x4a4a4a,
-  borderFolded: 0x404040,
-  divider: 0x3a3a3a,
-  text: 0xffffff,
-  textFolded: 0x888888,
-  chips: 0x4ade80,
-  chipsFolded: 0x666666,
-  activeGlow: 0xf4d03f,
-  timerGreen: 0x4ade80,
-  timerYellow: 0xfbbf24,
-  timerRed: 0xef4444,
-  timerBg: 0x333333,
-};
+import {
+  TABLE_RADIUS_X,
+  TABLE_RADIUS_Y,
+  HOLE_CARD_SPACING,
+  CARD_OFFSET_X,
+  HOOD_WIDTH,
+  HOOD_HEIGHT,
+  HOOD_BORDER_RADIUS,
+  HOOD_PADDING,
+  CARD_OVERLAP,
+  PARTICIPANT_COLORS,
+  CARD_HEIGHT,
+} from "../constants.js";
 
 export class ParticipantRenderer {
   constructor(participantId, tableContainer, getState) {
@@ -71,6 +52,21 @@ export class ParticipantRenderer {
     this.#renderChips();
   }
 
+  renderHood() {
+    this.hoodContainer.removeChildren();
+    this.betAreaContainer.removeChildren();
+
+    this.#renderHood();
+    this.#renderChips();
+
+    if (!this.container.children.includes(this.hoodContainer)) {
+      this.container.addChild(this.hoodContainer);
+    }
+    if (!this.container.children.includes(this.betAreaContainer)) {
+      this.container.addChild(this.betAreaContainer);
+    }
+  }
+
   async #flipCard(cardContainer, card) {
     await gsap.to(cardContainer.scale, {
       x: 0,
@@ -79,7 +75,7 @@ export class ParticipantRenderer {
     });
 
     const cardRenderer = new CardRenderer();
-    const newCardContent = cardRenderer.render(card);
+    const newCardContent = cardRenderer.renderHoleCard(card);
 
     cardContainer.removeChildren();
 
@@ -148,9 +144,9 @@ export class ParticipantRenderer {
 
     const cardRenderer = new CardRenderer();
     holeCards.forEach((card, index) => {
-      const cardSprite = cardRenderer.render(card);
+      const cardSprite = cardRenderer.renderHoleCard(card);
 
-      cardSprite.position.set(index * CARD_SPACING, 0);
+      cardSprite.position.set(index * HOLE_CARD_SPACING, 0);
 
       this.holeCardsContainer.addChild(cardSprite);
     });
@@ -182,17 +178,21 @@ export class ParticipantRenderer {
         HOOD_HEIGHT + 4,
         HOOD_BORDER_RADIUS + 2,
       );
-      hood.fill({ color: COLORS.activeGlow, alpha: 0.8 });
+      hood.fill({ color: PARTICIPANT_COLORS.activeGlow, alpha: 0.8 });
     }
 
     // Main background
     hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    hood.fill(isFolded ? COLORS.hoodBgFolded : COLORS.hoodBg);
+    hood.fill(
+      isFolded ? PARTICIPANT_COLORS.hoodBgFolded : PARTICIPANT_COLORS.hoodBg,
+    );
 
     // Subtle border
     hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
     hood.stroke({
-      color: isFolded ? COLORS.borderFolded : COLORS.border,
+      color: isFolded
+        ? PARTICIPANT_COLORS.borderFolded
+        : PARTICIPANT_COLORS.border,
       width: 1.5,
     });
 
@@ -202,7 +202,7 @@ export class ParticipantRenderer {
 
     divider.moveTo(HOOD_PADDING, HOOD_HEIGHT / 2);
     divider.lineTo(HOOD_WIDTH - HOOD_PADDING, HOOD_HEIGHT / 2);
-    divider.stroke({ color: COLORS.divider, width: 1 });
+    divider.stroke({ color: PARTICIPANT_COLORS.divider, width: 1 });
 
     this.hoodContainer.addChild(divider);
 
@@ -221,14 +221,16 @@ export class ParticipantRenderer {
       text: displayName,
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 13,
+        fontSize: 18,
         fontWeight: "bold",
-        fill: isFolded ? COLORS.textFolded : COLORS.text,
+        fill: isFolded
+          ? PARTICIPANT_COLORS.textFolded
+          : PARTICIPANT_COLORS.text,
       },
     });
 
     nameText.anchor.set(0.5, 0.5);
-    nameText.position.set(HOOD_WIDTH / 2, HOOD_PADDING + 4);
+    nameText.position.set(HOOD_WIDTH / 2, HOOD_PADDING + 8);
 
     this.hoodContainer.addChild(nameText);
 
@@ -237,14 +239,16 @@ export class ParticipantRenderer {
       text: this.formatChips(participant.chips),
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: "bold",
-        fill: isFolded ? COLORS.chipsFolded : COLORS.chips,
+        fill: isFolded
+          ? PARTICIPANT_COLORS.chipsFolded
+          : PARTICIPANT_COLORS.chips,
       },
     });
 
     chipsText.anchor.set(0.5, 0.5);
-    chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 2);
+    chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 6);
 
     this.hoodContainer.addChild(chipsText);
     this.container.addChild(this.hoodContainer);
@@ -273,8 +277,8 @@ export class ParticipantRenderer {
     const radiusY = TABLE_RADIUS_Y;
 
     const positions = {
-      0: { x: -45, y: radiusY + 45 }, // Hero - bottom center
-      1: { x: radiusX - 45, y: radiusY * 0.4 }, // Bottom right
+      0: { x: -70, y: radiusY - CARD_HEIGHT / 2 }, // Hero - bottom center
+      1: { x: radiusX - 110, y: radiusY * 0.35 }, // Bottom right
       2: { x: radiusX + 60, y: -radiusY * 0.4 }, // Top right
       3: { x: 0, y: -radiusY - 80 }, // Top center
       4: { x: -radiusX - 60, y: -radiusY * 0.4 }, // Top left
@@ -300,7 +304,7 @@ export class ParticipantRenderer {
 
     const cardRenderer = new CardRenderer();
     participant.holeCards.forEach((card, index) => {
-      const cardSprite = cardRenderer.render(card);
+      const cardSprite = cardRenderer.renderHoleCard(card);
 
       cardSprite.position.set(localStart.x - 40, localStart.y - 40);
       cardSprite.alpha = 0;
@@ -311,7 +315,7 @@ export class ParticipantRenderer {
       timeline.to(
         cardSprite,
         {
-          x: CARD_OFFSET_X + index * CARD_SPACING,
+          x: CARD_OFFSET_X + index * HOLE_CARD_SPACING,
           y: 0,
           alpha: 1,
           duration: timing.duration / 1000 || 0.25,

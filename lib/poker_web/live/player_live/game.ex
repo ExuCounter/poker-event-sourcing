@@ -67,49 +67,6 @@ defmodule PokerWeb.PlayerLive.Game do
     {:noreply, assign(socket, :game_view, game_view)}
   end
 
-  defp process_next_event(socket) do
-    case socket.assigns.queue do
-      [] ->
-        assign(socket, current_animated_event_id: nil)
-
-      [next_event | _rest] ->
-        game_view =
-          Tables.get_player_game_view(
-            socket.assigns.current_scope,
-            socket.assigns.table_id,
-            next_event.event_id
-          )
-
-        next_event =
-          if next_event.type == "ParticipantHandGiven" do
-            participant =
-              Enum.find(game_view.participants, &(&1.player_id == socket.assigns.current_user_id))
-
-            if participant.id != next_event.participant_id do
-              %{
-                next_event
-                | hole_cards: [nil, nil]
-              }
-            else
-              next_event
-            end
-          else
-            next_event
-          end
-
-        socket =
-          push_event(socket, "table_event", %{
-            event: JsonEncoder.transform_keys(next_event),
-            new_state: JsonEncoder.transform_keys(game_view)
-          })
-
-        assign(socket,
-          current_animated_event_id: next_event.event_id,
-          raise_amount: nil
-        )
-    end
-  end
-
   # Action event handlers
   @impl true
   def handle_event("fold_hand", _params, socket) do
@@ -155,6 +112,49 @@ defmodule PokerWeb.PlayerLive.Game do
     {:noreply, assign(socket, raise_amount: amount_int)}
   end
 
+  defp process_next_event(socket) do
+    case socket.assigns.queue do
+      [] ->
+        assign(socket, current_animated_event_id: nil)
+
+      [next_event | _rest] ->
+        game_view =
+          Tables.get_player_game_view(
+            socket.assigns.current_scope,
+            socket.assigns.table_id,
+            next_event.event_id
+          )
+
+        next_event =
+          if next_event.type == "ParticipantHandGiven" do
+            participant =
+              Enum.find(game_view.participants, &(&1.player_id == socket.assigns.current_user_id))
+
+            if participant.id != next_event.participant_id do
+              %{
+                next_event
+                | hole_cards: [nil, nil]
+              }
+            else
+              next_event
+            end
+          else
+            next_event
+          end
+
+        socket =
+          push_event(socket, "table_event", %{
+            event: JsonEncoder.transform_keys(next_event),
+            new_state: JsonEncoder.transform_keys(game_view)
+          })
+
+        assign(socket,
+          current_animated_event_id: next_event.event_id,
+          raise_amount: nil
+        )
+    end
+  end
+
   # Helper functions
   defp format_error(%{message: message}), do: message
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
@@ -168,8 +168,6 @@ defmodule PokerWeb.PlayerLive.Game do
       else
         assigns
       end
-
-    dbg(assigns)
 
     ~H"""
     <.flash kind={:error} flash={@flash} />
@@ -185,94 +183,89 @@ defmodule PokerWeb.PlayerLive.Game do
       />
       
     <!-- Action Controls - positioned and scaled -->
-      <div class="origin-bottom-right" style=" transform: scale(var(--game-scale, 0));">
-        <%= if not is_nil(@game_view.hand_id) and is_nil(@current_animated_event_id) do %>
-          <div class="absolute bottom-[10px] right-[10px]">
-            <div class="bg-gray-900 rounded-2xl p-6 shadow-2xl border-2 border-gray-700 flex flex-col">
+      <div
+        class="origin-bottom-right absolute bottom-[16px] right-[16px]"
+        style=" transform: scale(var(--game-scale, 0));"
+      >
+        <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
+          <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border-2 border-gray-700 flex flex-col">
+            
+    <!-- Raise Controls -->
+            <%= if @game_view.valid_actions.raise do %>
+              <div class="flex flex-row gap-4 mb-5">
+                <div class="flex gap-3 flex-wrap">
+                  <%= for preset <- @game_view.valid_actions.raise.presets do %>
+                    <button
+                      type="button"
+                      phx-click="update_raise_amount"
+                      phx-value-raise_amount={preset.value}
+                      class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-md px-3 rounded"
+                    >
+                      {preset.label}
+                    </button>
+                  <% end %>
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                  <form phx-change="update_raise_amount">
+                    <input
+                      type="range"
+                      name="raise_amount"
+                      min={@game_view.valid_actions.raise.min}
+                      max={@game_view.valid_actions.raise.max}
+                      value={@raise_amount}
+                      class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                    />
+                  </form>
+                  <div class="flex justify-between text-md text-gray-500 font-bold">
+                    <span>{@game_view.valid_actions.raise.min}</span>
+                    <span>{@game_view.valid_actions.raise.max}</span>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <div class="flex gap-3 items-center">
+              <!-- Fold Button -->
+              <%= if @game_view.valid_actions.fold do %>
+                <.button
+                  phx-click="fold_hand"
+                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                >
+                  Fold
+                </.button>
+              <% end %>
+              <!-- Check Button -->
+              <%= if @game_view.valid_actions.check do %>
+                <.button
+                  phx-click="check_hand"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                >
+                  Check
+                </.button>
+              <% end %>
+              
+    <!-- Call Button -->
+              <%= if @game_view.valid_actions.call do %>
+                <.button
+                  phx-click="call_hand"
+                  class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                >
+                  Call {@game_view.valid_actions.call.amount}
+                </.button>
+              <% end %>
               
     <!-- Raise Controls -->
               <%= if @game_view.valid_actions.raise do %>
-                <div class="flex flex-row gap-3 mt-[-10px] mb-4">
-                  <div class="flex gap-2 flex-wrap py-2">
-                    <%= for preset <- @game_view.valid_actions.raise.presets do %>
-                      <button
-                        type="button"
-                        phx-click="update_raise_amount"
-                        phx-value-raise_amount={preset.value}
-                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded"
-                      >
-                        {preset.label}
-                      </button>
-                    <% end %>
+                <.button
+                  phx-click="raise_hand"
+                  phx-value-amount={@raise_amount}
+                  class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                >
+                  <div class="w-[120px] text-center">
+                    Raise {@raise_amount}
                   </div>
-                  <div>
-                    <div class="flex flex-col gap-1 min-w-[150px]">
-                      <form phx-change="update_raise_amount">
-                        <input
-                          type="range"
-                          name="raise_amount"
-                          min={@game_view.valid_actions.raise.min}
-                          max={@game_view.valid_actions.raise.max}
-                          value={@raise_amount}
-                          class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                        />
-                      </form>
-                      <div class="flex justify-between text-xs text-gray-500">
-                        <span>{@game_view.valid_actions.raise.min}</span>
-                        <span>{@game_view.valid_actions.raise.max}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              <% else %>
-                <div class="text-gray-400 text-lg font-semibold px-6 text-center">
-                  Waiting for other players...
-                </div>
+                </.button>
               <% end %>
-
-              <div class="flex gap-4 items-center">
-                <!-- Fold Button -->
-                <%= if @game_view.valid_actions.fold do %>
-                  <.button
-                    phx-click="fold_hand"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-7 py-3 rounded-lg"
-                  >
-                    Fold
-                  </.button>
-                <% end %>
-                <!-- Check Button -->
-                <%= if @game_view.valid_actions.check do %>
-                  <.button
-                    phx-click="check_hand"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-7 py-3 rounded-lg"
-                  >
-                    Check
-                  </.button>
-                <% end %>
-                
-    <!-- Call Button -->
-                <%= if @game_view.valid_actions.call do %>
-                  <.button
-                    phx-click="call_hand"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg"
-                  >
-                    Call {@game_view.valid_actions.call.amount}
-                  </.button>
-                <% end %>
-                
-    <!-- Raise Controls -->
-                <%= if @game_view.valid_actions.raise do %>
-                  <.button
-                    phx-click="raise_hand"
-                    phx-value-amount={@raise_amount}
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-6 py-3 rounded-lg"
-                  >
-                    <div class="w-[100px] text-center">
-                      Raise {@raise_amount}
-                    </div>
-                  </.button>
-                <% end %>
-              </div>
             </div>
           </div>
         <% end %>

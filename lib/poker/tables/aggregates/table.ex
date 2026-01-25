@@ -60,6 +60,7 @@ defmodule Poker.Tables.Aggregates.Table do
     :settings,
     :participants,
     :hand,
+    :prev_hand_id,
     :round,
     :community_cards,
     :pots,
