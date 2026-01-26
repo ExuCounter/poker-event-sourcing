@@ -22,7 +22,6 @@ defmodule Poker.Tables.Views.ReplayEvents do
     Events.ParticipantWentAllIn,
     Events.PayoutDistributed,
     Events.ParticipantShowdownCardsRevealed,
-    Events.HandFinished,
     Events.PotsRecalculated
   ]
 
@@ -44,11 +43,11 @@ defmodule Poker.Tables.Views.ReplayEvents do
       iex> Poker.Tables.Views.ReplayEvents.animated?(%ParticipantToActSelected{})
       false
   """
+  def animated?(%Events.RoundStarted{community_cards: []}), do: false
+
   def animated?(event) when is_struct(event) do
     event.__struct__ in @animated_events
   end
-
-  def animated?(_), do: false
 
   @doc """
   Filters a list of events to only those with animations.

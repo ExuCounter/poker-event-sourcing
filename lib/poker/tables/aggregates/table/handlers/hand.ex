@@ -61,18 +61,18 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn table ->
+      %HandStarted{
+        id: hand_id,
+        table_id: table.id
+      }
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
       dealer_button_participant = Helpers.find_dealer_button_participant(table)
 
       %DealerButtonMoved{
         table_id: table.id,
         hand_id: hand_id,
         participant_id: dealer_button_participant.id
-      }
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      %HandStarted{
-        id: hand_id,
-        table_id: table.id
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
@@ -86,7 +86,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       %RoundStarted{
-        id: Ecto.UUID.generate(),
+        id: UUIDv7.generate(),
         hand_id: hand_id,
         table_id: table.id,
         type: :pre_flop,
@@ -100,7 +100,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
       [
         %ParticipantHandGiven{
-          id: Ecto.UUID.generate(),
+          id: UUIDv7.generate(),
           table_id: table.id,
           participant_id: participant.id,
           table_hand_id: hand_id,
@@ -122,7 +122,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         hand = Helpers.find_participant_hand_by_position(table.participant_hands, :dealer)
 
         %SmallBlindPosted{
-          id: Ecto.UUID.generate(),
+          id: UUIDv7.generate(),
           table_id: table.id,
           hand_id: hand_id,
           participant_id: hand.participant_id,
@@ -133,7 +133,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         hand = Helpers.find_participant_hand_by_position(table.participant_hands, :small_blind)
 
         %SmallBlindPosted{
-          id: Ecto.UUID.generate(),
+          id: UUIDv7.generate(),
           table_id: table.id,
           hand_id: hand_id,
           participant_id: hand.participant_id,
@@ -146,7 +146,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       hand = Helpers.find_participant_hand_by_position(table.participant_hands, :big_blind)
 
       %BigBlindPosted{
-        id: Ecto.UUID.generate(),
+        id: UUIDv7.generate(),
         table_id: table.id,
         hand_id: hand_id,
         participant_id: hand.participant_id,

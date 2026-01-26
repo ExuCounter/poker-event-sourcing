@@ -11,8 +11,8 @@ defmodule Poker do
     quote do
       use Ecto.Schema
       import Ecto.Changeset
-      @primary_key {:id, :binary_id, autogenerate: true}
-      @foreign_key_type :binary_id
+      @primary_key {:id, UUIDv7.Type, autogenerate: true}
+      @foreign_key_type UUIDv7.Type 
     end
   end
 

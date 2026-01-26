@@ -2,12 +2,8 @@ defmodule Poker.Tables.Queries.HandEvents do
   @moduledoc """
   Queries for retrieving hand-specific events from EventStore.
 
-  Provides functions to extract events for a specific hand by finding
-  the HandStarted and HandFinished event boundaries.
+  Uses the hand_histories projection for efficient event lookup.
   """
-
-  alias Poker.Tables.Aggregates.Table
-  alias Poker.Tables.Events.{HandStarted, HandFinished}
 
   @doc """
   Get all events for a specific hand from EventStore.
@@ -22,18 +18,19 @@ defmodule Poker.Tables.Queries.HandEvents do
       true
   """
   def get_hand_events(table_id, hand_id) do
-    stream_id = "table-#{table_id}"
+    case get_hand_history(table_id, hand_id) do
+      nil ->
+        {nil, []}
 
-    stream_id
-    |> Poker.EventStore.stream_forward()
-    |> Enum.to_list()
-    |> find_hand_event_range(hand_id)
+      hand_history ->
+        {hand_history, get_hand_events_from_history(hand_history)}
+    end
   end
 
   @doc """
   Get events for the previous hand (if exists).
 
-  Builds the aggregate to get the prev_hand_id, then retrieves those events.
+  Queries the hand_histories projection for the most recent completed hand.
 
   ## Returns
 
@@ -49,51 +46,49 @@ defmodule Poker.Tables.Queries.HandEvents do
       {:error, :no_previous_hand}
   """
   def get_previous_hand_events(table_id) do
-    # First, build aggregate to get prev_hand_id
-    aggregate = build_aggregate(table_id)
+    # Query hand_histories for most recent completed hand
+    case get_latest_completed_hand(table_id) do
+      nil ->
+        {:error, :no_previous_hand}
 
-    case aggregate.prev_hand_id do
-      nil -> {:error, :no_previous_hand}
-      hand_id -> {:ok, get_hand_events(table_id, hand_id)}
+      hand_history ->
+        events = get_hand_events_from_history(hand_history)
+
+        {:ok, events}
     end
   end
 
-  # Private helpers
+  defp get_hand_history(table_id, hand_id) do
+    import Ecto.Query
 
-  defp find_hand_event_range(events, hand_id) do
-    # Find HandStarted event with matching id
-    start_idx =
-      Enum.find_index(events, fn event ->
-        match?(%{data: %HandStarted{id: ^hand_id}}, event)
-      end)
-
-    if is_nil(start_idx) do
-      []
-    else
-      # Find HandFinished event for this hand
-      end_idx =
-        events
-        |> Enum.drop(start_idx)
-        |> Enum.find_index(fn event ->
-          match?(%{data: %HandFinished{hand_id: ^hand_id}}, event)
-        end)
-
-      if is_nil(end_idx) do
-        []
-      else
-        # Adjust end_idx to be relative to full list
-        actual_end_idx = start_idx + end_idx
-
-        Enum.slice(events, start_idx..actual_end_idx)
-      end
-    end
+    from(h in Poker.Tables.Projections.HandHistory,
+      where: h.table_id == ^table_id and h.hand_id == ^hand_id
+    )
+    |> Poker.Repo.one()
   end
 
-  defp build_aggregate(table_id) do
-    "table-#{table_id}"
-    |> Poker.EventStore.stream_forward()
-    |> Enum.to_list()
-    |> Enum.map(& &1.data)
-    |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
+  defp get_latest_completed_hand(table_id) do
+    import Ecto.Query
+
+    from(h in Poker.Tables.Projections.HandHistory,
+      where: h.table_id == ^table_id and not is_nil(h.end_version),
+      order_by: [desc: h.inserted_at],
+      limit: 1
+    )
+    |> Poker.Repo.one()
+  end
+
+  defp get_hand_events_from_history(hand_history) do
+    stream_id = "table-#{hand_history.table_id}"
+    count = hand_history.end_version - hand_history.start_version
+
+    {:ok, events} =
+      Poker.EventStore.read_stream_forward(
+        stream_id,
+        hand_history.start_version,
+        count
+      )
+
+    events
   end
 end

@@ -30,14 +30,14 @@ defmodule Poker.Tables.ProcessManager do
         %Poker.Tables.ProcessManager{},
         %TableStarted{id: table_id} = _event
       ) do
-    struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
+    struct(StartHand, %{table_id: table_id, hand_id: UUIDv7.generate()})
   end
 
   def handle(
         %Poker.Tables.ProcessManager{},
         %HandFinished{table_id: table_id} = _event
       ) do
-    struct(StartHand, %{table_id: table_id, hand_id: Ecto.UUID.generate()})
+    struct(StartHand, %{table_id: table_id, hand_id: UUIDv7.generate()})
   end
 
   def handle(
@@ -67,7 +67,7 @@ defmodule Poker.Tables.ProcessManager do
       # Otherwise, start next round
       reason == :all_acted ->
         struct(StartRound, %{
-          round_id: Ecto.UUID.generate(),
+          round_id: UUIDv7.generate(),
           round: next_round(round_type),
           table_id: event.table_id,
           hand_id: event.hand_id

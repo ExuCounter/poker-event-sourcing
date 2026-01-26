@@ -150,88 +150,56 @@ defmodule Poker.Tables.Views.HandReplay do
     if is_nil(step_event_info) do
       replay.current_state
     else
-      # Stream ALL table events from the beginning (not just hand events)
-      all_table_events =
-        "table-#{replay.table_id}"
-        |> Poker.EventStore.stream_forward()
-        |> Enum.to_list()
+      {hand_history, hand_events} = HandEvents.get_hand_events(replay.table_id, replay.hand_id)
 
-      # Find the step event in the full table event stream by event_id
+      aggregate = :erlang.binary_to_term(hand_history.initial_state)
+
       step_event_idx =
-        Enum.find_index(all_table_events, fn event ->
+        Enum.find_index(hand_events, fn event ->
           event.event_id == step_event_info.event_id
         end)
 
-      if is_nil(step_event_idx) do
-        # Event not found, return current state
-        replay.current_state
-      else
-        # Apply ALL events from beginning up to and including this step
-        events_to_apply = Enum.take(all_table_events, step_event_idx + 1)
-
-        # Build aggregate from empty Table (not from current_state!)
-        aggregate =
-          events_to_apply
-          |> Enum.map(fn %{data: data} -> data end)
-          |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
-
-        # Convert to player view with replay visibility
-        GameStateBuilder.build_view(aggregate, replay.player_id, [], step_event_info.event_id,
-          visibility_mode: :replay,
-          calculate_actions: false
-        )
-      end
-    end
-  end
-
-  defp build_initial_state(table_id, player_id, hand_events) do
-    # Build state at HandStarted event to have proper table context
-    # We need ALL table events from the beginning, not just hand events
-
-    # Get the hand_id from the first event
-    hand_id = extract_hand_id(hand_events)
-
-    if is_nil(hand_id) do
-      # No hand found, return empty state
-      GameStateBuilder.build_view(%Table{}, player_id, [], nil,
-        visibility_mode: :replay,
-        calculate_actions: false
-      )
-    else
-      # Stream ALL table events from the beginning
-      all_table_events =
-        "table-#{table_id}"
-        |> Poker.EventStore.stream_forward()
-        |> Enum.to_list()
-
-      # Find HandStarted event with this hand_id in full event stream
-      hand_started_idx =
-        Enum.find_index(all_table_events, fn event ->
-          case event do
-            %{data: %Poker.Tables.Events.HandStarted{id: ^hand_id}} -> true
-            _ -> false
-          end
-        end)
-
-      # Build aggregate from ALL events up to and including HandStarted
-      events_to_apply = Enum.take(all_table_events, hand_started_idx + 1)
+      events_to_apply = Enum.take(hand_events, step_event_idx + 1)
 
       aggregate =
         events_to_apply
         |> Enum.map(fn %{data: data} -> data end)
-        |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
+        |> Enum.reduce(aggregate, &Table.apply(&2, &1))
 
-      event_id =
-        case Enum.at(all_table_events, hand_started_idx) do
-          %{event_id: id} -> id
-          _ -> nil
-        end
-
-      GameStateBuilder.build_view(aggregate, player_id, [], event_id,
+      GameStateBuilder.build_view(
+        aggregate,
+        replay.player_id,
+        [],
+        step_event_info.event_id,
         visibility_mode: :replay,
         calculate_actions: false
       )
     end
+  end
+
+  defp build_initial_state(table_id, player_id, hand_events) do
+    hand_id = extract_hand_id(hand_events)
+    hand_history = get_hand_history(hand_id)
+    aggregate = :erlang.binary_to_term(hand_history.initial_state)
+    stream_id = "table-#{table_id}"
+
+    {:ok, [hand_started_event]} =
+      Poker.EventStore.read_stream_forward(
+        stream_id,
+        hand_history.start_version,
+        1
+      )
+
+    aggregate = Table.apply(aggregate, hand_started_event.data)
+
+    GameStateBuilder.build_view(
+      aggregate,
+      player_id,
+      [],
+      hand_started_event.event_id,
+      visibility_mode: :replay,
+      calculate_actions: false
+    )
   end
 
   defp extract_hand_id([]), do: nil
@@ -239,4 +207,13 @@ defmodule Poker.Tables.Views.HandReplay do
   defp extract_hand_id([%{data: %{id: id}} | _]) when is_binary(id), do: id
 
   defp extract_hand_id(_), do: nil
+
+  defp get_hand_history(hand_id) do
+    import Ecto.Query
+
+    from(h in Poker.Tables.Projections.HandHistory,
+      where: h.hand_id == ^hand_id
+    )
+    |> Poker.Repo.one!()
+  end
 end

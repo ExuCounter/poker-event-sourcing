@@ -15,9 +15,9 @@ defmodule Poker.Tables do
   import Ecto.Query
 
   def create_table(creator_id, settings_attrs \\ %{}) do
-    table_id = Ecto.UUID.generate()
-    creator_participant_id = Ecto.UUID.generate()
-    settings_id = Ecto.UUID.generate()
+    table_id = UUIDv7.generate()
+    creator_participant_id = UUIDv7.generate()
+    settings_id = UUIDv7.generate()
 
     command_attrs = %{
       table_id: table_id,
@@ -39,7 +39,7 @@ defmodule Poker.Tables do
   end
 
   def join_participant(table_id, player_id, attrs \\ %{}) do
-    participant_id = Ecto.UUID.generate()
+    participant_id = UUIDv7.generate()
     starting_stack = Map.get(attrs, :starting_stack)
 
     command_attrs = %{
@@ -68,7 +68,7 @@ defmodule Poker.Tables do
   end
 
   def fold_hand(table_id, player_id) do
-    hand_action_id = Ecto.UUID.generate()
+    hand_action_id = UUIDv7.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
@@ -84,7 +84,7 @@ defmodule Poker.Tables do
   end
 
   def check_hand(table_id, player_id) do
-    hand_action_id = Ecto.UUID.generate()
+    hand_action_id = UUIDv7.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
@@ -100,7 +100,7 @@ defmodule Poker.Tables do
   end
 
   def call_hand(table_id, player_id) do
-    hand_action_id = Ecto.UUID.generate()
+    hand_action_id = UUIDv7.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
@@ -116,7 +116,7 @@ defmodule Poker.Tables do
   end
 
   def raise_hand(table_id, player_id, amount) do
-    hand_action_id = Ecto.UUID.generate()
+    hand_action_id = UUIDv7.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,
@@ -133,7 +133,7 @@ defmodule Poker.Tables do
   end
 
   def all_in_hand(table_id, player_id) do
-    hand_action_id = Ecto.UUID.generate()
+    hand_action_id = UUIDv7.generate()
 
     command_attrs = %{
       hand_action_id: hand_action_id,

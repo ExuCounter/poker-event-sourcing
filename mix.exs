@@ -74,7 +74,8 @@ defmodule Poker.MixProject do
       {:seed_factory, "~> 0.6.0", only: :test},
       {:faker, "~> 0.18.0", only: :test},
       {:mox, "~> 1.2", only: :test},
-      {:bodyguard, "~> 2.4.3"}
+      {:bodyguard, "~> 2.4.3"},
+      {:uuid_v7, "~> 0.6.0"}
     ]
   end
 
