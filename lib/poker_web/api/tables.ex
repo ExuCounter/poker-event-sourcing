@@ -7,8 +7,8 @@ defmodule PokerWeb.Api.Tables do
     Poker.Tables.get_lobby(table_id)
   end
 
-  def get_player_game_view(%{user: user} = _scope, table_id, since_event_id \\ nil) do
-    Poker.Tables.get_player_game_view(table_id, user.id, since_event_id)
+  def get_player_game_view(%{user: user} = _scope, table_id, since_version \\ nil) do
+    Poker.Tables.get_player_game_view(table_id, user.id, since_version)
   end
 
   def create_table(%{user: user} = _scope, settings) do

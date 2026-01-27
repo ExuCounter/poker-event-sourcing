@@ -15,12 +15,12 @@ defmodule Poker.Tables.Views.PlayerGameView do
   Configured for live game mode with:
   - Card visibility mode: :live (only show current player's cards)
   - Action calculation: enabled
-  - Incremental updates: supported via since_event_id
+  - Incremental updates: supported via since_version
 
   ## Parameters
     * `table_id` - The table identifier
     * `player_id` - The player for whom to build the view
-    * `since_event_id` - Optional UUID of last processed event for incremental updates
+    * `since_version` - Optional stream version of last processed event for incremental updates
 
   ## Returns
 
@@ -32,13 +32,13 @@ defmodule Poker.Tables.Views.PlayerGameView do
     * `:hole_cards` - Current player's hole cards (opponent cards are hidden)
     * `:participants` - List of all participants with their state
     * `:valid_actions` - Actions available to the current player
-    * `:latest_event_id` - ID of the latest processed event
-    * `:new_events` - New events since `since_event_id` (for animation)
+    * `:latest_version` - Stream version of the latest processed event
+    * `:new_events` - New events since `since_version` (for animation)
     * `:hand_status` - Current hand status (:pre_flop, :flop, etc.)
   """
-  def build(table_id, player_id, since_event_id \\ nil) do
+  def build(table_id, player_id, since_version \\ nil) do
     GameStateBuilder.build(table_id, player_id,
-      since_event_id: since_event_id,
+      since_version: since_version,
       visibility_mode: :live,
       calculate_actions: true
     )

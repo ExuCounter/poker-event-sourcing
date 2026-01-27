@@ -40,13 +40,13 @@ export const CARD_DIAMOND_COORDS = {
 export const CARD_FONT_SIZES = {
   rank: 30,
   smallSuit: 30,
-  bigSuit: 50,
+  bigSuit: 70,
 };
 
 export const CARD_TEXT_POSITIONS = {
   rank: { x: 6, y: 4 },
   smallSuit: { x: 8, y: 32 },
-  bigSuit: { x: 40, y: 75 },
+  bigSuit: { x: 52, y: 75 },
 };
 
 // ============================================================================

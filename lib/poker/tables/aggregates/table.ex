@@ -53,6 +53,8 @@ defmodule Poker.Tables.Aggregates.Table do
     PayoutDistributed
   }
 
+  @derive Jason.Encoder
+
   defstruct [
     :id,
     :creator_id,

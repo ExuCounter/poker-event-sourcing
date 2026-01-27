@@ -50,15 +50,15 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  def handle_event("event_processed", %{"eventId" => processed_event_id}, socket) do
+  def handle_event("event_processed", %{"streamVersion" => processed_stream_version}, socket) do
     remaining_queue =
-      Enum.reject(socket.assigns.queue, fn event -> event.event_id == processed_event_id end)
+      Enum.reject(socket.assigns.queue, fn event -> event.stream_version == processed_stream_version end)
 
     game_view =
       Tables.get_player_game_view(
         socket.assigns.current_scope,
         socket.assigns.table_id,
-        processed_event_id
+        processed_stream_version
       )
 
     socket = assign(socket, queue: remaining_queue)
@@ -122,7 +122,7 @@ defmodule PokerWeb.PlayerLive.Game do
           Tables.get_player_game_view(
             socket.assigns.current_scope,
             socket.assigns.table_id,
-            next_event.event_id
+            next_event.stream_version
           )
 
         next_event =

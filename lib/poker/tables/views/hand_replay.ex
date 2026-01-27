@@ -156,7 +156,7 @@ defmodule Poker.Tables.Views.HandReplay do
 
       step_event_idx =
         Enum.find_index(hand_events, fn event ->
-          event.event_id == step_event_info.event_id
+          event.stream_version == step_event_info.stream_version
         end)
 
       events_to_apply = Enum.take(hand_events, step_event_idx + 1)
@@ -169,8 +169,7 @@ defmodule Poker.Tables.Views.HandReplay do
       GameStateBuilder.build_view(
         aggregate,
         replay.player_id,
-        [],
-        step_event_info.event_id,
+        step_event_info.stream_version,
         visibility_mode: :replay,
         calculate_actions: false
       )
@@ -195,8 +194,7 @@ defmodule Poker.Tables.Views.HandReplay do
     GameStateBuilder.build_view(
       aggregate,
       player_id,
-      [],
-      hand_started_event.event_id,
+      hand_started_event.stream_version,
       visibility_mode: :replay,
       calculate_actions: false
     )

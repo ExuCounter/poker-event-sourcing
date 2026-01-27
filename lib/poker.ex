@@ -12,7 +12,7 @@ defmodule Poker do
       use Ecto.Schema
       import Ecto.Changeset
       @primary_key {:id, UUIDv7.Type, autogenerate: true}
-      @foreign_key_type UUIDv7.Type 
+      @foreign_key_type UUIDv7.Type
     end
   end
 

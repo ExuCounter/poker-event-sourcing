@@ -55,7 +55,7 @@ export const PokerCanvas = {
 
         // if (this.isReplayMode) {
         //   this.pushEvent("event_processed", {
-        //     eventId: event.eventId || event.event_id,
+        //     streamVersion: event.streamVersion || event.stream_version,
         //   });
         // }
 
@@ -63,7 +63,7 @@ export const PokerCanvas = {
 
         if (!this.isReplayMode) {
           this.pushEvent("event_processed", {
-            eventId: event.eventId || event.event_id,
+            streamVersion: event.streamVersion || event.stream_version,
           });
         }
       },

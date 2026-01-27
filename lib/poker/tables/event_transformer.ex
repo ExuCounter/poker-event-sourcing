@@ -7,7 +7,8 @@ defmodule Poker.Tables.EventTransformer do
   (via HandReplay).
 
   Adds:
-  - event_id (from metadata or struct field)
+  - event_id (from metadata or struct field, for debugging/logging)
+  - stream_version (from metadata, used as cursor for incremental updates)
   - type (derived from module name)
   - timing (animation duration from AnimationDelays)
   """
@@ -18,31 +19,32 @@ defmodule Poker.Tables.EventTransformer do
   Transforms a raw event into frontend format.
 
   Accepts events in different formats:
-  - EventStore format: %{data: event, event_id: id}
+  - EventStore format: %{data: event, event_id: id, stream_version: version}
   - Commanded format: event with separate metadata map
-  - Already transformed: event with event_id field
+  - Already transformed: event with event_id and stream_version fields
 
   ## Examples
 
       # From EventStore (wrapped event)
-      iex> transform(%{data: %HandStarted{table_id: "123"}, event_id: "uuid-123"})
-      %{table_id: "123", type: "HandStarted", event_id: "uuid-123", timing: %{duration: 1000}}
+      iex> transform(%{data: %HandStarted{table_id: "123"}, event_id: "uuid-123", stream_version: 5})
+      %{table_id: "123", type: "HandStarted", event_id: "uuid-123", stream_version: 5, timing: %{duration: 1000}}
 
       # From Commanded metadata
-      iex> transform(%HandStarted{table_id: "123"}, %{event_id: "uuid-123"})
-      %{table_id: "123", type: "HandStarted", event_id: "uuid-123", timing: %{duration: 1000}}
+      iex> transform(%HandStarted{table_id: "123"}, %{event_id: "uuid-123", stream_version: 5})
+      %{table_id: "123", type: "HandStarted", event_id: "uuid-123", stream_version: 5, timing: %{duration: 1000}}
   """
-  def transform(%{data: event, event_id: event_id}) when is_struct(event) do
-    do_transform(event, event_id)
+  def transform(%{data: event, event_id: event_id, stream_version: stream_version}) when is_struct(event) do
+    do_transform(event, event_id, stream_version)
   end
 
-  def transform(event, %{event_id: event_id}) when is_struct(event) do
-    do_transform(event, event_id)
+  def transform(event, %{event_id: event_id, stream_version: stream_version}) when is_struct(event) do
+    do_transform(event, event_id, stream_version)
   end
 
   def transform(event) when is_struct(event) and is_map_key(event, :event_id) do
     event_id = Map.get(event, :event_id)
-    do_transform(event, event_id)
+    stream_version = Map.get(event, :stream_version)
+    do_transform(event, event_id, stream_version)
   end
 
   # Already transformed
@@ -50,13 +52,14 @@ defmodule Poker.Tables.EventTransformer do
     event
   end
 
-  defp do_transform(event, event_id) do
+  defp do_transform(event, event_id, stream_version) do
     event_type = derive_event_type(event)
 
     event
     |> Map.from_struct()
     |> Map.put(:type, event_type)
     |> Map.put(:event_id, event_id)
+    |> Map.put(:stream_version, stream_version)
     |> Map.put(:timing, %{
       duration: AnimationDelays.for_event(event)
     })

@@ -113,14 +113,14 @@ defmodule Poker.Tables.Views.ReplayEvents do
       %{
         event: event,
         position: idx,
-        event_id: get_event_id(event)
+        stream_version: get_stream_version(event)
       }
     end)
   end
 
   # Private helpers
 
-  defp get_event_id(%{event_id: id}), do: id
-  defp get_event_id(%{data: _, event_id: id}), do: id
-  defp get_event_id(_), do: nil
+  defp get_stream_version(%{stream_version: version}), do: version
+  defp get_stream_version(%{data: _, stream_version: version}), do: version
+  defp get_stream_version(_), do: nil
 end
