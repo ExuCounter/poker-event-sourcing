@@ -45,13 +45,15 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
     |> Commanded.Aggregate.Multi.execute(fn table ->
       next_participant = Helpers.find_next_participant_to_act(table)
 
-      dbg(next_participant)
-
-      %ParticipantToActSelected{
-        table_id: table.id,
-        round_id: round_id,
-        participant_id: next_participant.id
-      }
+      if next_participant do
+        %ParticipantToActSelected{
+          table_id: table.id,
+          round_id: round_id,
+          participant_id: next_participant.id
+        }
+      else
+        nil
+      end
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       all_acted? = Helpers.all_acted?(table)

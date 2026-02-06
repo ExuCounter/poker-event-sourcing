@@ -52,7 +52,9 @@ defmodule PokerWeb.PlayerLive.Game do
 
   def handle_event("event_processed", %{"streamVersion" => processed_stream_version}, socket) do
     remaining_queue =
-      Enum.reject(socket.assigns.queue, fn event -> event.stream_version == processed_stream_version end)
+      Enum.reject(socket.assigns.queue, fn event ->
+        event.stream_version == processed_stream_version
+      end)
 
     game_view =
       Tables.get_player_game_view(
@@ -124,23 +126,6 @@ defmodule PokerWeb.PlayerLive.Game do
             socket.assigns.table_id,
             next_event.stream_version
           )
-
-        next_event =
-          if next_event.type == "ParticipantHandGiven" do
-            participant =
-              Enum.find(game_view.participants, &(&1.player_id == socket.assigns.current_user_id))
-
-            if participant.id != next_event.participant_id do
-              %{
-                next_event
-                | hole_cards: [nil, nil]
-              }
-            else
-              next_event
-            end
-          else
-            next_event
-          end
 
         socket =
           push_event(socket, "table_event", %{

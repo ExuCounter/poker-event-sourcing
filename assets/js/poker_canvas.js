@@ -38,7 +38,6 @@ export const PokerCanvas = {
       antialias: false,
     });
 
-    // Initialize renderer objects
     this.renderers = {
       communityCards: null,
       totalPot: null,
@@ -49,15 +48,6 @@ export const PokerCanvas = {
       "table_event",
       async ({ event: event, new_state: serverState }) => {
         this.state = serverState;
-
-        console.log(event);
-        console.log(this.state);
-
-        // if (this.isReplayMode) {
-        //   this.pushEvent("event_processed", {
-        //     streamVersion: event.streamVersion || event.stream_version,
-        //   });
-        // }
 
         await this.runAnimation(event);
 

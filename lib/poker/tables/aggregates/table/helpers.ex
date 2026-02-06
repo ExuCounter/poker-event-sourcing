@@ -62,7 +62,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
     Enum.find_value(indices, fn index ->
       participant = Enum.at(participants, index)
-      # Can act if not busted and has chips remaining
+
       if participant.status == :active and participant.chips > 0, do: participant
     end)
   end

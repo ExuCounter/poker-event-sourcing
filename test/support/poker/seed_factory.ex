@@ -107,7 +107,7 @@ defmodule Poker.SeedFactorySchema do
     param(:table, entity: :table)
 
     resolve(fn args ->
-      {:ok, _hand_id} = Poker.Tables.start_table(args.table.id)
+      :ok = Poker.Tables.start_table(args.table.id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)

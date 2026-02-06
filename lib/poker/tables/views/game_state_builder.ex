@@ -30,8 +30,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     %{latest_version: latest_version, aggregate: aggregate} =
       replay_events(table_id, since_version)
 
-    dbg(latest_version)
-
     build_view(aggregate, player_id, latest_version,
       visibility_mode: visibility_mode,
       calculate_actions: calculate_actions
@@ -206,7 +204,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
        )
        when is_list(participants) do
     participant_hands = Map.get(aggregate, :participant_hands, [])
-    revealed_cards = Map.get(aggregate, :revealed_cards, %{})
 
     Enum.map(participants, fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
@@ -222,12 +219,14 @@ defmodule Poker.Tables.Views.GameStateBuilder do
           {:replay, ^current_player_id} ->
             get_player_hole_cards(aggregate, participant)
 
-          {:replay, _} when is_map(revealed_cards) ->
-            Map.get(revealed_cards, participant.id, [nil, nil])
-
-          # Default: hide cards
           _ ->
-            [nil, nil]
+            player_cards = get_player_hole_cards(aggregate, participant)
+
+            if player_cards == [] do
+              []
+            else
+              [nil, nil]
+            end
         end
 
       %{

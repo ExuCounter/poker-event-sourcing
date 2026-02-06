@@ -34,8 +34,8 @@ config :poker, Poker.App,
   registry: :local,
   snapshotting: %{
     Poker.Tables.Aggregates.Table => [
-      snapshot_every: 1,
-      snapshot_version: 1
+      snapshot_every: 30,
+      snapshot_version: 2
     ]
   }
 

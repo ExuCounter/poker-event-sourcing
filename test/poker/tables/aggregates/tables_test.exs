@@ -162,7 +162,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
       assert ctx.positions.utg.participant.chips == ctx.table.settings.starting_stack
     end
 
-    test "should calculate pot correctly after first move", ctx do
+    test "should calculate pot correctly after first round", ctx do
       ctx = ctx |> exec(:start_table)
 
       [pot1, pot2] = ctx.table.pots

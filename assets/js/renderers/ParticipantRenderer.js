@@ -32,20 +32,21 @@ export class ParticipantRenderer {
 
     this.hoodContainer = new PIXI.Container();
 
-    this.betAreaContainer = new PIXI.Container({
-      x: 0,
-      y: -60,
-    });
-
     this.tableContainer.addChild(this.container);
   }
 
   render() {
     this.container.removeChildren();
 
-    const position = this.#getPlayerPosition();
+    const participantPosition = this.#getPlayerPosition();
+    const betPosition = this.#getBetPosition();
 
-    this.container.position.set(position.x, position.y);
+    this.betAreaContainer = new PIXI.Container({
+      x: betPosition.x,
+      y: betPosition.y,
+    });
+
+    this.container.position.set(participantPosition.x, participantPosition.y);
 
     this.#renderHood();
     this.#renderHoleCards();
@@ -256,36 +257,56 @@ export class ParticipantRenderer {
 
   #getPlayerPosition() {
     const state = this.getState();
-
-    const participant = state.participants.find(
+    const participantIndex = state.participants.findIndex(
       (p) => p.id === this.participantId,
     );
-
-    const participantIndex = state.participants.findIndex(
-      (p) => p === participant,
-    );
-
     const currentUserIndex = state.participants.findIndex(
       (p) => p.playerId === state.currentUserId,
     );
-
+    const playerCount = state.participants.length;
     const relativePosition =
-      (participantIndex - currentUserIndex + state.participants.length) %
-      state.participants.length;
+      (participantIndex - currentUserIndex + playerCount) % playerCount;
 
     const radiusX = TABLE_RADIUS_X;
     const radiusY = TABLE_RADIUS_Y;
+    const padding = 40; // distance from table edge
 
-    const positions = {
-      0: { x: -70, y: radiusY - CARD_HEIGHT / 2 }, // Hero - bottom center
-      1: { x: radiusX - 110, y: radiusY * 0.35 }, // Bottom right
-      2: { x: radiusX + 60, y: -radiusY * 0.4 }, // Top right
-      3: { x: 0, y: -radiusY - 80 }, // Top center
-      4: { x: -radiusX - 60, y: -radiusY * 0.4 }, // Top left
-      5: { x: -radiusX - 60, y: radiusY * 0.4 }, // Bottom left
+    // Start from bottom (π/2) and go clockwise
+    const angle =
+      Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
+
+    return {
+      x: (radiusX + padding) * Math.cos(angle) - HOOD_WIDTH / 2,
+      y: (radiusY + padding) * Math.sin(angle) - CARD_HEIGHT / 2,
     };
+  }
 
-    return positions[relativePosition];
+  #getBetPosition() {
+    const state = this.getState();
+    const participantIndex = state.participants.findIndex(
+      (p) => p.id === this.participantId,
+    );
+    const currentUserIndex = state.participants.findIndex(
+      (p) => p.playerId === state.currentUserId,
+    );
+    const playerCount = state.participants.length;
+    const relativePosition =
+      (participantIndex - currentUserIndex + playerCount) % playerCount;
+
+    const angle =
+      Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
+
+    const playerRadiusX = TABLE_RADIUS_X + 60;
+    const playerRadiusY = TABLE_RADIUS_Y + 60;
+
+    const betRadiusX = TABLE_RADIUS_X * 0.55;
+    const betRadiusY = TABLE_RADIUS_Y * 0.55;
+
+    // Difference in radii
+    const offsetX = (betRadiusX - playerRadiusX) * Math.cos(angle);
+    const offsetY = (betRadiusY - playerRadiusY) * Math.sin(angle);
+
+    return { x: offsetX, y: offsetY };
   }
 
   async animateHandGiven(tableContainer, timing) {

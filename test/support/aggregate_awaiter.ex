@@ -7,7 +7,7 @@ defmodule Poker.TestSupport.ProcessManagerAwaiter do
   for the system to settle.
   """
 
-  @settle_time_ms 100
+  @settle_time_ms 50
 
   def wait_to_settle do
     Process.sleep(@settle_time_ms)

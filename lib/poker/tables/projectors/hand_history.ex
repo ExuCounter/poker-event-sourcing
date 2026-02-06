@@ -9,7 +9,7 @@ defmodule Poker.Tables.Projectors.HandHistory do
 
   project(%Poker.Tables.Events.HandStarted{} = event, metadata, fn multi ->
     initial_state =
-      case find_previous_hand(event.table_id) |> dbg() do
+      case find_previous_hand(event.table_id) do
         nil ->
           %Poker.Tables.Aggregates.Table{}
           |> replay_events_from(

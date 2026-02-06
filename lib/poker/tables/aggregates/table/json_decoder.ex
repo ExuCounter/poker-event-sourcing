@@ -84,13 +84,13 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   end
 
   defp decode_hand_position(%{position: position} = hand) when is_binary(position) do
-    %{hand | position: String.to_existing_atom(position)}
+    %{hand | position: String.to_atom(position)}
   end
 
   defp decode_hand_position(hand), do: hand
 
   defp decode_hand_status(%{status: status} = hand) when is_binary(status) do
-    %{hand | status: String.to_existing_atom(status)}
+    %{hand | status: String.to_atom(status)}
   end
 
   defp decode_hand_status(hand), do: hand
@@ -99,7 +99,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_round(%Table{round: nil} = table), do: table
 
   defp decode_round(%Table{round: %{type: type} = round} = table) when is_binary(type) do
-    updated_round = %{round | type: String.to_existing_atom(type)}
+    updated_round = %{round | type: String.to_atom(type)}
     %{table | round: updated_round}
   end
 
@@ -116,7 +116,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_pots(table), do: table
 
   defp decode_pot(%{type: type} = pot) when is_binary(type) do
-    %{pot | type: String.to_existing_atom(type)}
+    %{pot | type: String.to_atom(type)}
   end
 
   defp decode_pot(pot), do: pot

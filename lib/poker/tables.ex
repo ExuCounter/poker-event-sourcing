@@ -28,7 +28,7 @@ defmodule Poker.Tables do
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateTable.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       {:ok,
        %{
          table_id: table_id,
@@ -51,7 +51,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &JoinTableParticipant.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       {:ok, participant_id}
     end
   end
@@ -62,8 +62,8 @@ defmodule Poker.Tables do
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &StartTable.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
-      {:ok, :table_started}
+         :ok <- Poker.App.dispatch(command) do
+      :ok
     end
   end
 
@@ -78,7 +78,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &ParticipantFold.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -94,7 +94,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &ParticipantCheck.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -110,7 +110,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &ParticipantCall.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -127,7 +127,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &ParticipantRaise.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -143,7 +143,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &ParticipantAllIn.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -156,7 +156,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &SitOutParticipant.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
@@ -169,7 +169,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &SitInParticipant.changeset/1),
-         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+         :ok <- Poker.App.dispatch(command) do
       :ok
     end
   end
