@@ -46,23 +46,27 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     stream_id = "table-#{table_id}"
 
     if is_nil(since_version) do
-      with {:ok, snapshot} <- Poker.EventStore.read_snapshot(stream_id) do
+      with {:ok, snapshot} <- Commanded.EventStore.read_snapshot(Poker.App, stream_id) do
         events_after_snapshot =
-          stream_id
-          |> Poker.EventStore.stream_forward(snapshot.source_version + 1)
+          Poker.App
+          |> Commanded.EventStore.stream_forward(stream_id, snapshot.source_version + 1)
           |> Enum.to_list()
+
+        dbg(snapshot.source_version)
 
         aggregate =
           events_after_snapshot
           |> Enum.map(& &1.data)
           |> Enum.reduce(snapshot.data, &Table.apply(&2, &1))
 
+        dbg(aggregate.participants)
+
         %{aggregate: aggregate, latest_version: get_latest_version(events_after_snapshot)}
       else
         {:error, :snapshot_not_found} ->
           all_events =
-            stream_id
-            |> Poker.EventStore.stream_forward()
+            Poker.App
+            |> Commanded.EventStore.stream_forward(stream_id)
             |> Enum.to_list()
 
           aggregate =
@@ -78,12 +82,14 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       if hand_history do
         initial_aggregate = :erlang.binary_to_term(hand_history.initial_state)
 
-        {:ok, hand_events} =
-          Poker.EventStore.read_stream_forward(
+        hand_events =
+          Commanded.EventStore.stream_forward(
+            Poker.App,
             stream_id,
-            hand_history.start_version,
-            since_version - hand_history.start_version + 1
+            hand_history.start_version
           )
+          |> Enum.take(since_version - hand_history.start_version + 1)
+          |> Enum.to_list()
 
         hand_events = Enum.to_list(hand_events)
 
@@ -94,12 +100,13 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
         %{aggregate: aggregate, latest_version: since_version}
       else
-        {:ok, all_events} =
-          Poker.EventStore.read_stream_forward(
+        all_events =
+          Commanded.EventStore.stream_forward(
+            Poker.App,
             stream_id,
-            0,
-            since_version + 1
+            0
           )
+          |> Enum.to_list()
 
         all_events = Enum.to_list(all_events)
 
@@ -138,7 +145,10 @@ defmodule Poker.Tables.Views.GameStateBuilder do
           default_actions()
         end,
       latest_version: latest_version,
-      hand_status: get_hand_status(aggregate)
+      hand_status: get_hand_status(aggregate),
+      timeout_seconds: get_timeout_seconds(aggregate),
+      current_turn: get_current_turn(aggregate),
+      timeout_info: build_timeout_info(aggregate)
     }
   end
 
@@ -237,7 +247,8 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         status: participant.status,
         bet_this_round: get_bet_this_round(participant_hand),
         hand_status: get_participant_hand_status(participant_hand),
-        hole_cards: hole_cards
+        hole_cards: hole_cards,
+        is_sitting_out: participant.is_sitting_out
       }
     end)
   end
@@ -278,6 +289,28 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   defp get_big_blind(%{settings: %{big_blind: bb}}), do: bb
   defp get_big_blind(_), do: 0
 
+  defp get_timeout_seconds(%{settings: %{timeout_seconds: timeout}}), do: timeout
+  defp get_timeout_seconds(_), do: nil
+
+  defp get_current_turn(%{round: %{participant_to_act_id: participant_id}})
+       when not is_nil(participant_id) do
+    %{
+      participant_id: participant_id
+    }
+  end
+
+  defp get_current_turn(_), do: nil
+
+  defp build_timeout_info(%{round: %{started_at: started_at, timeout_seconds: timeout_seconds}})
+       when not is_nil(started_at) and not is_nil(timeout_seconds) do
+    %{
+      started_at: started_at,
+      timeout_seconds: timeout_seconds
+    }
+  end
+
+  defp build_timeout_info(_), do: nil
+
   # VALID ACTIONS CALCULATION
 
   defp calculate_valid_actions(_aggregate, nil), do: default_actions()
@@ -286,7 +319,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     # Check if it's player's turn
     is_my_turn = is_my_turn?(aggregate, current_participant)
 
-    unless is_my_turn and aggregate.status != :finished do
+    unless is_my_turn and aggregate.status not in [:finished, :paused] do
       default_actions()
     else
       current_bet = get_current_bet(aggregate)

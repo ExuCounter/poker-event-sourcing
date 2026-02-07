@@ -10,7 +10,9 @@ defmodule Poker.Tables.Projectors.TableLobby do
     TableFinished,
     ParticipantJoined,
     ParticipantBusted,
-    TableStarted
+    TableStarted,
+    TablePaused,
+    TableResumed
   }
 
   alias Poker.Tables.Projections.TableLobby
@@ -29,6 +31,7 @@ defmodule Poker.Tables.Projectors.TableLobby do
       starting_stack: starting_stack,
       creator_id: creator_id
     },
+    _metadata,
     fn multi ->
       seats_count = max_seats(table_type)
 
@@ -46,11 +49,11 @@ defmodule Poker.Tables.Projectors.TableLobby do
     end
   )
 
-  project(%TableStarted{id: id, status: status}, fn multi ->
+  project(%TableStarted{id: id, status: status}, _metadata, fn multi ->
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
   end)
 
-  project(%ParticipantJoined{table_id: id, player_id: player_id}, fn multi ->
+  project(%ParticipantJoined{table_id: id, player_id: player_id}, _metadata, fn multi ->
     user = Poker.Accounts.get_user!(player_id)
 
     participant_data = %{
@@ -59,8 +62,8 @@ defmodule Poker.Tables.Projectors.TableLobby do
     }
 
     multi
-    |> Ecto.Multi.run(:get_table, fn repo, _changes ->
-      case repo.get(TableLobby, id) do
+    |> Ecto.Multi.run(:get_table, fn _repo, _changes ->
+      case Poker.Repo.get(TableLobby, id) do
         nil -> {:error, :table_not_found}
         table -> {:ok, table}
       end
@@ -82,6 +85,14 @@ defmodule Poker.Tables.Projectors.TableLobby do
 
   project(%TableFinished{table_id: id}, fn multi ->
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
+  end)
+
+  project(%TablePaused{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :paused])
+  end)
+
+  project(%TableResumed{table_id: id}, fn multi ->
+    Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :live])
   end)
 
   def after_update(%TableCreated{id: _table_id}, _metadata, _changes), do: :ok
@@ -112,5 +123,13 @@ defmodule Poker.Tables.Projectors.TableLobby do
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
     Poker.TableEvents.broadcast_lobby(table_id, :table_finished)
+  end
+
+  def after_update(%TablePaused{table_id: table_id}, _metadata, _changes) do
+    Poker.TableEvents.broadcast_lobby(table_id, :table_paused)
+  end
+
+  def after_update(%TableResumed{table_id: table_id}, _metadata, _changes) do
+    Poker.TableEvents.broadcast_lobby(table_id, :table_resumed)
   end
 end

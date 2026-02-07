@@ -57,13 +57,14 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   defp find_next_active_participant(participants, start_index) do
     total = length(participants)
 
-    # Generate indices for one full cycle starting from next position
     indices = for offset <- 1..total, do: rem(start_index + offset, total)
 
     Enum.find_value(indices, fn index ->
       participant = Enum.at(participants, index)
 
-      if participant.status == :active and participant.chips > 0, do: participant
+      if participant.status == :active and participant.chips > 0 do
+        participant
+      end
     end)
   end
 
@@ -82,6 +83,13 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   def filter_active_participants(participants) do
     Enum.filter(participants, &(&1.status == :active))
+  end
+
+  @doc """
+  Filters participants who are active and not sitting out (eligible to play in hand).
+  """
+  def filter_playing_participants(participants) do
+    Enum.filter(participants, &(&1.status == :active and not &1.is_sitting_out))
   end
 
   def update_participant(table, participant_id, fun) when is_function(fun, 1) do
@@ -124,7 +132,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     count_of_folded_participant_hands =
       table.participant_hands |> Enum.filter(fn hand -> hand.status in [:folded] end) |> length()
 
-    count_of_participant_hands - 1 == count_of_folded_participant_hands
+    count_of_participant_hands - count_of_folded_participant_hands <= 1
   end
 
   def runout?(table) do
@@ -140,6 +148,27 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
   def heads_up?(table) do
     length(table.participant_hands) == 2
+  end
+
+  @doc """
+  Returns true if all active participants (not busted) are sitting out.
+  Returns false if there are no active participants or if at least one is not sitting out.
+  """
+  def all_active_sitting_out?(participants) do
+    active_participants = filter_active_participants(participants)
+
+    case active_participants do
+      [] -> false
+      participants_list -> Enum.all?(participants_list, fn p -> p.is_sitting_out end)
+    end
+  end
+
+  @doc """
+  Returns true if there is at least one active participant who is not sitting out.
+  """
+  def has_participant_not_sitting_out?(participants) do
+    active_participants = filter_active_participants(participants)
+    Enum.any?(active_participants, fn p -> not p.is_sitting_out end)
   end
 
   # Utility functions

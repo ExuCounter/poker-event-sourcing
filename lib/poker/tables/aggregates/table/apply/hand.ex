@@ -36,7 +36,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
       position: event.position,
       status: event.status,
       bet_this_round: event.bet_this_round,
-      total_bet_this_hand: event.total_bet_this_hand
+      total_bet_this_hand: event.total_bet_this_hand,
+      folded_at: nil
     }
 
     %Table{table | participant_hands: participant_hands ++ [new_participant_hand]}

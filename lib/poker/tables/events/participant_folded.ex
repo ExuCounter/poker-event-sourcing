@@ -6,7 +6,8 @@ defmodule Poker.Tables.Events.ParticipantFolded do
              :table_hand_id,
              :table_id,
              :status,
-             :round
+             :round,
+             :folded_at
            ]}
   defstruct [
     :id,
@@ -14,6 +15,7 @@ defmodule Poker.Tables.Events.ParticipantFolded do
     :table_hand_id,
     :table_id,
     :status,
-    :round
+    :round,
+    :folded_at
   ]
 end

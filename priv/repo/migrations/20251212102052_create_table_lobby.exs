@@ -8,7 +8,7 @@ defmodule Poker.Repo.Migrations.CreateTableLobby do
     execute(create_enum, drop_enum)
 
     create table(:table_lobby, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :small_blind, :integer, null: false
       add :big_blind, :integer, null: false
       add :starting_stack, :integer, null: false

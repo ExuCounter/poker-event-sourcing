@@ -38,6 +38,7 @@ defmodule Poker.SeedFactorySchema do
   command :create_table do
     param(:player, entity: :player)
     param(:type, value: :six_max)
+    param(:subscribe_to_pub_sub?, value: false)
 
     param(:settings,
       value: %{
@@ -53,13 +54,15 @@ defmodule Poker.SeedFactorySchema do
 
       {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
 
-      Poker.TableEvents.subscribe_to_table(table_id)
-
       aggregate_state = aggregate_state(:table, table_id)
 
-      ExUnit.Callbacks.on_exit(fn ->
-        Poker.TableEvents.unsubscribe_from_table(table_id)
-      end)
+      if args.subscribe_to_pub_sub? do
+        Poker.TableEvents.subscribe_to_table(table_id)
+
+        ExUnit.Callbacks.on_exit(fn ->
+          Poker.TableEvents.unsubscribe_from_table(table_id)
+        end)
+      end
 
       {:ok, %{table: aggregate_state}}
     end)
@@ -230,6 +233,38 @@ defmodule Poker.SeedFactorySchema do
 
         :ok = Poker.Tables.all_in_hand(args.table.id, acting_player_id)
       end)
+
+      table = aggregate_state(:table, args.table.id)
+
+      {:ok, %{table: table}}
+    end)
+
+    update(:table)
+  end
+
+  command :sit_out do
+    param(:table, entity: :table)
+
+    resolve(fn args ->
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.sit_out_participant(args.table.id, acting_player_id)
+
+      table = aggregate_state(:table, args.table.id)
+
+      {:ok, %{table: table}}
+    end)
+
+    update(:table)
+  end
+
+  command :sit_in do
+    param(:table, entity: :table)
+
+    resolve(fn args ->
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.sit_in_participant(args.table.id, acting_player_id)
 
       table = aggregate_state(:table, args.table.id)
 

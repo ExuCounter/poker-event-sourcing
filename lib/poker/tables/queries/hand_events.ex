@@ -82,12 +82,14 @@ defmodule Poker.Tables.Queries.HandEvents do
     stream_id = "table-#{hand_history.table_id}"
     count = hand_history.end_version - hand_history.start_version
 
-    {:ok, events} =
-      Poker.EventStore.read_stream_forward(
+    events =
+      Commanded.EventStore.stream_forward(
+        Poker.App,
         stream_id,
-        hand_history.start_version,
-        count
+        hand_history.start_version
       )
+      |> Enum.take(count)
+      |> Enum.to_list()
 
     events
   end

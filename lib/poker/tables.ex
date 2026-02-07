@@ -9,7 +9,8 @@ defmodule Poker.Tables do
     ParticipantRaise,
     ParticipantAllIn,
     SitOutParticipant,
-    SitInParticipant
+    SitInParticipant,
+    TimeoutParticipant
   }
 
   import Ecto.Query
@@ -28,7 +29,7 @@ defmodule Poker.Tables do
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateTable.changeset/1),
-         :ok <- Poker.App.dispatch(command) do
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
       {:ok,
        %{
          table_id: table_id,
@@ -51,7 +52,7 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &JoinTableParticipant.changeset/1),
-         :ok <- Poker.App.dispatch(command) do
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
       {:ok, participant_id}
     end
   end
@@ -148,10 +149,10 @@ defmodule Poker.Tables do
     end
   end
 
-  def sit_out(participant) do
+  def sit_out_participant(table_id, player_id) do
     command_attrs = %{
-      participant_id: participant.id,
-      table_id: participant.table_id
+      player_id: player_id,
+      table_id: table_id
     }
 
     with {:ok, command} <-
@@ -161,15 +162,23 @@ defmodule Poker.Tables do
     end
   end
 
-  def sit_in(participant) do
+  def sit_in_participant(table_id, player_id) do
     command_attrs = %{
-      participant_id: participant.id,
-      table_id: participant.table_id
+      player_id: player_id,
+      table_id: table_id
     }
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &SitInParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command) do
+      :ok
+    end
+  end
+
+  def timeout_participant(attrs) do
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(attrs, &TimeoutParticipant.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end
   end

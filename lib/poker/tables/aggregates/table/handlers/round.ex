@@ -16,6 +16,19 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
     {:error, :hand_id_mismatch}
   end
 
+  def handle(
+        %{participant_to_act_id: nil} = table,
+        %StartRound{hand_id: command_hand_id} = _command
+      ) do
+    %RoundCompleted{
+      id: table.round.id,
+      hand_id: table.hand.id,
+      type: table.round.type,
+      table_id: table.id,
+      reason: :all_acted
+    }
+  end
+
   def handle(table, %StartRound{} = command) do
     if Helpers.runout?(table) do
       table
@@ -64,7 +77,9 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
       %ParticipantToActSelected{
         table_id: table.id,
         round_id: command.round_id,
-        participant_id: participant_to_act.id
+        participant_id: participant_to_act.id,
+        timeout_seconds: table.settings.timeout_seconds,
+        started_at: DateTime.utc_now() |> DateTime.to_iso8601()
       }
     ]
   end

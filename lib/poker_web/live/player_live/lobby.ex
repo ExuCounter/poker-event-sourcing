@@ -31,7 +31,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
     case Tables.join_participant(socket.assigns.current_scope, %{
            table_id: socket.assigns.table_id
          }) do
-      {:ok, _participant} ->
+      {:ok, _participant_id} ->
         {:noreply,
          socket
          |> put_flash(:info, "Successfully joined the table")
@@ -48,7 +48,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
   @impl true
   def handle_event("start_table", _params, socket) do
     case Tables.start_table(socket.assigns.current_scope, socket.assigns.table_id) do
-      {:ok, _} ->
+      :ok ->
         {:noreply,
          socket
          |> put_flash(:info, "Table started!")
@@ -148,7 +148,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
               <div class="text-gray-500">Table is full ({@lobby.seats_count} max)</div>
             <% end %>
 
-            <%= if @lobby.status == :waiting && @lobby.seated_count >= 2 && @lobby.creator_id == @user_id do %>
+            <%= if @lobby.status in [:waiting, :live] && @lobby.seated_count >= 2 && @lobby.creator_id == @user_id do %>
               <.button phx-click="start_table">
                 Start Game
               </.button>

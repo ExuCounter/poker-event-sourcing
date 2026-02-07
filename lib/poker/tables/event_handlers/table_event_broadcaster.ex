@@ -16,7 +16,7 @@ defmodule Poker.Tables.EventHandlers.TableEventBroadcaster do
   # Generic handler for all table events
   def handle(event, metadata)
       when is_map(event) and is_map_key(event, :table_id) and
-           is_map_key(metadata, :event_id) and is_map_key(metadata, :stream_version) do
+             is_map_key(metadata, :event_id) and is_map_key(metadata, :stream_version) do
     # Use EventTransformer for consistent formatting
     transformed_event = EventTransformer.transform(event, metadata)
 

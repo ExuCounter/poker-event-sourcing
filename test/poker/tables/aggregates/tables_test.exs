@@ -74,7 +74,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       %{player: player} = produce(ctx, :player)
 
-      assert {:error, :table_already_started} =
+      assert {:error, :cannot_join_started_or_finished_table} =
                Poker.Tables.join_participant(ctx.table.id, player.id)
     end
 
@@ -164,20 +164,14 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
     test "should calculate pot correctly after first round", ctx do
       ctx = ctx |> exec(:start_table)
+      ctx = ctx |> exec(:advance_round)
 
-      [pot1, pot2] = ctx.table.pots
+      [pot1] = ctx.table.pots
 
-      assert pot1.amount == ctx.table.settings.small_blind * 2
-      assert pot1.bet_amount == ctx.table.settings.small_blind
+      assert pot1.amount == ctx.table.settings.big_blind * 6
+      assert pot1.bet_amount == ctx.table.settings.big_blind
 
-      assert pot1.contributing_participant_ids == [
-               ctx.positions.small_blind.participant.id,
-               ctx.positions.big_blind.participant.id
-             ]
-
-      assert pot2.amount == ctx.table.settings.big_blind - ctx.table.settings.small_blind
-      assert pot2.bet_amount == ctx.table.settings.big_blind - ctx.table.settings.small_blind
-      assert pot2.contributing_participant_ids == [ctx.positions.big_blind.participant.id]
+      assert length(pot1.contributing_participant_ids) == 6
     end
 
     test "should deal flop after betting round", ctx do
@@ -380,7 +374,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
         Poker.Tables.Events.PayoutDistributed,
         fn event ->
           assert event.amount > 0
-          assert event.pot_type == :main
+          assert event.pot_type == :combined
           assert event.hand_rank == nil
         end
       )
@@ -410,7 +404,6 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
       assert ctx.table.hand.id != previous_table.hand.id
       assert ctx.table.community_cards == []
-      assert ctx.table.pots != previous_table.pots
       assert ctx.table.round.type == :pre_flop
     end
 
@@ -431,12 +424,42 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     test "all-in should start runout and finish the game", ctx do
       ctx = ctx |> setup_winning_hand() |> exec(:start_table)
 
-      prev_hand_id = ctx.table.hand.id
-
       ctx = ctx |> exec(:all_in_hand)
       ctx = ctx |> exec(:all_in_hand)
 
       assert ctx.table.status == :finished
+    end
+  end
+
+  describe "sit out" do
+    test "player should fold it's hand on sit out", ctx do
+      [player1, player2] =
+        for _ <- 1..2 do
+          %{player: player} = produce(ctx, :player)
+          player
+        end
+
+      ctx =
+        ctx
+        |> exec(:create_table, type: :six_max)
+        |> exec(:add_participants, players: [player1, player2])
+        |> exec(:start_table)
+
+      sit_out_participant_id = ctx.table.round.participant_to_act_id
+
+      ctx = ctx |> exec(:sit_out)
+
+      sit_out_participant = Enum.find(ctx.table.participants, &(&1.id == sit_out_participant_id))
+
+      assert_receive_event(Poker.App, Poker.Tables.Events.ParticipantSatOut, fn event ->
+        assert event.participant_id == sit_out_participant_id
+      end)
+
+      assert_receive_event(Poker.App, Poker.Tables.Events.ParticipantFolded, fn event ->
+        assert event.participant_id == sit_out_participant_id
+      end)
+
+      assert sit_out_participant.is_sitting_out
     end
   end
 end

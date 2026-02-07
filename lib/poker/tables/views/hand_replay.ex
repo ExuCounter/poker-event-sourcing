@@ -182,12 +182,14 @@ defmodule Poker.Tables.Views.HandReplay do
     aggregate = :erlang.binary_to_term(hand_history.initial_state)
     stream_id = "table-#{table_id}"
 
-    {:ok, [hand_started_event]} =
-      Poker.EventStore.read_stream_forward(
+    hand_started_event =
+      Commanded.EventStore.stream_forward(
+        Poker.App,
         stream_id,
-        hand_history.start_version,
-        1
+        hand_history.start_version
       )
+      |> Enum.take(1)
+      |> List.first()
 
     aggregate = Table.apply(aggregate, hand_started_event.data)
 

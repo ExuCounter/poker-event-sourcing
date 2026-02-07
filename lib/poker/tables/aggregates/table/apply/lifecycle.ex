@@ -4,7 +4,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   """
 
   alias Poker.Tables.Aggregates.Table
-  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished}
+  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed}
 
   def apply(%Table{} = _table, %TableCreated{} = created) do
     settings = %{
@@ -33,5 +33,13 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
 
   def apply(%Table{} = table, %TableFinished{}) do
     %Table{table | status: :finished}
+  end
+
+  def apply(%Table{} = table, %TablePaused{}) do
+    %Table{table | status: :paused}
+  end
+
+  def apply(%Table{} = table, %TableResumed{}) do
+    %Table{table | status: :live}
   end
 end

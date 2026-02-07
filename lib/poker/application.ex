@@ -10,6 +10,7 @@ defmodule Poker.Application do
       Poker.App,
       PokerWeb.Telemetry,
       Poker.Repo,
+      {Oban, Application.fetch_env!(:poker, Oban)},
       {DNSCluster, query: Application.get_env(:poker, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Poker.PubSub},
       # Start a worker by calling: Poker.Worker.start_link(arg)

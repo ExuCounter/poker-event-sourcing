@@ -46,4 +46,12 @@ defmodule PokerWeb.Api.Tables do
   def all_in_hand(%{user: user} = _scope, table_id) do
     Poker.Tables.all_in_hand(table_id, user.id)
   end
+
+  def sit_out_participant(%{user: user} = _scope, table_id) do
+    Poker.Tables.sit_out_participant(table_id, user.id)
+  end
+
+  def sit_in_participant(%{user: user} = _scope, table_id) do
+    Poker.Tables.sit_in_participant(table_id, user.id)
+  end
 end

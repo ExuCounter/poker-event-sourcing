@@ -24,6 +24,7 @@ defmodule Poker.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Poker.DataCase
+      import Commanded.Assertions.EventAssertions
 
       import Mox
 
@@ -59,6 +60,7 @@ defmodule Poker.DataCase do
   """
   def setup_sandbox(tags) do
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Poker.Repo, shared: not tags[:async])
+
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 

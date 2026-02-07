@@ -26,6 +26,7 @@ export const PokerCanvas = {
     this.lobbyState = lobbyState;
     this.currentUserId = currentUserId;
     this.isReplayMode = mode === "replay";
+    this.timeoutAnimationFrame = null;
 
     console.log(this.state);
 
@@ -84,6 +85,7 @@ export const PokerCanvas = {
 
     switch (event.type) {
       case "ParticipantRaised":
+        this.stopTimeoutAnimation();
         this.sounds.raise.play();
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
@@ -101,9 +103,11 @@ export const PokerCanvas = {
         await this.animateParticipantHandGiven(event, timing);
         break;
       case "ParticipantFolded":
+        this.stopTimeoutAnimation();
         this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantCalled":
+        this.stopTimeoutAnimation();
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -116,6 +120,7 @@ export const PokerCanvas = {
         this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantWentAllIn":
+        this.stopTimeoutAnimation();
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -127,11 +132,18 @@ export const PokerCanvas = {
         await this.showdownParticipantCards(event, timing);
         break;
       case "HandFinished":
+        this.stopTimeoutAnimation();
         await this.wait(timing.duration);
         await this.handleHandFinish(event, timing);
         break;
       case "PotsRecalculated":
         await this.animateBetChipsCollectToPot(event, timing);
+        break;
+      case "ParticipantToActSelected":
+        this.startTimeoutAnimation();
+        break;
+      case "ParticipantChecked":
+        this.stopTimeoutAnimation();
         break;
       default:
         return;
@@ -303,20 +315,6 @@ export const PokerCanvas = {
     tableGraphics.ellipse(0, 4, TABLE_RADIUS_X + 15, TABLE_RADIUS_Y + 15);
     tableGraphics.fill({ color: 0x000000, alpha: 0.03 });
 
-    const boundingBoxX = -(TABLE_RADIUS_X + 15);
-    const boundingBoxY = 4 - (TABLE_RADIUS_Y + 15);
-    const boundingBoxWidth = (TABLE_RADIUS_X + 15) * 2;
-    const boundingBoxHeight = (TABLE_RADIUS_Y + 15) * 2;
-
-    // Draw rectangle around it
-    tableGraphics.rect(
-      boundingBoxX,
-      boundingBoxY,
-      boundingBoxWidth,
-      boundingBoxHeight,
-    );
-    tableGraphics.stroke({ color: 0xff0000, width: 2 });
-
     // Main table felt
     tableGraphics.ellipse(0, 0, TABLE_RADIUS_X, TABLE_RADIUS_Y);
     tableGraphics.fill(0x35654d);
@@ -341,8 +339,6 @@ export const PokerCanvas = {
       this.renderers.totalPot.getContainer(),
     );
     this.renderers.totalPot.render(this.state.totalPot);
-
-    this.renderers.totalPot.container.position.set(0, 30);
 
     // Initialize CommunityCardsRenderer
     this.renderers.communityCards = new CommunityCardsRenderer(
@@ -374,6 +370,39 @@ export const PokerCanvas = {
     await this.createTable();
     this.renderCommunityCards();
     this.resize();
+  },
+
+  startTimeoutAnimation() {
+    if (this.timeoutAnimationFrame) {
+      cancelAnimationFrame(this.timeoutAnimationFrame);
+    }
+
+    const animate = () => {
+      if (this.state?.timeoutInfo) {
+        // Find the active participant
+        const activeParticipant = this.state.participants.find(
+          (p) => p.id === this.state.currentTurn?.participantId,
+        );
+
+        if (activeParticipant) {
+          const renderer = this.renderers.participants.get(
+            activeParticipant.id,
+          );
+          renderer?.renderTimeoutProgress();
+        }
+
+        this.timeoutAnimationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animate();
+  },
+
+  stopTimeoutAnimation() {
+    if (this.timeoutAnimationFrame) {
+      cancelAnimationFrame(this.timeoutAnimationFrame);
+      this.timeoutAnimationFrame = null;
+    }
   },
 
   wait(ms) {

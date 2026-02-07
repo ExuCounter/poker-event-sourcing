@@ -16,7 +16,10 @@ defmodule Poker.Router do
     SitInParticipant,
     SitOutParticipant,
     StartRound,
-    FinishHand
+    FinishHand,
+    TimeoutParticipant,
+    ResumeTable,
+    PauseTable
   }
 
   alias Poker.Tables.Aggregates.{Table}
@@ -39,7 +42,10 @@ defmodule Poker.Router do
       SitInParticipant,
       SitOutParticipant,
       StartRound,
-      FinishHand
+      FinishHand,
+      TimeoutParticipant,
+      ResumeTable,
+      PauseTable
     ],
     to: Table
   )

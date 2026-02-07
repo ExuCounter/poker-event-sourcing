@@ -1,6 +1,3 @@
-==> oban
-Compiling 64 files (.ex)
-Generated oban app
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Config module.
 #
@@ -37,8 +34,8 @@ config :poker, Poker.App,
   registry: :local,
   snapshotting: %{
     Poker.Tables.Aggregates.Table => [
-      snapshot_every: 30,
-      snapshot_version: 2
+      snapshot_every: 10,
+      snapshot_version: 6
     ]
   }
 
@@ -93,8 +90,9 @@ config :phoenix, :json_library, Jason
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Implementation
 
+# Configure Oban
 config :poker, Oban,
-  repo: Pt.Repo,
+  repo: Poker.Repo,
   queues: [tables: 10]
 
 # Import environment specific config. This must remain at the bottom

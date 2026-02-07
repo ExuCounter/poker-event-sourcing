@@ -27,8 +27,10 @@ defmodule Poker.Storage do
     """
     TRUNCATE TABLE
       table_pot_winners,
+      hand_histories,
       table_pots,
       tables,
+      table_hands,
       table_participants,
       table_participant_hands,
       table_rounds,

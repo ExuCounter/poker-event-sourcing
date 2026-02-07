@@ -14,7 +14,9 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Round do
       id: event.id,
       type: event.type,
       acted_participant_ids: [],
-      participant_to_act_id: nil
+      participant_to_act_id: nil,
+      started_at: nil,
+      timeout_seconds: nil
     }
 
     updated_community_cards = community_cards ++ event.community_cards

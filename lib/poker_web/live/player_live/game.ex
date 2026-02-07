@@ -25,12 +25,16 @@ defmodule PokerWeb.PlayerLive.Game do
           socket
         end
 
+      current_participant =
+        find_current_participant(game_view.participants, socket.assigns.current_scope.user.id)
+
       {:ok,
        assign(socket,
          table_id: table_id,
          lobby: lobby,
          game_view: game_view,
          current_user_id: socket.assigns.current_scope.user.id,
+         current_participant: current_participant,
          raise_amount: nil,
          current_animated_event_id: nil,
          queue: []
@@ -63,7 +67,10 @@ defmodule PokerWeb.PlayerLive.Game do
         processed_stream_version
       )
 
-    socket = assign(socket, queue: remaining_queue)
+    current_participant =
+      find_current_participant(game_view.participants, socket.assigns.current_user_id)
+
+    socket = assign(socket, queue: remaining_queue, current_participant: current_participant)
     socket = process_next_event(socket)
 
     {:noreply, assign(socket, :game_view, game_view)}
@@ -114,6 +121,22 @@ defmodule PokerWeb.PlayerLive.Game do
     {:noreply, assign(socket, raise_amount: amount_int)}
   end
 
+  def handle_event("sit_out", _params, socket) do
+    case Tables.sit_out_participant(socket.assigns.current_scope, socket.assigns.table_id) do
+      :ok -> {:noreply, socket}
+      {:ok, _} -> {:noreply, socket}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
+    end
+  end
+
+  def handle_event("sit_in", _params, socket) do
+    case Tables.sit_in_participant(socket.assigns.current_scope, socket.assigns.table_id) do
+      :ok -> {:noreply, socket}
+      {:ok, _} -> {:noreply, socket}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
+    end
+  end
+
   defp process_next_event(socket) do
     case socket.assigns.queue do
       [] ->
@@ -144,6 +167,12 @@ defmodule PokerWeb.PlayerLive.Game do
   defp format_error(%{message: message}), do: message
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
 
+  defp find_current_participant(participants, player_id) when is_list(participants) do
+    Enum.find(participants, fn p -> p.player_id == player_id end)
+  end
+
+  defp find_current_participant(_, _), do: nil
+
   @impl true
   def render(assigns) do
     # Initialize raise_amount from game_view if not set
@@ -166,6 +195,21 @@ defmodule PokerWeb.PlayerLive.Game do
         data-state={JsonEncoder.transform_keys(@game_view) |> Jason.encode!()}
         data-current-user-id={@current_user_id}
       />
+      
+    <!-- Sit Out/In Button - bottom-left corner -->
+      <%= if @current_participant do %>
+        <div class="absolute left-5 bottom-5 z-10">
+          <button
+            phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
+            class={[
+              "px-5 py-3 rounded-lg font-medium text-sm transition-colors",
+              "bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+            ]}
+          >
+            {if @current_participant.is_sitting_out, do: "Sit In", else: "Sit Out"}
+          </button>
+        </div>
+      <% end %>
       
     <!-- Action Controls - positioned and scaled -->
       <div

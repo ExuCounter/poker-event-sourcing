@@ -32,6 +32,13 @@ export class ParticipantRenderer {
     this.betAreaContainer = new PIXI.Container();
 
     this.tableContainer.addChild(this.container);
+
+    // Timeout progress properties
+    this.progressArc = null;
+    this.countdownText = null;
+    this.alertSoundPlayed = false;
+    this.countdownPulseTween = null;
+    this.arcPulseTween = null;
   }
 
   render() {
@@ -158,7 +165,8 @@ export class ParticipantRenderer {
       (p) => p.id === this.participantId,
     );
 
-    const isFolded = participant.handStatus === "folded";
+    const isFolded =
+      participant.handStatus === "folded" || participant.isSittingOut;
     const isActive = participant.isActive || false;
 
     this.hoodContainer.zIndex = 2; // Above cards
@@ -334,6 +342,9 @@ export class ParticipantRenderer {
     const participant = state.participants.find(
       (p) => p.id === this.participantId,
     );
+
+    if (!participant.holeCards) return;
+
     const timeline = gsap.timeline();
 
     const globalCenter = tableContainer.toGlobal({
@@ -344,6 +355,7 @@ export class ParticipantRenderer {
     const localStart = this.container.toLocal(globalCenter);
 
     const cardRenderer = new CardRenderer();
+
     participant.holeCards.forEach((card, index) => {
       const cardSprite = cardRenderer.renderHoleCard(card);
 
@@ -368,6 +380,145 @@ export class ParticipantRenderer {
     });
 
     await timeline.then();
+  }
+
+  renderTimeoutProgress() {
+    // Remove existing progress arc if any
+    if (this.progressArc) {
+      this.hoodContainer.removeChild(this.progressArc);
+      this.progressArc = null;
+    }
+
+    const state = this.getState();
+    const participant = state.participants.find(
+      (p) => p.id === this.participantId,
+    );
+
+    if (!participant?.isActive || !state.timeoutInfo) return;
+
+    // Calculate time remaining
+    const startedAt = new Date(state.timeoutInfo.startedAt);
+    const now = new Date();
+    const elapsed = (now - startedAt) / 1000; // seconds
+    const remaining = Math.max(0, state.timeoutInfo.timeoutSeconds - elapsed);
+    const progress = remaining / state.timeoutInfo.timeoutSeconds;
+
+    // Determine arc color based on remaining time (blue → yellow → red)
+    let arcColor;
+    if (progress > 0.5) {
+      arcColor = 0x2563eb; // Blue (primary)
+    } else if (progress > 0.25) {
+      arcColor = 0xfbbf24; // Yellow/amber
+    } else {
+      arcColor = 0xef4444; // Red
+    }
+
+    // Create circular progress arc
+    const graphics = new PIXI.Graphics();
+    const radius = 60; // Adjust based on hood size
+    const lineWidth = 3;
+    const startAngle = -Math.PI / 2; // Start at top
+    const endAngle = startAngle + 2 * Math.PI * progress;
+
+    graphics.arc(HOOD_WIDTH / 2, HOOD_HEIGHT / 2, radius, startAngle, endAngle);
+    graphics.stroke({ color: arcColor, width: lineWidth });
+
+    this.progressArc = graphics;
+    this.hoodContainer.addChild(graphics);
+
+    // Show countdown when < 10s
+    if (remaining < 10 && remaining > 0) {
+      this.renderCountdown(Math.ceil(remaining), remaining <= 5);
+    } else if (this.countdownText) {
+      this.hoodContainer.removeChild(this.countdownText);
+      this.countdownText = null;
+    }
+
+    // Play alert sound at 5 seconds (once)
+    if (remaining <= 5 && remaining > 4.9 && !this.alertSoundPlayed) {
+      this.playTimeoutAlert();
+      this.alertSoundPlayed = true;
+    }
+    if (remaining > 5) {
+      this.alertSoundPlayed = false; // Reset for next timeout
+    }
+  }
+
+  renderCountdown(seconds, shouldPulse = false) {
+    if (!this.countdownText) {
+      this.countdownText = new PIXI.Text({
+        text: seconds.toString(),
+        style: {
+          fontSize: 24,
+          fontWeight: "bold",
+          fill: 0xff0000,
+        },
+      });
+      this.countdownText.anchor.set(0.5);
+      this.countdownText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT + 30);
+      this.hoodContainer.addChild(this.countdownText);
+    } else {
+      this.countdownText.text = seconds.toString();
+    }
+
+    // Add pulsing animation when <= 5 seconds
+    if (shouldPulse && !this.countdownPulseTween) {
+      this.countdownPulseTween = gsap.to(this.countdownText.scale, {
+        x: 1.3,
+        y: 1.3,
+        duration: 0.5,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut",
+      });
+
+      // Also pulse the progress arc
+      if (this.progressArc && !this.arcPulseTween) {
+        this.arcPulseTween = gsap.to(this.progressArc, {
+          alpha: 0.5,
+          duration: 0.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "power1.inOut",
+        });
+      }
+    }
+
+    // Stop pulsing when time is up or above 5s
+    if (!shouldPulse && this.countdownPulseTween) {
+      this.countdownPulseTween.kill();
+      this.countdownPulseTween = null;
+      this.countdownText.scale.set(1, 1);
+
+      if (this.arcPulseTween) {
+        this.arcPulseTween.kill();
+        this.arcPulseTween = null;
+        if (this.progressArc) this.progressArc.alpha = 1;
+      }
+    }
+  }
+
+  playTimeoutAlert() {
+    // Play a short beep sound
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 800; // Hz
+    oscillator.type = "sine";
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.3,
+    );
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
   }
 
   truncateText(text, maxLength) {

@@ -728,4 +728,45 @@ end
 6. [ ] Define projection schema in `/projections`
 7. [ ] Add projector handlers in `/projectors`
 
+# Repository Guidelines
+
+## AI Assistant Integration
+
+This project uses [Tidewave MCP](https://hexdocs.pm/tidewave) for enhanced Elixir/Phoenix development capabilities. AI agents should leverage Tidewave's tools when working with this codebase:
+
+- **`mcp__tidewave__project_eval`** - Evaluate Elixir code in project context with all dependencies loaded
+- **`mcp__tidewave__get_docs`** - Access documentation for modules, functions, and callbacks
+- **`mcp__tidewave__get_source_location`** - Find where modules, functions, or dependencies are defined
+- **`mcp__tidewave__get_ecto_schemas`** - List all Ecto schemas in the project
+- **`mcp__tidewave__execute_sql_query`** - Query the database directly to inspect schema or debug data
+- **`mcp__tidewave__search_package_docs`** - Search documentation across project dependencies
+- **`mcp__tidewave__get_logs`** - Check application logs for errors or request traces
+
+These tools provide deep framework integration and should be your first choice for Elixir/Phoenix development tasks. Refer to [Tidewave MCP documentation](https://hexdocs.pm/tidewave/mcp.html) for setup instructions if needed.
+
+## Project Structure & Module Organization
+Backend code runs as an Elixir umbrella: `apps/pt` contains core contexts, `apps/pt_web` serves Phoenix endpoints and assets in `priv`, and supporting integrations (mailbox, calendar, geocoding, etc.) live in sibling apps so you can limit compilation to relevant domains. Tests mirror each app under `apps/*/test`, with shared helpers in `apps/pt/test/support`. The React/Vite client sits in `frontend/`, Playwright suites in `e2e_tests/`, configuration in `config/`, and deployment artifacts under `deploy/` and `docker/`.
+
+## Preferred Workflows with Tidewave
+
+When working with Elixir code, prefer Tidewave tools over generic file operations:
+
+- **Instead of grep/search** - Use `get_source_location` to find module/function definitions, or `get_ecto_schemas` to list schemas
+- **Instead of reading docs** - Use `get_docs` for any Elixir/Phoenix/dependency documentation, or `search_package_docs` to search across packages
+- **Instead of IEx console** - Use `project_eval` to test code, debug, or explore module functions with IEx helpers (e.g., `exports(Module)`)
+- **Instead of psql** - Use `execute_sql_query` to inspect database state or debug data issues
+- **For debugging** - Use `get_logs` to check for errors/traces, or `project_eval` to test hypotheses about code behavior
+
+## Build, Test, and Development Commands
+Bootstrap Elixir tooling with `mise install` (or `asdf install` if needed) followed by `mix deps.get`. Use `mix ecto.setup` for a fresh database and `mix ecto.migrate` after schema changes. Start the API with `iex -S mix phx.server`. `mix test` runs through an alias that prepares the database; narrow scope with `mix test apps/pt/test/<file>`. Enforce style via `mix format` and `mix credo --strict`.
+
+## Coding Style & Naming Conventions
+Keep Elixir code formatter-clean (120-character width) and prefer explicit module names such as `Poker.Accounts`. Files stay snake_case, modules PascalCase, and long pipelines should be refactored into `with` blocks or private helpers. Address Credo warnings or document any exception with short comments.
+
+## Testing Guidelines
+ExUnit suites live beside code as `*_test.exs` files with descriptive `describe` blocks. Use factories from `test/support` and mock external services with Mox or Hammox. Generate CI artifacts with `mix test --formatter JunitFormatter`.
+
+## Commit & Pull Request Guidelines
+Commits follow `type[(scope)]: summary`, e.g. `feat: add poker table`. Keep schema updates and matching seeds together, and call out feature flags or config toggles in the body.
+
 <!-- usage-rules-end -->

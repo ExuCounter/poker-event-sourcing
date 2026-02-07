@@ -23,10 +23,13 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantChecked,
     ParticipantCalled,
     ParticipantRaised,
-    ParticipantWentAllIn
+    ParticipantWentAllIn,
+    ParticipantToActSelected
   }
 
   alias Poker.Tables.Aggregates.Table.Helpers
+  alias Poker.Tables.Aggregates.Table.Pot
+  alias Poker.Tables.Events.{PotsRecalculated, RoundCompleted}
 
   @max_players %{
     six_max: 6
@@ -35,8 +38,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   @doc """
   Handles participant commands.
   """
-  def handle(%{status: :live}, %JoinTableParticipant{}),
-    do: {:error, :table_already_started}
+  def handle(%{status: status}, %JoinTableParticipant{}) when status in [:live, :finished],
+    do: {:error, :cannot_join_started_or_finished_table}
 
   def handle(table, %JoinTableParticipant{} = command) do
     max_players = Map.fetch!(@max_players, table.settings.table_type)
@@ -63,36 +66,130 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   end
 
   def handle(table, %SitOutParticipant{} = command) do
-    participant = Enum.find(table.participants, &(&1.id == command.participant_id))
+    participant = Enum.find(table.participants, &(&1.player_id == command.player_id))
 
     if participant.is_sitting_out do
       {:error, :already_sat_out}
     else
-      %ParticipantSatOut{
-        participant_id: command.participant_id,
-        table_id: command.table_id
-      }
-    end
-  end
+      # Check if participant is in an active hand
+      participant_hand =
+        if table.hand && table.participant_hands do
+          Enum.find(table.participant_hands, fn hand ->
+            hand.participant_id == participant.id && hand.status == :playing
+          end)
+        else
+          nil
+        end
 
-  def handle(table, %SitInParticipant{} = command) do
-    participant = Enum.find(table.participants, &(&1.id == command.participant_id))
-
-    if participant && participant.is_sitting_out do
-      %ParticipantSatIn{
-        participant_id: command.participant_id,
-        table_id: command.table_id
-      }
-    else
-      if participant do
-        {:error, :already_sat_in}
+      if participant_hand do
+        # Active hand - use Multi pattern to fold, sit out, and switch turns
+        handle_sit_out_during_hand(table, command, participant_hand)
       else
-        # Participant doesn't exist, create sit in event anyway
-        %ParticipantSatIn{
-          participant_id: command.participant_id,
+        # No active hand - just sit out (no turn switching needed)
+        %ParticipantSatOut{
+          participant_id: participant.id,
           table_id: command.table_id
         }
       end
+    end
+  end
+
+  # Private function following TimeoutParticipant pattern
+  defp handle_sit_out_during_hand(
+         %{
+           hand: %{id: table_hand_id},
+           round: %{id: round_id, type: round_type}
+         } = table,
+         command,
+         participant_hand
+       ) do
+    table
+    |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn _table ->
+      [
+        %ParticipantFolded{
+          id: participant_hand.id,
+          participant_id: participant_hand.participant_id,
+          table_hand_id: table_hand_id,
+          table_id: command.table_id,
+          status: :folded,
+          round: round_type,
+          folded_at: DateTime.utc_now()
+        },
+        %ParticipantSatOut{
+          participant_id: participant_hand.participant_id,
+          table_id: command.table_id
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      next_participant = Helpers.find_next_participant_to_act(table)
+
+      if next_participant do
+        %ParticipantToActSelected{
+          table_id: table.id,
+          round_id: round_id,
+          participant_id: next_participant.id,
+          timeout_seconds: table.settings.timeout_seconds,
+          started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+      else
+        nil
+      end
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      all_acted? = Helpers.all_acted?(table)
+      all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
+
+      cond do
+        all_folded_except_one? ->
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_folded
+            }
+          ]
+
+        all_acted? ->
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_acted
+            }
+          ]
+
+        true ->
+          :ok
+      end
+    end)
+  end
+
+  def handle(table, %SitInParticipant{} = command) do
+    participant = Enum.find(table.participants, &(&1.player_id == command.player_id))
+
+    if participant && participant.is_sitting_out do
+      %ParticipantSatIn{
+        participant_id: participant.id,
+        table_id: command.table_id
+      }
+    else
+      :ok
     end
   end
 
@@ -107,7 +204,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         table_hand_id: table.hand.id,
         table_id: table.id,
         status: :folded,
-        round: table.round.type
+        round: table.round.type,
+        folded_at: DateTime.utc_now()
       }
     end
   end

@@ -54,3 +54,9 @@ config :poker, Poker.Services.Deck, dispatcher: Poker.Services.DeckMock
 config :commanded,
   assert_receive_event_timeout: 100,
   refute_receive_event_timeout: 100
+
+config :poker, Poker.App,
+  event_store: [
+    adapter: Commanded.EventStore.Adapters.InMemory,
+    serializer: Commanded.Serialization.JsonSerializer
+  ]

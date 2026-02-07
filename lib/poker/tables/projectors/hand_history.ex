@@ -9,7 +9,7 @@ defmodule Poker.Tables.Projectors.HandHistory do
 
   project(%Poker.Tables.Events.HandStarted{} = event, metadata, fn multi ->
     initial_state =
-      case find_previous_hand(event.table_id) do
+      case find_previous_hand(event.table_id, event.id) do
         nil ->
           %Poker.Tables.Aggregates.Table{}
           |> replay_events_from(
@@ -45,9 +45,9 @@ defmodule Poker.Tables.Projectors.HandHistory do
     )
   end)
 
-  defp find_previous_hand(table_id) do
+  defp find_previous_hand(table_id, hand_id) do
     from(h in Poker.Tables.Projections.HandHistory,
-      where: h.table_id == ^table_id,
+      where: h.table_id == ^table_id and h.hand_id < ^hand_id,
       order_by: [desc: h.hand_id],
       limit: 1
     )
@@ -57,9 +57,14 @@ defmodule Poker.Tables.Projectors.HandHistory do
   defp replay_events_from(state, table_id, from_version, to_version) do
     stream = "table-#{table_id}"
 
-    {:ok, new_events} =
-      stream
-      |> Poker.EventStore.read_stream_forward(from_version, to_version - from_version)
+    new_events =
+      Commanded.EventStore.stream_forward(
+        Poker.App,
+        stream,
+        from_version
+      )
+      |> Enum.take(to_version - from_version)
+      |> Enum.to_list()
 
     Enum.reduce(new_events, state, fn event, acc ->
       Poker.Tables.Aggregates.Table.apply(acc, event.data)

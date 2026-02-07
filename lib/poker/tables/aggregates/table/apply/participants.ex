@@ -16,7 +16,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     ParticipantCalled,
     ParticipantRaised,
     ParticipantWentAllIn,
-    ParticipantToActSelected
+    ParticipantToActSelected,
+    ParticipantTimedOut
   }
 
   def apply(%Table{participants: participants} = table, %ParticipantJoined{} = event) do
@@ -44,6 +45,12 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     Helpers.update_participant(table, participant_id, &%{&1 | status: :busted})
   end
 
+  def apply(%Table{} = table, %ParticipantTimedOut{} = _event) do
+    # No state change needed - this is informational
+    # The actual state changes come from ParticipantFolded and ParticipantSatOut
+    table
+  end
+
   # Participant action events - Fold
   def apply(%Table{round: round} = table, %ParticipantFolded{} = event) do
     updated_round = %{
@@ -53,7 +60,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
 
     table
     |> Helpers.update_participant_hand(event.participant_id, fn hand ->
-      %{hand | status: event.status}
+      %{hand | status: event.status, folded_at: event.folded_at}
     end)
     |> Map.put(:round, updated_round)
   end
@@ -141,6 +148,14 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
 
   # Participant to act selected
   def apply(%Table{round: round} = table, %ParticipantToActSelected{} = event) do
-    %Table{table | round: %{round | participant_to_act_id: event.participant_id}}
+    %Table{
+      table
+      | round: %{
+          round
+          | participant_to_act_id: event.participant_id,
+            started_at: event.started_at,
+            timeout_seconds: event.timeout_seconds
+        }
+    }
   end
 end

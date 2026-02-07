@@ -33,11 +33,13 @@ defmodule Poker.Tables.EventTransformer do
       iex> transform(%HandStarted{table_id: "123"}, %{event_id: "uuid-123", stream_version: 5})
       %{table_id: "123", type: "HandStarted", event_id: "uuid-123", stream_version: 5, timing: %{duration: 1000}}
   """
-  def transform(%{data: event, event_id: event_id, stream_version: stream_version}) when is_struct(event) do
+  def transform(%{data: event, event_id: event_id, stream_version: stream_version})
+      when is_struct(event) do
     do_transform(event, event_id, stream_version)
   end
 
-  def transform(event, %{event_id: event_id, stream_version: stream_version}) when is_struct(event) do
+  def transform(event, %{event_id: event_id, stream_version: stream_version})
+      when is_struct(event) do
     do_transform(event, event_id, stream_version)
   end
 
@@ -48,7 +50,8 @@ defmodule Poker.Tables.EventTransformer do
   end
 
   # Already transformed
-  def transform(event) when is_map(event) and is_map_key(event, :type) and is_map_key(event, :event_id) do
+  def transform(event)
+      when is_map(event) and is_map_key(event, :type) and is_map_key(event, :event_id) do
     event
   end
 

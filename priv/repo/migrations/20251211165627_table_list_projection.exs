@@ -8,7 +8,7 @@ defmodule Poker.Repo.Migrations.TableListProjection do
     execute(create_enum, drop_enum)
 
     create table(:table_list, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :seats_count, :integer, null: false
       add :seated_count, :integer, default: 0
       add :status, :string, null: false
