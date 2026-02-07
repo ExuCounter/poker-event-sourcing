@@ -27,10 +27,9 @@ export class ParticipantRenderer {
 
     this.holeCardsContainer = new PIXI.Container();
 
-    this.holeCardsContainer.zIndex = 1;
-    this.holeCardsContainer.position.set(CARD_OFFSET_X, 0);
-
     this.hoodContainer = new PIXI.Container();
+
+    this.betAreaContainer = new PIXI.Container();
 
     this.tableContainer.addChild(this.container);
   }
@@ -41,10 +40,7 @@ export class ParticipantRenderer {
     const participantPosition = this.#getPlayerPosition();
     const betPosition = this.#getBetPosition();
 
-    this.betAreaContainer = new PIXI.Container({
-      x: betPosition.x,
-      y: betPosition.y,
-    });
+    this.betAreaContainer.position.set(betPosition.x, betPosition.y);
 
     this.container.position.set(participantPosition.x, participantPosition.y);
 
@@ -115,14 +111,13 @@ export class ParticipantRenderer {
       const chipsText = new PIXI.Text({
         text: this.formatChips(participant.betThisRound),
         style: {
-          fontFamily: "Arial, sans-serif",
-          fontSize: 24,
+          fontSize: 18,
           fontWeight: "bold",
           fill: "#e2e2e2",
         },
       });
 
-      chipsText.position.set(40, -10);
+      chipsText.position.set(-chipsText.width / 2, chipsText.height + 5);
 
       this.betAreaContainer.addChild(chipsText);
 
@@ -267,20 +262,30 @@ export class ParticipantRenderer {
     const relativePosition =
       (participantIndex - currentUserIndex + playerCount) % playerCount;
 
-    const radiusX = TABLE_RADIUS_X;
-    const radiusY = TABLE_RADIUS_Y;
-    const padding = 40; // distance from table edge
+    const radiusX = TABLE_RADIUS_X * 1.07;
+    const radiusY = TABLE_RADIUS_Y * 1.07;
+    const padding = 40; // Distance from table edge to the outer edge of hood
 
     // Start from bottom (π/2) and go clockwise
     const angle =
       Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
 
+    const cosAngle = Math.cos(angle);
+    const sinAngle = Math.sin(angle);
+
+    // Calculate radius at this angle (distance from center to ellipse edge)
+    const radiusAtAngle =
+      (radiusX * radiusY) /
+      Math.sqrt((radiusY * cosAngle) ** 2 + (radiusX * sinAngle) ** 2);
+
+    const containerFarEdgeOffset = 0;
+    const targetRadius = radiusAtAngle + padding - containerFarEdgeOffset;
+
     return {
-      x: (radiusX + padding) * Math.cos(angle) - HOOD_WIDTH / 2,
-      y: (radiusY + padding) * Math.sin(angle) - CARD_HEIGHT / 2,
+      x: targetRadius * cosAngle - HOOD_WIDTH / 2,
+      y: targetRadius * sinAngle - 70,
     };
   }
-
   #getBetPosition() {
     const state = this.getState();
     const participantIndex = state.participants.findIndex(
@@ -293,20 +298,35 @@ export class ParticipantRenderer {
     const relativePosition =
       (participantIndex - currentUserIndex + playerCount) % playerCount;
 
+    const radiusX = TABLE_RADIUS_X;
+    const radiusY = TABLE_RADIUS_Y;
+    const betInset = 100; // Distance from edge toward center
+
     const angle =
       Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
 
-    const playerRadiusX = TABLE_RADIUS_X + 60;
-    const playerRadiusY = TABLE_RADIUS_Y + 60;
+    const cosAngle = Math.cos(angle);
+    const sinAngle = Math.sin(angle);
 
-    const betRadiusX = TABLE_RADIUS_X * 0.55;
-    const betRadiusY = TABLE_RADIUS_Y * 0.55;
+    // Calculate radius at this angle
+    const radiusAtAngle =
+      (radiusX * radiusY) /
+      Math.sqrt((radiusY * cosAngle) ** 2 + (radiusX * sinAngle) ** 2);
 
-    // Difference in radii
-    const offsetX = (betRadiusX - playerRadiusX) * Math.cos(angle);
-    const offsetY = (betRadiusY - playerRadiusY) * Math.sin(angle);
+    // Bet position inset from edge
+    const betRadius = radiusAtAngle - betInset;
+    const betX = betRadius * cosAngle;
+    const betY = betRadius * sinAngle;
 
-    return { x: offsetX, y: offsetY };
+    // Player position for relative offset
+    const playerRadius = radiusAtAngle + 40;
+    const playerX = playerRadius * cosAngle;
+    const playerY = playerRadius * sinAngle;
+
+    return {
+      x: betX - playerX + HOOD_WIDTH / 2,
+      y: betY - playerY + CARD_HEIGHT / 2 + 15,
+    };
   }
 
   async animateHandGiven(tableContainer, timing) {

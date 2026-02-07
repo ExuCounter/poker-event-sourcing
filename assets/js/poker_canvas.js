@@ -210,8 +210,7 @@ export const PokerCanvas = {
           .getContainer()
           .getGlobalPosition();
 
-        const localTarget =
-          participantRenderer.betAreaContainer.toLocal(globalTarget);
+        const localTarget = participantRenderer.container.toLocal(globalTarget);
 
         participantRenderer.hideBetAreaChipsText();
 
@@ -220,7 +219,7 @@ export const PokerCanvas = {
           participantRenderer.betAreaContainer,
           {
             x: localTarget.x,
-            y: localTarget.y - 60,
+            y: localTarget.y,
             duration: timing.duration / 1000 || 0.4,
             ease: "power2.out",
           },
@@ -301,8 +300,22 @@ export const PokerCanvas = {
     const tableGraphics = new PIXI.Graphics();
 
     // Outer glow/shadow effect
-    tableGraphics.ellipse(0, 4, TABLE_RADIUS_X + 5, TABLE_RADIUS_Y + 5);
-    tableGraphics.fill({ color: 0x000000, alpha: 0.3 });
+    tableGraphics.ellipse(0, 4, TABLE_RADIUS_X + 15, TABLE_RADIUS_Y + 15);
+    tableGraphics.fill({ color: 0x000000, alpha: 0.03 });
+
+    const boundingBoxX = -(TABLE_RADIUS_X + 15);
+    const boundingBoxY = 4 - (TABLE_RADIUS_Y + 15);
+    const boundingBoxWidth = (TABLE_RADIUS_X + 15) * 2;
+    const boundingBoxHeight = (TABLE_RADIUS_Y + 15) * 2;
+
+    // Draw rectangle around it
+    tableGraphics.rect(
+      boundingBoxX,
+      boundingBoxY,
+      boundingBoxWidth,
+      boundingBoxHeight,
+    );
+    tableGraphics.stroke({ color: 0xff0000, width: 2 });
 
     // Main table felt
     tableGraphics.ellipse(0, 0, TABLE_RADIUS_X, TABLE_RADIUS_Y);
@@ -328,6 +341,8 @@ export const PokerCanvas = {
       this.renderers.totalPot.getContainer(),
     );
     this.renderers.totalPot.render(this.state.totalPot);
+
+    this.renderers.totalPot.container.position.set(0, 30);
 
     // Initialize CommunityCardsRenderer
     this.renderers.communityCards = new CommunityCardsRenderer(

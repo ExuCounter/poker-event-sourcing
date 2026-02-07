@@ -26,7 +26,7 @@ export class CommunityCardsRenderer {
     // Center the cards on the table
     const maxWidth = 5 * COMMUNITY_CARD_SPACING;
 
-    this.container.position.set(-(maxWidth / 2), -(BASE_HEIGHT / 6));
+    this.container.position.set(-(maxWidth / 2), -(BASE_HEIGHT / 8));
 
     return this.container;
   }

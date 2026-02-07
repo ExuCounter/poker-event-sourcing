@@ -18,11 +18,14 @@ export class TotalPotRenderer {
     // Render amount text
     const text = new PIXI.Text({
       text: `$${totalPot}`,
-      style: { fontSize: 24 },
-      anchor: 0.5,
+      style: {
+        fontSize: 18,
+        fontWeight: "bold",
+        fill: "#e2e2e2",
+      },
     });
 
-    text.position.set(0, 40);
+    text.position.set(-chipsContainer.width / 2, 25);
     this.container.addChild(text);
 
     return this.container;
