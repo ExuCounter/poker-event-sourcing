@@ -75,7 +75,8 @@ defmodule Poker.MixProject do
       {:faker, "~> 0.18.0", only: [:test, :dev]},
       {:mox, "~> 1.2", only: :test},
       {:bodyguard, "~> 2.4.3"},
-      {:uuid_v7, "~> 0.6.0"}
+      {:uuid_v7, "~> 0.6.0"},
+      {:oban, "~> 2.20.3"}
     ]
   end
 

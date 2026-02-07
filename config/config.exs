@@ -1,3 +1,6 @@
+==> oban
+Compiling 64 files (.ex)
+Generated oban app
 # This file is responsible for configuring your application
 # and its dependencies with the aid of the Config module.
 #
@@ -89,6 +92,10 @@ config :logger, :default_formatter,
 config :phoenix, :json_library, Jason
 
 config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Implementation
+
+config :poker, Oban,
+  repo: Pt.Repo,
+  queues: [tables: 10]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
