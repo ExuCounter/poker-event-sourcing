@@ -147,12 +147,12 @@ defmodule PokerWeb.PlayerLive.Replay do
       <!-- Replay controls -->
       <div
         class="replay-controls"
-        style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(0, 0, 0, 0.8); padding: 15px 25px; border-radius: 10px; display: flex; align-items: center; gap: 15px;"
+        style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(0, 0, 0, 0.8); padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px;"
       >
         <button
           phx-click="step_backward"
           disabled={@replay.current_step == 0}
-          style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"
+          style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
           class={if @replay.current_step == 0, do: "opacity-50 cursor-not-allowed", else: ""}
         >
           ← Previous
@@ -160,7 +160,7 @@ defmodule PokerWeb.PlayerLive.Replay do
 
         <button
           phx-click="toggle_play"
-          style="padding: 8px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;"
+          style="padding: 6px 14px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold;"
         >
           {if @replay.playing, do: "⏸ Pause", else: "▶ Play"}
         </button>
@@ -168,7 +168,7 @@ defmodule PokerWeb.PlayerLive.Replay do
         <button
           phx-click="step_forward"
           disabled={@replay.current_step >= @replay.total_steps}
-          style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"
+          style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
           class={
             if @replay.current_step >= @replay.total_steps,
               do: "opacity-50 cursor-not-allowed",
@@ -180,12 +180,12 @@ defmodule PokerWeb.PlayerLive.Replay do
 
         <button
           phx-click="reset"
-          style="padding: 8px 16px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"
+          style="padding: 6px 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
         >
           ↺ Reset
         </button>
 
-        <span style="color: white; font-size: 14px; margin-left: 10px; font-family: monospace;">
+        <span style="color: white; font-size: 13px; margin-left: 8px; font-family: monospace;">
           Step {@replay.current_step} / {@replay.total_steps}
         </span>
       </div>

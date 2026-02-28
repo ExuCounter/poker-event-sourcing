@@ -18,7 +18,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
 
   def handle(
         %{participant_to_act_id: nil} = table,
-        %StartRound{hand_id: command_hand_id} = _command
+        %StartRound{hand_id: _command_hand_id} = _command
       ) do
     %RoundCompleted{
       id: table.round.id,

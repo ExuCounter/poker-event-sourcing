@@ -7,37 +7,78 @@ defmodule PokerWeb.UserLive.Registration do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
-      <div class="mx-auto max-w-sm">
-        <div class="text-center">
-          <.header>
-            Register for an account
-            <:subtitle>
-              Already registered?
-              <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
-                Log in
-              </.link>
-              to your account now.
-            </:subtitle>
-          </.header>
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-md w-full">
+        <!-- Main Card -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <!-- Header -->
+          <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-500">
+            <h1 class="text-2xl font-bold text-white text-center">Create Your Account</h1>
+            <p class="text-emerald-50 text-center text-sm mt-1">
+              Join the poker action today
+            </p>
+          </div>
+
+          <div class="p-6">
+            <.form for={@form} id="registration_form" phx-submit="save" phx-change="validate" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Email Address
+                  </div>
+                </label>
+                <.input
+                  field={@form[:email]}
+                  type="email"
+                  label=""
+                  autocomplete="username"
+                  required
+                  phx-mounted={JS.focus()}
+                  class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                />
+              </div>
+
+              <.button
+                phx-disable-with="Creating account..."
+                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Create Account
+              </.button>
+            </.form>
+
+            <!-- Info Box -->
+            <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-750 rounded-lg border border-slate-200 dark:border-slate-600">
+              <div class="flex gap-3">
+                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-slate-600 dark:text-slate-400">
+                  <p class="font-medium text-slate-900 dark:text-white">Email-based Authentication</p>
+                  <p class="mt-1">We'll send you a magic link to log in. No password needed unless you set one up later.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <.form for={@form} id="registration_form" phx-submit="save" phx-change="validate">
-          <.input
-            field={@form[:email]}
-            type="email"
-            label="Email"
-            autocomplete="username"
-            required
-            phx-mounted={JS.focus()}
-          />
-
-          <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-            Create an account
-          </.button>
-        </.form>
+        <!-- Login Link -->
+        <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+          Already have an account?
+          <.link
+            navigate={~p"/users/log-in"}
+            class="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+          >
+            Log in here
+          </.link>
+        </p>
       </div>
-    </Layouts.app>
+    </div>
     """
   end
 
