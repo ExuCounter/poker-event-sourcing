@@ -5,6 +5,7 @@ import { ParticipantRenderer } from "./renderers/ParticipantRenderer.js";
 import { CommunityCardsRenderer } from "./renderers/CommunityCardsRenderer.js";
 import { TotalPotRenderer } from "./renderers/TotalPotRenderer.js";
 import { ChipsRenderer } from "./renderers/ChipsRenderer.js";
+import { TableInfoRenderer } from "./renderers/TableInfoRenderer.js";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -28,8 +29,6 @@ export const PokerCanvas = {
     this.isReplayMode = mode === "replay";
     this.timeoutAnimationFrame = null;
 
-    console.log(this.state);
-
     await this.app.init({
       canvas: this.el,
       backgroundColor: 0x1a3d2e, // Darker green for contrast
@@ -42,6 +41,7 @@ export const PokerCanvas = {
     this.renderers = {
       communityCards: null,
       totalPot: null,
+      tableInfo: null,
       participants: new Map(),
     };
 
@@ -144,6 +144,12 @@ export const PokerCanvas = {
         break;
       case "ParticipantChecked":
         this.stopTimeoutAnimation();
+        break;
+      case "TableStarted":
+      case "TablePaused":
+      case "TableResumed":
+      case "TableFinished":
+        this.renderers.tableInfo.render();
         break;
       default:
         return;
@@ -332,6 +338,18 @@ export const PokerCanvas = {
     tableGraphics.stroke({ width: 2, color: 0x8b6914 }); // Gold trim
 
     this.containers.tableContainer.addChild(tableGraphics);
+
+    // Initialize TableInfoRenderer
+    this.renderers.tableInfo = new TableInfoRenderer(
+      () => this.state,
+      () => this.lobbyState,
+    );
+
+    this.containers.tableContainer.addChild(
+      this.renderers.tableInfo.getContainer(),
+    );
+
+    this.renderers.tableInfo.render();
 
     // Initialize TotalPotRenderer
     this.renderers.totalPot = new TotalPotRenderer(() => this.state);

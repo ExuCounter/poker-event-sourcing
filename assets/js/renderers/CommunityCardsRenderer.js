@@ -17,6 +17,7 @@ export class CommunityCardsRenderer {
     this.container.removeChildren();
 
     const cardRenderer = new CardRenderer();
+
     communityCards.forEach((card, index) => {
       const cardSprite = cardRenderer.renderCommunityCard(card);
       cardSprite.position.set(index * COMMUNITY_CARD_SPACING, 0);
@@ -36,6 +37,7 @@ export class CommunityCardsRenderer {
     const state = this.getState();
 
     const cardRenderer = new CardRenderer();
+
     newCards.forEach((card, index) => {
       const cardSprite = cardRenderer.renderCommunityCard(card);
       cardSprite.position.set(0, ANIMATION_START_Y);

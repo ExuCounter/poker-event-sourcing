@@ -173,7 +173,7 @@ defmodule Poker.Tables.ProcessManager do
       ) do
     playing_participants = Enum.reject(participants, & &1.is_sitting_out)
 
-    if length(playing_participants) > 2 do
+    if length(playing_participants) === 1 do
       struct(ResumeTable, %{table_id: table_id})
     else
       []

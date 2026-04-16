@@ -131,11 +131,18 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
     current_participant = find_participant_by_player_id(aggregate, player_id)
 
+    dbg(aggregate.status)
+
     %{
       table_status: aggregate.status,
       hand_id: get_hand_id(aggregate),
       total_pot: calculate_total_pot(aggregate),
-      community_cards: aggregate.community_cards || [],
+      community_cards:
+        if aggregate.status == :paused do
+          []
+        else
+          aggregate.community_cards
+        end,
       hole_cards: get_player_hole_cards(aggregate, current_participant),
       participants: build_participants_list(aggregate, player_id, visibility_mode),
       valid_actions:
@@ -208,7 +215,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   defp get_player_hole_cards(_, _), do: []
 
   defp build_participants_list(
-         %{participants: participants} = aggregate,
+         %{participants: participants, status: table_status} = aggregate,
          current_player_id,
          visibility_mode
        )
@@ -220,13 +227,16 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
       # Determine hole cards based on visibility mode
       hole_cards =
-        case {visibility_mode, participant.player_id} do
+        case {table_status, visibility_mode, participant.player_id} do
+          {:paused, _visibility_mode, _current_player_id} ->
+            []
+
           # Live mode: only show current player's cards
-          {:live, ^current_player_id} ->
+          {_table_status, :live, ^current_player_id} ->
             get_player_hole_cards(aggregate, participant)
 
           # Replay mode: show current player's cards OR revealed showdown cards
-          {:replay, ^current_player_id} ->
+          {_table_status, :replay, ^current_player_id} ->
             get_player_hole_cards(aggregate, participant)
 
           _ ->
