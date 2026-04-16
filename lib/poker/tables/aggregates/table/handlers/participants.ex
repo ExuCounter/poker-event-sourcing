@@ -123,21 +123,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
       ]
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      next_participant = Helpers.find_next_participant_to_act(table)
-
-      if next_participant do
-        %ParticipantToActSelected{
-          table_id: table.id,
-          round_id: round_id,
-          participant_id: next_participant.id,
-          timeout_seconds: table.settings.timeout_seconds,
-          started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      else
-        nil
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
       all_acted? = Helpers.all_acted?(table)
       all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
 
@@ -175,7 +160,20 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
           ]
 
         true ->
-          :ok
+          # Only select next participant if round is not complete
+          next_participant = Helpers.find_next_participant_to_act(table)
+
+          if next_participant do
+            %ParticipantToActSelected{
+              table_id: table.id,
+              round_id: round_id,
+              participant_id: next_participant.id,
+              timeout_seconds: table.settings.timeout_seconds,
+              started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+          else
+            nil
+          end
       end
     end)
   end

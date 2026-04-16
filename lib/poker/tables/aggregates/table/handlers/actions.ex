@@ -74,21 +74,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
       ]
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      next_participant = Helpers.find_next_participant_to_act(table)
-
-      if next_participant do
-        %ParticipantToActSelected{
-          table_id: table.id,
-          round_id: round_id,
-          participant_id: next_participant.id,
-          timeout_seconds: table.settings.timeout_seconds,
-          started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      else
-        nil
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
       all_acted? = Helpers.all_acted?(table)
       all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
 
@@ -126,93 +111,103 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
           ]
 
         true ->
-          :ok
+          # Only select next participant if round is not complete
+          next_participant = Helpers.find_next_participant_to_act(table)
+
+          if next_participant do
+            %ParticipantToActSelected{
+              table_id: table.id,
+              round_id: round_id,
+              participant_id: next_participant.id,
+              timeout_seconds: table.settings.timeout_seconds,
+              started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+          else
+            nil
+          end
       end
     end)
   end
-
-  # Handles participant action commands.
-  # Validates turn, processes action, updates pots, and checks for round completion.
-  def handle(%{hand: nil}, _command),
-    do: {:error, :no_active_hand}
 
   def handle(
         %{
-          round: %{participant_to_act_id: participant_to_act_id},
-          participant_hands: participant_hands
-        },
-        %{participant_id: participant_id}
-      )
-      when participant_to_act_id != participant_id do
-    {:error,
-     %{
-       status: :not_participants_turn,
-       message: "It's not participant id:#{participant_id}'s turn to act"
-     }}
-  end
-
-  def handle(
-        %{hand: %{id: table_hand_id}, round: %{id: round_id, type: round_type}} = table,
-        command
+          hand: %{id: table_hand_id},
+          round: %{
+            id: round_id,
+            type: round_type,
+            participant_to_act_id: participant_to_act_id,
+            acted_participant_ids: acted_participant_ids
+          }
+        } = table,
+        %{player_id: player_id} = command
       ) do
-    table
-    |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(&Participants.handle(&1, command))
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      next_participant = Helpers.find_next_participant_to_act(table)
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
 
-      if next_participant do
-        %ParticipantToActSelected{
-          table_id: table.id,
-          round_id: round_id,
-          participant_id: next_participant.id,
-          timeout_seconds: table.settings.timeout_seconds,
-          started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      else
-        nil
-      end
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      all_acted? = Helpers.all_acted?(table)
-      all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
 
-      cond do
-        all_folded_except_one? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_folded
-            }
-          ]
+      participant.id != participant_to_act_id ->
+        {:error,
+         %{status: :not_participants_turn, message: "It's not this participant's turn to act"}}
 
-        all_acted? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_acted
-            }
-          ]
+      true ->
+        table
+        |> Commanded.Aggregate.Multi.new()
+        |> Commanded.Aggregate.Multi.execute(&Participants.handle(&1, command))
+        |> Commanded.Aggregate.Multi.execute(fn table ->
+          all_acted? = Helpers.all_acted?(table)
+          all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
 
-        true ->
-          :ok
-      end
-    end)
+          cond do
+            all_folded_except_one? ->
+              [
+                %PotsRecalculated{
+                  table_id: table.id,
+                  hand_id: table.hand.id,
+                  pots: Pot.recalculate_pots(table.participant_hands)
+                },
+                %RoundCompleted{
+                  id: round_id,
+                  hand_id: table_hand_id,
+                  type: round_type,
+                  table_id: table.id,
+                  reason: :all_folded
+                }
+              ]
+
+            all_acted? ->
+              [
+                %PotsRecalculated{
+                  table_id: table.id,
+                  hand_id: table.hand.id,
+                  pots: Pot.recalculate_pots(table.participant_hands)
+                },
+                %RoundCompleted{
+                  id: round_id,
+                  hand_id: table_hand_id,
+                  type: round_type,
+                  table_id: table.id,
+                  reason: :all_acted
+                }
+              ]
+
+            true ->
+              next_participant = Helpers.find_next_participant_to_act(table)
+
+              if next_participant do
+                %ParticipantToActSelected{
+                  table_id: table.id,
+                  round_id: round_id,
+                  participant_id: next_participant.id,
+                  timeout_seconds: table.settings.timeout_seconds,
+                  started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+                }
+              else
+                nil
+              end
+          end
+        end)
+    end
   end
 end

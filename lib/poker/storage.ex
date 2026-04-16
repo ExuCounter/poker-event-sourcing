@@ -4,7 +4,7 @@ defmodule Poker.Storage do
   """
   def reset! do
     reset_eventstore()
-    # reset_readstore()
+    reset_readstore()
   end
 
   defp reset_eventstore do
@@ -27,7 +27,6 @@ defmodule Poker.Storage do
     """
     TRUNCATE TABLE
       table_pot_winners,
-      hand_histories,
       table_pots,
       tables,
       table_hands,

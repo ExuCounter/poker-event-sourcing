@@ -23,6 +23,7 @@ export class ChipsRenderer {
       while (remaining >= value) {
         const chip = this.#createSingleChip(value, CHIP_COLORS[value]);
         chip.y = -stackOffset * CHIP_STACK_OFFSET;
+        chip.x = 0;
         container.addChild(chip);
         chips.push(chip);
 

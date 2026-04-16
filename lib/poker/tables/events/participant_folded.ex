@@ -19,3 +19,11 @@ defmodule Poker.Tables.Events.ParticipantFolded do
     :folded_at
   ]
 end
+
+defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantFolded do
+  def decode(%Poker.Tables.Events.ParticipantFolded{} = event) do
+    {:ok, folded_at, _offset} = DateTime.from_iso8601(event.folded_at)
+
+    %Poker.Tables.Events.ParticipantFolded{event | folded_at: folded_at}
+  end
+end

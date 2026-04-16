@@ -13,6 +13,7 @@ export class TotalPotRenderer {
     // Render chips
     const chipsRenderer = new ChipsRenderer();
     const chipsContainer = chipsRenderer.render(totalPot);
+
     this.container.addChild(chipsContainer);
 
     // Render amount text
@@ -25,7 +26,8 @@ export class TotalPotRenderer {
       },
     });
 
-    text.position.set(-chipsContainer.width / 2, 25);
+    text.anchor.set(0.5, 0);
+    text.position.set(0, chipsContainer.y + 25);
     this.container.addChild(text);
 
     return this.container;
