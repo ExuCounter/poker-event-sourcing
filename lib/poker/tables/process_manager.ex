@@ -168,10 +168,16 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def handle(
-        %Poker.Tables.ProcessManager{table_status: :paused} = _state,
+        %Poker.Tables.ProcessManager{table_status: :paused, participants: participants} = _state,
         %ParticipantSatIn{table_id: table_id} = _event
       ) do
-    struct(ResumeTable, %{table_id: table_id})
+    playing_participants = Enum.reject(participants, & &1.is_sitting_out)
+
+    if length(playing_participants) > 2 do
+      struct(ResumeTable, %{table_id: table_id})
+    else
+      []
+    end
   end
 
   def handle(

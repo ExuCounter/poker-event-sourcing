@@ -41,6 +41,10 @@ export class ParticipantRenderer {
     this.arcPulseTween = null;
   }
 
+  getContainer() {
+    return this.container;
+  }
+
   render() {
     this.container.removeChildren();
 
@@ -132,6 +136,7 @@ export class ParticipantRenderer {
     }
 
     this.betAreaContainer.addChild(chipsContainer);
+    this.betAreaContainer.zIndex = 5;
 
     this.container.addChild(this.betAreaContainer);
   }

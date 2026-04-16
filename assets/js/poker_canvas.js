@@ -336,15 +336,12 @@ export const PokerCanvas = {
     // Initialize TotalPotRenderer
     this.renderers.totalPot = new TotalPotRenderer(() => this.state);
 
-    this.containers.tableContainer.sortableChildren = true;
-
     this.containers.tableContainer.addChild(
       this.renderers.totalPot.getContainer(),
     );
     this.renderers.totalPot.render(this.state.totalPot);
 
     this.renderers.totalPot.getContainer().y += 20;
-    this.renderers.totalPot.getContainer().zIndex = 10;
 
     // Initialize CommunityCardsRenderer
     this.renderers.communityCards = new CommunityCardsRenderer(
