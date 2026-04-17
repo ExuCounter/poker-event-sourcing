@@ -40,6 +40,9 @@ export class ParticipantRenderer {
     this.alertSoundPlayed = false;
     this.countdownPulseTween = null;
     this.arcPulseTween = null;
+
+    // Hood text elements for partial updates
+    this.balanceText = null;
   }
 
   getContainer() {
@@ -76,10 +79,15 @@ export class ParticipantRenderer {
     }
   }
 
-  async #flipCard(cardContainer, card) {
+  async #flipCard(cardContainer, card, timing) {
+    const flipDuration = timing.duration / 1000 / 2; // Half for flip out, half for flip in
+
+    console.log(timing);
+    console.log(flipDuration);
+
     await gsap.to(cardContainer.scale, {
       x: 0,
-      duration: 0.2,
+      duration: flipDuration,
       ease: "power2.in",
     });
 
@@ -92,15 +100,15 @@ export class ParticipantRenderer {
 
     await gsap.to(cardContainer.scale, {
       x: 1,
-      duration: 0.2,
+      duration: flipDuration,
       ease: "power2.out",
     });
   }
 
-  async flipHoleCards(holeCards) {
+  async flipHoleCards(holeCards, timing) {
     const flipCardPromises = this.holeCardsContainer.children.map(
       async (cardContainer, idx) =>
-        this.#flipCard(cardContainer, holeCards[idx]),
+        this.#flipCard(cardContainer, holeCards[idx], timing),
     );
 
     await Promise.all(flipCardPromises);
@@ -361,8 +369,8 @@ export class ParticipantRenderer {
           x: CARD_OFFSET_X + index * HOLE_CARD_SPACING,
           y: 0,
           alpha: 1,
-          duration: timing.duration / 1000 || 0.25,
-          delay: index * 0.15,
+          duration: timing.duration / 1000,
+          delay: index * (timing.stagger / 1000),
           ease: "power2.out",
         },
         0,
@@ -434,15 +442,15 @@ export class ParticipantRenderer {
 
     // Cumulative lengths at the END of each segment
     const cumLengths = [
-      halfTop,                                    // 0: top-right line
-      halfTop + cornerLen,                        // 1: top-right corner
-      halfTop + cornerLen + straightV,            // 2: right line
-      halfTop + 2 * cornerLen + straightV,        // 3: bottom-right corner
-      halfTop + 2 * cornerLen + straightV + straightH,  // 4: bottom line
-      halfTop + 3 * cornerLen + straightV + straightH,  // 5: bottom-left corner
-      halfTop + 3 * cornerLen + 2 * straightV + straightH,  // 6: left line
-      halfTop + 4 * cornerLen + 2 * straightV + straightH,  // 7: top-left corner
-      totalPerimeter,                             // 8: top-left line (back to center)
+      halfTop, // 0: top-right line
+      halfTop + cornerLen, // 1: top-right corner
+      halfTop + cornerLen + straightV, // 2: right line
+      halfTop + 2 * cornerLen + straightV, // 3: bottom-right corner
+      halfTop + 2 * cornerLen + straightV + straightH, // 4: bottom line
+      halfTop + 3 * cornerLen + straightV + straightH, // 5: bottom-left corner
+      halfTop + 3 * cornerLen + 2 * straightV + straightH, // 6: left line
+      halfTop + 4 * cornerLen + 2 * straightV + straightH, // 7: top-left corner
+      totalPerimeter, // 8: top-left line (back to center)
     ];
 
     // Start at exact top-center of the hood (not padded area)
@@ -463,7 +471,13 @@ export class ParticipantRenderer {
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(right - r, top + r, r, -Math.PI / 2, -Math.PI / 2 + angleSpan);
+      graphics.arc(
+        right - r,
+        top + r,
+        r,
+        -Math.PI / 2,
+        -Math.PI / 2 + angleSpan,
+      );
     }
     prevCum = cumLengths[1];
 
@@ -493,7 +507,13 @@ export class ParticipantRenderer {
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI / 2 + angleSpan);
+      graphics.arc(
+        left + r,
+        bottom - r,
+        r,
+        Math.PI / 2,
+        Math.PI / 2 + angleSpan,
+      );
     }
     prevCum = cumLengths[5];
 

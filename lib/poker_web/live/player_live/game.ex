@@ -137,6 +137,14 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
+  # Speed multipliers based on queue size thresholds
+  # Format: {min_queue_size, multiplier} - :skip means instant jump
+  @speed_multipliers [
+    {20, :skip},
+    {15, 0.25},
+    {10, 0.5}
+  ]
+
   defp process_next_event(socket) do
     case socket.assigns.queue do
       [] ->
@@ -150,9 +158,13 @@ defmodule PokerWeb.PlayerLive.Game do
             next_event.stream_version
           )
 
+        # Apply dynamic timing based on queue size
+        queue_size = length(socket.assigns.queue)
+        adjusted_event = apply_dynamic_timing(next_event, queue_size)
+
         socket =
           push_event(socket, "table_event", %{
-            event: JsonEncoder.transform_keys(next_event),
+            event: JsonEncoder.transform_keys(adjusted_event),
             new_state: JsonEncoder.transform_keys(game_view)
           })
 
@@ -161,6 +173,35 @@ defmodule PokerWeb.PlayerLive.Game do
           raise_amount: nil
         )
     end
+  end
+
+  defp apply_dynamic_timing(event, queue_size) do
+    case get_speed_multiplier(queue_size) do
+      :skip ->
+        event
+        |> Map.put(:skip_animation, true)
+        |> put_in([:timing, :duration], 0)
+        |> maybe_put_in([:timing, :stagger], 0)
+
+      multiplier when is_number(multiplier) ->
+        event
+        |> update_in([:timing, :duration], &round(&1 * multiplier))
+        |> maybe_update_in([:timing, :stagger], &round(&1 * multiplier))
+    end
+  end
+
+  defp maybe_update_in(map, path, fun) do
+    if get_in(map, path), do: update_in(map, path, fun), else: map
+  end
+
+  defp maybe_put_in(map, path, value) do
+    if get_in(map, path), do: put_in(map, path, value), else: map
+  end
+
+  defp get_speed_multiplier(queue_size) do
+    Enum.find_value(@speed_multipliers, 1.0, fn {threshold, multiplier} ->
+      if queue_size >= threshold, do: multiplier
+    end)
   end
 
   # Helper functions

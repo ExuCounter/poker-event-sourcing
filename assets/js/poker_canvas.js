@@ -81,7 +81,12 @@ export const PokerCanvas = {
   },
 
   async runAnimation(event) {
-    const timing = event.timing || event.animation || { duration: 250 };
+    // Skip animation when backend signals instant jump (queue >= 20 events)
+    if (event.skipAnimation) {
+      return;
+    }
+
+    const timing = event.timing;
 
     switch (event.type) {
       case "ParticipantRaised":
@@ -125,6 +130,7 @@ export const PokerCanvas = {
         this.rerenderParticipant(event.participantId);
         break;
       case "PayoutDistributed":
+        await this.wait(timing.duration);
         await this.animateBetChipsCollectToPlayer(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -156,14 +162,14 @@ export const PokerCanvas = {
     }
   },
 
-  async showdownParticipantCards(event) {
+  async showdownParticipantCards(event, timing) {
     const renderer = this.renderers.participants.get(event.participantId);
     const currentParticipant = this.state.participants.find(
       (p) => p.playerId === this.currentUserId,
     );
 
     if (currentParticipant.id !== event.participantId) {
-      await renderer.flipHoleCards(event.holeCards);
+      await renderer.flipHoleCards(event.holeCards, timing);
     }
   },
 
@@ -205,7 +211,7 @@ export const PokerCanvas = {
     timeline.to(payoutChipsContainer, {
       x: localTarget.x,
       y: localTarget.y,
-      duration: timing.duration / 1000 || 0.5,
+      duration: timing.duration / 1000,
       ease: "power2.out",
     });
 
@@ -238,7 +244,7 @@ export const PokerCanvas = {
           {
             x: localTarget.x,
             y: localTarget.y,
-            duration: timing.duration / 1000 || 0.4,
+            duration: timing.duration / 1000,
             ease: "power2.out",
           },
           "<",

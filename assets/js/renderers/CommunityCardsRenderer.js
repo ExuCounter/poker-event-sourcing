@@ -56,7 +56,7 @@ export class CommunityCardsRenderer {
           y: 0,
           alpha: 1,
           duration: timing.duration / 1000,
-          delay: index * 0.15,
+          delay: index * (timing.stagger / 1000),
           ease: "power2.out",
         },
         0,

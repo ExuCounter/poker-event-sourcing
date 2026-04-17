@@ -63,9 +63,7 @@ defmodule Poker.Tables.EventTransformer do
     |> Map.put(:type, event_type)
     |> Map.put(:event_id, event_id)
     |> Map.put(:stream_version, stream_version)
-    |> Map.put(:timing, %{
-      duration: AnimationDelays.for_event(event)
-    })
+    |> Map.put(:timing, AnimationDelays.for_event(event))
   end
 
   @doc """
