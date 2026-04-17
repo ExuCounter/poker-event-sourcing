@@ -31,10 +31,10 @@
     </script>
   </head>
   <body>
-    <div class="absolute left-0 top-0 w-full z-10 px-6 py-4" style="transform: scale(var(--game-scale, 0));">
-      <div class="flex items-center justify-between">
+    <div class="absolute left-0 top-0 w-full z-10">
+      <div class="flex items-center justify-between" style="transform: scale(var(--game-scale, 0)); width: calc(100vw / var(--game-scale, 1)); transform-origin: 0 0">
         <!-- Left Navigation -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 pl-6 py-4 origin-top-left">
           <.link
             href={~p"/tables/#{@lobby.id}/lobby"}
             class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
@@ -63,7 +63,7 @@
         </div>
 
         <!-- Right Navigation -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 pr-6 py-4">
           <.link
             href={~p"/users/settings"}
             class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"

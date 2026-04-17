@@ -10,6 +10,8 @@ export class TotalPotRenderer {
   render(totalPot) {
     this.container.removeChildren();
 
+    if (totalPot === 0) return this.container;
+
     // Render chips
     const chipsRenderer = new ChipsRenderer();
     const chipsContainer = chipsRenderer.render(totalPot);

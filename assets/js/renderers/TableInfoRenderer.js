@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { TABLE_RADIUS_Y } from "../constants.js";
+import { TABLE_HEIGHT } from "../constants.js";
 
 export class TableInfoRenderer {
   constructor(getState, getLobbyState) {
@@ -46,16 +46,16 @@ export class TableInfoRenderer {
       text: displayParts.join(", "),
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 20,
-        fontWeight: "500",
+        fontSize: 38,
+        fontWeight: "600",
         fill: 0xffffff,
         letterSpacing: 1,
       },
     });
 
-    tableTypeText.alpha = 0.3;
+    tableTypeText.alpha = 0.12;
     tableTypeText.anchor.set(0.5);
-    tableTypeText.position.set(0, TABLE_RADIUS_Y / 2.5);
+    tableTypeText.position.set(0, 45);
 
     this.container.addChild(tableTypeText);
 

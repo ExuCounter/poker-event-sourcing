@@ -236,133 +236,148 @@ defmodule PokerWeb.PlayerLive.Game do
         data-state={JsonEncoder.transform_keys(@game_view) |> Jason.encode!()}
         data-current-user-id={@current_user_id}
       />
-      
-    <!-- Sit Out/In Button - bottom-left corner -->
-      <%= if @current_participant do %>
-        <div class="absolute left-5 bottom-5 z-10">
-          <button
-            phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
-            class={[
-              "px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border",
-              if(@current_participant.is_sitting_out,
-                do: "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20",
-                else: "bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
-              )
-            ]}
-          >
-            <span class="flex items-center gap-1.5">
-              <%= if @current_participant.is_sitting_out do %>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Sit In
-              <% else %>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Sit Out
-              <% end %>
-            </span>
-          </button>
-        </div>
-      <% end %>
-      
-    <!-- Action Controls - positioned and scaled -->
-      <div
-        class="origin-bottom-right absolute bottom-[16px] right-[16px]"
-        style=" transform: scale(var(--game-scale, 0));"
-      >
-        <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
-          <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border-2 border-gray-700 flex flex-col">
-            
-    <!-- Raise Controls -->
-            <%= if @game_view.valid_actions.raise do %>
-              <div class="flex flex-row gap-4 mb-5">
-                <div class="flex gap-3 flex-wrap">
-                  <%= for preset <- @game_view.valid_actions.raise.presets do %>
-                    <button
-                      type="button"
-                      phx-click="update_raise_amount"
-                      phx-value-raise_amount={preset.value}
-                      class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-md px-3 rounded"
-                    >
-                      {preset.label}
-                    </button>
-                  <% end %>
-                </div>
-                <div class="flex flex-col gap-2 flex-1">
-                  <form phx-change="update_raise_amount">
-                    <input
-                      type="range"
-                      name="raise_amount"
-                      min={@game_view.valid_actions.raise.min}
-                      max={@game_view.valid_actions.raise.max}
-                      value={@raise_amount}
-                      class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                    />
-                  </form>
-                  <div class="flex justify-between text-md text-gray-500 font-bold">
-                    <span>{@game_view.valid_actions.raise.min}</span>
-                    <span>{@game_view.valid_actions.raise.max}</span>
-                  </div>
-                </div>
-              </div>
-            <% end %>
 
-            <div class="flex gap-3 items-center">
-              <!-- Fold Button -->
-              <%= if @game_view.valid_actions.fold do %>
-                <.button
-                  phx-click="fold_hand"
-                  class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-lg text-base"
-                >
-                  Fold
-                </.button>
-              <% end %>
-              <!-- Check Button -->
-              <%= if @game_view.valid_actions.check do %>
-                <.button
-                  phx-click="check_hand"
-                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-lg text-base"
-                >
-                  Check
-                </.button>
-              <% end %>
-              
-    <!-- Call Button -->
-              <%= if @game_view.valid_actions.call do %>
-                <.button
-                  phx-click="call_hand"
-                  class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-lg text-base"
-                >
-                  Call {@game_view.valid_actions.call.amount}
-                </.button>
-              <% end %>
+      <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
+        <!-- Sit Out/In Button - bottom-left corner -->
+        <%= if @current_participant do %>
+          <div class="absolute left-5 bottom-5 z-10">
+            <button
+              phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
+              class={[
+                "px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border",
+                if(@current_participant.is_sitting_out,
+                  do:
+                    "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20",
+                  else: "bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
+                )
+              ]}
+            >
+              <span class="flex items-center gap-1.5">
+                <%= if @current_participant.is_sitting_out do %>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Sit In
+                <% else %>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Sit Out
+                <% end %>
+              </span>
+            </button>
+          </div>
+        <% end %>
+        
+    <!-- Action Controls - positioned and scaled -->
+        <div class="origin-bottom-right absolute bottom-[16px] right-[16px]">
+          <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
+            <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border-2 border-gray-700 flex flex-col">
               
     <!-- Raise Controls -->
               <%= if @game_view.valid_actions.raise do %>
-                <.button
-                  phx-click="raise_hand"
-                  phx-value-amount={@raise_amount}
-                  class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-8 py-4 rounded-lg text-base"
-                >
-                  <div class="w-[120px] text-center">
-                    Raise {@raise_amount}
+                <div class="flex flex-row gap-4 mb-5">
+                  <div class="flex gap-3 flex-wrap">
+                    <%= for preset <- @game_view.valid_actions.raise.presets do %>
+                      <button
+                        type="button"
+                        phx-click="update_raise_amount"
+                        phx-value-raise_amount={preset.value}
+                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-md px-3 rounded"
+                      >
+                        {preset.label}
+                      </button>
+                    <% end %>
                   </div>
-                </.button>
+                  <div class="flex flex-col gap-2 flex-1">
+                    <form phx-change="update_raise_amount">
+                      <input
+                        type="range"
+                        name="raise_amount"
+                        min={@game_view.valid_actions.raise.min}
+                        max={@game_view.valid_actions.raise.max}
+                        value={@raise_amount}
+                        class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                      />
+                    </form>
+                    <div class="flex justify-between text-md text-gray-500 font-bold">
+                      <span>{@game_view.valid_actions.raise.min}</span>
+                      <span>{@game_view.valid_actions.raise.max}</span>
+                    </div>
+                  </div>
+                </div>
               <% end %>
-            </div>
-          </div>
-        <% end %>
 
-        <div
-          id="connection-status"
-          phx-disconnected={JS.show()}
-          phx-connected={JS.hide()}
-          class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-4 py-2 rounded-lg"
-        >
-          ⚠️ Disconnected - trying to reconnect...
+              <div class="flex gap-3 items-center">
+                <!-- Fold Button -->
+                <%= if @game_view.valid_actions.fold do %>
+                  <.button
+                    phx-click="fold_hand"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                  >
+                    Fold
+                  </.button>
+                <% end %>
+                <!-- Check Button -->
+                <%= if @game_view.valid_actions.check do %>
+                  <.button
+                    phx-click="check_hand"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                  >
+                    Check
+                  </.button>
+                <% end %>
+                
+    <!-- Call Button -->
+                <%= if @game_view.valid_actions.call do %>
+                  <.button
+                    phx-click="call_hand"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                  >
+                    Call {@game_view.valid_actions.call.amount}
+                  </.button>
+                <% end %>
+                
+    <!-- Raise Controls -->
+                <%= if @game_view.valid_actions.raise do %>
+                  <.button
+                    phx-click="raise_hand"
+                    phx-value-amount={@raise_amount}
+                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                  >
+                    <div class="w-[120px] text-center">
+                      Raise {@raise_amount}
+                    </div>
+                  </.button>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+
+          <div
+            id="connection-status"
+            phx-disconnected={JS.show()}
+            phx-connected={JS.hide()}
+            class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-4 py-2 rounded-lg"
+          >
+            ⚠️ Disconnected - trying to reconnect...
+          </div>
         </div>
       </div>
     </div>

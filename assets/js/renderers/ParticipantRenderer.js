@@ -3,8 +3,9 @@ import gsap from "gsap";
 import { CardRenderer } from "./CardRenderer.js";
 import { ChipsRenderer } from "./ChipsRenderer.js";
 import {
-  TABLE_RADIUS_X,
-  TABLE_RADIUS_Y,
+  TABLE_WIDTH,
+  TABLE_HEIGHT,
+  TABLE_BORDER_RADIUS,
   HOLE_CARD_SPACING,
   CARD_OFFSET_X,
   HOOD_WIDTH,
@@ -60,7 +61,7 @@ export class ParticipantRenderer {
     this.container.position.set(participantPosition.x, participantPosition.y);
 
     this.#renderHood();
-    this.#renderHoleCards();
+    this.renderHoleCards();
     this.#renderChips();
   }
 
@@ -150,7 +151,7 @@ export class ParticipantRenderer {
     this.container.addChild(this.betAreaContainer);
   }
 
-  #renderHoleCards() {
+  renderHoleCards() {
     this.holeCardsContainer.removeChildren();
 
     const state = this.getState();
@@ -217,13 +218,42 @@ export class ParticipantRenderer {
       (p) => p.playerId === participant.playerId,
     );
 
-    const displayName = this.truncateText(lobbyUser?.nickname, 12);
+    const nickname = lobbyUser?.nickname || "??";
 
+    // Render avatar circle
+    const avatarRadius = 14;
+    const avatarX = HOOD_PADDING + avatarRadius;
+    const avatarY = HOOD_HEIGHT / 4 + 2;
+    const avatarColor = this.#getAvatarColor(nickname, isFolded);
+
+    const avatar = new PIXI.Graphics();
+    avatar.circle(avatarX, avatarY, avatarRadius);
+    avatar.fill(avatarColor);
+
+    this.hoodContainer.addChild(avatar);
+
+    // Avatar initials (first 2 letters)
+    const initials = nickname.substring(0, 2).toUpperCase();
+    const initialsText = new PIXI.Text({
+      text: initials,
+      style: {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 12,
+        fontWeight: "bold",
+        fill: 0xffffff,
+      },
+    });
+    initialsText.anchor.set(0.5, 0.5);
+    initialsText.position.set(avatarX, avatarY);
+    this.hoodContainer.addChild(initialsText);
+
+    // Name text (positioned after avatar)
+    const displayName = this.truncateText(nickname, 10);
     const nameText = new PIXI.Text({
       text: displayName,
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "bold",
         fill: isFolded
           ? PARTICIPANT_COLORS.textFolded
@@ -231,8 +261,8 @@ export class ParticipantRenderer {
       },
     });
 
-    nameText.anchor.set(0.5, 0.5);
-    nameText.position.set(HOOD_WIDTH / 2, HOOD_PADDING + 8);
+    nameText.anchor.set(0, 0.5);
+    nameText.position.set(avatarX + avatarRadius + 8, avatarY);
 
     this.hoodContainer.addChild(nameText);
 
@@ -256,6 +286,131 @@ export class ParticipantRenderer {
     this.container.addChild(this.hoodContainer);
   }
 
+  #getAvatarColor(nickname, isFolded) {
+    if (isFolded) {
+      return 0x555555;
+    }
+
+    // Generate a consistent hue from nickname string
+    let hash = 0;
+    for (let i = 0; i < nickname.length; i++) {
+      hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Convert hash to hue (0-360)
+    const hue = Math.abs(hash % 360);
+
+    // Convert HSL to RGB (saturation: 65%, lightness: 45%)
+    return this.#hslToHex(hue, 65, 45);
+  }
+
+  #hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+
+    let r, g, b;
+    if (h < 60) {
+      [r, g, b] = [c, x, 0];
+    } else if (h < 120) {
+      [r, g, b] = [x, c, 0];
+    } else if (h < 180) {
+      [r, g, b] = [0, c, x];
+    } else if (h < 240) {
+      [r, g, b] = [0, x, c];
+    } else if (h < 300) {
+      [r, g, b] = [x, 0, c];
+    } else {
+      [r, g, b] = [c, 0, x];
+    }
+
+    const toHex = (val) => {
+      const hex = Math.round((val + m) * 255).toString(16);
+      return hex.length === 1 ? "0" + hex : hex;
+    };
+
+    return parseInt(toHex(r) + toHex(g) + toHex(b), 16);
+  }
+
+  // Predefined seat positions for rectangular table (relative to table center)
+  // Positions are arranged: bottom center, then clockwise
+  #getSeatPositions(playerCount) {
+    const halfW = TABLE_WIDTH / 2;
+    const halfH = TABLE_HEIGHT / 2;
+    // Different padding for different sides to keep players on screen
+    const sidePadding = 30; // Distance from table edge for left/right
+    const topPadding = 20; // Distance for top players (closer to table)
+    const bottomPadding = -10; // Distance for bottom players (even closer)
+
+    const positions = {
+      2: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: 0, y: -halfH - topPadding }, // Top center
+      ],
+      3: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: 0 }, // Right
+        { x: -halfW - sidePadding, y: 0 }, // Left
+      ],
+      4: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: 0 }, // Right
+        { x: 0, y: -halfH - topPadding }, // Top center
+        { x: -halfW - sidePadding, y: 0 }, // Left
+      ],
+      5: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: halfH * 0.4 }, // Bottom right
+        { x: halfW + sidePadding, y: -halfH * 0.4 }, // Top right
+        { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Top left
+        { x: -halfW - sidePadding, y: halfH * 0.4 }, // Bottom left
+      ],
+      6: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: halfH * 0.4 }, // Bottom right
+        { x: halfW + sidePadding, y: -halfH * 0.4 }, // Top right
+        { x: 0, y: -halfH - topPadding }, // Top center
+        { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Top left
+        { x: -halfW - sidePadding, y: halfH * 0.4 }, // Bottom left
+      ],
+      7: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: halfH * 0.5 }, // Bottom right
+        { x: halfW + sidePadding, y: -halfH * 0.2 }, // Right
+        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
+        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
+        { x: -halfW - sidePadding, y: -halfH * 0.2 }, // Left
+        { x: -halfW - sidePadding, y: halfH * 0.5 }, // Bottom left
+      ],
+      8: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW + sidePadding, y: halfH * 0.5 }, // Bottom right
+        { x: halfW + sidePadding, y: -halfH * 0.2 }, // Right
+        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
+        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
+        { x: -halfW - sidePadding, y: -halfH * 0.2 }, // Left
+        { x: -halfW - sidePadding, y: halfH * 0.5 }, // Bottom left
+        { x: halfW * 0.5, y: halfH + bottomPadding }, // Bottom right corner
+      ],
+      9: [
+        { x: 0, y: halfH + bottomPadding }, // Bottom center
+        { x: halfW * 0.6, y: halfH + bottomPadding }, // Bottom right
+        { x: halfW + sidePadding, y: halfH * 0.3 }, // Right bottom
+        { x: halfW + sidePadding, y: -halfH * 0.3 }, // Right top
+        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
+        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
+        { x: -halfW - sidePadding, y: -halfH * 0.3 }, // Left top
+        { x: -halfW - sidePadding, y: halfH * 0.3 }, // Left bottom
+        { x: -halfW * 0.6, y: halfH + bottomPadding }, // Bottom left
+      ],
+    };
+
+    return positions[playerCount] || positions[6];
+  }
+
   #getPlayerPosition() {
     const state = this.getState();
     const participantIndex = state.participants.findIndex(
@@ -268,30 +423,15 @@ export class ParticipantRenderer {
     const relativePosition =
       (participantIndex - currentUserIndex + playerCount) % playerCount;
 
-    const radiusX = TABLE_RADIUS_X * 1.07;
-    const radiusY = TABLE_RADIUS_Y * 1.07;
-    const padding = 40; // Distance from table edge to the outer edge of hood
-
-    // Start from bottom (π/2) and go clockwise
-    const angle =
-      Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
-
-    const cosAngle = Math.cos(angle);
-    const sinAngle = Math.sin(angle);
-
-    // Calculate radius at this angle (distance from center to ellipse edge)
-    const radiusAtAngle =
-      (radiusX * radiusY) /
-      Math.sqrt((radiusY * cosAngle) ** 2 + (radiusX * sinAngle) ** 2);
-
-    const containerFarEdgeOffset = 0;
-    const targetRadius = radiusAtAngle + padding - containerFarEdgeOffset;
+    const seatPositions = this.#getSeatPositions(playerCount);
+    const pos = seatPositions[relativePosition] || { x: 0, y: 0 };
 
     return {
-      x: targetRadius * cosAngle - HOOD_WIDTH / 2,
-      y: targetRadius * sinAngle - 70,
+      x: pos.x - HOOD_WIDTH / 2,
+      y: pos.y - 70,
     };
   }
+
   #getBetPosition() {
     const state = this.getState();
     const participantIndex = state.participants.findIndex(
@@ -304,30 +444,51 @@ export class ParticipantRenderer {
     const relativePosition =
       (participantIndex - currentUserIndex + playerCount) % playerCount;
 
-    const radiusX = TABLE_RADIUS_X;
-    const radiusY = TABLE_RADIUS_Y;
-    const betInset = 100; // Distance from edge toward center
+    const seatPositions = this.#getSeatPositions(playerCount);
+    const pos = seatPositions[relativePosition] || { x: 0, y: 0 };
+    const halfW = TABLE_WIDTH / 2;
+    const halfH = TABLE_HEIGHT / 2;
 
-    const angle =
-      Math.PI / 2 - (relativePosition * (2 * Math.PI)) / playerCount;
+    // Calculate bet position - inset from player toward table center
+    // But also offset to the side to avoid community cards
+    const betInsetY = 130;
+    const betInsetX = 100;
+    const sideOffset = 80; // Horizontal offset to avoid center
+    let betX = pos.x;
+    let betY = pos.y;
 
-    const cosAngle = Math.cos(angle);
-    const sinAngle = Math.sin(angle);
-
-    // Calculate radius at this angle
-    const radiusAtAngle =
-      (radiusX * radiusY) /
-      Math.sqrt((radiusY * cosAngle) ** 2 + (radiusX * sinAngle) ** 2);
-
-    // Bet position inset from edge
-    const betRadius = radiusAtAngle - betInset;
-    const betX = betRadius * cosAngle;
-    const betY = betRadius * sinAngle;
+    // Move bet chips toward center but offset to the side
+    if (pos.y > halfH * 0.3) {
+      // Bottom players: bet above them, offset based on x position
+      betY = pos.y - betInsetY;
+      if (pos.x > 20) {
+        betX = pos.x - sideOffset; // Right side: offset left
+      } else if (pos.x < -20) {
+        betX = pos.x + sideOffset; // Left side: offset right
+      }
+      // Center bottom player keeps x position
+    } else if (pos.y < -halfH * 0.3) {
+      // Top players: bet below them, offset based on x position
+      betY = pos.y + betInsetY;
+      if (pos.x > 20) {
+        betX = pos.x - sideOffset; // Right side: offset left
+      } else if (pos.x < -20) {
+        betX = pos.x + sideOffset; // Left side: offset right
+      }
+      // Center top player keeps x position
+    } else if (pos.x > halfW * 0.3) {
+      // Right players: bet to their left
+      betX = pos.x - betInsetX;
+      betY = pos.y + (p3s.y > 0 ? -40 : 40); // Slight vertical offset away from center
+    } else if (pos.x < -halfW * 0.3) {
+      // Left players: bet to their right
+      betX = pos.x + betInsetX;
+      betY = pos.y + (pos.y > 0 ? -40 : 40); // Slight vertical offset away from center
+    }
 
     // Player position for relative offset
-    const playerRadius = radiusAtAngle + 40;
-    const playerX = playerRadius * cosAngle;
-    const playerY = playerRadius * sinAngle;
+    const playerX = pos.x;
+    const playerY = pos.y;
 
     return {
       x: betX - playerX + HOOD_WIDTH / 2,

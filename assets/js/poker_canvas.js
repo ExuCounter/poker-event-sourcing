@@ -6,11 +6,15 @@ import { CommunityCardsRenderer } from "./renderers/CommunityCardsRenderer.js";
 import { TotalPotRenderer } from "./renderers/TotalPotRenderer.js";
 import { ChipsRenderer } from "./renderers/ChipsRenderer.js";
 import { TableInfoRenderer } from "./renderers/TableInfoRenderer.js";
+import { DealerButtonRenderer } from "./renderers/DealerButtonRenderer.js";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
   TABLE_RADIUS_X,
   TABLE_RADIUS_Y,
+  TABLE_WIDTH,
+  TABLE_HEIGHT,
+  TABLE_BORDER_RADIUS,
 } from "./constants.js";
 
 export const PokerCanvas = {
@@ -106,6 +110,8 @@ export const PokerCanvas = {
         break;
       case "ParticipantHandGiven":
         await this.animateParticipantHandGiven(event, timing);
+        // Update dealer button after hand is given (positions are now assigned)
+        this.renderers.dealerButton?.render();
         break;
       case "ParticipantFolded":
         this.stopTimeoutAnimation();
@@ -192,6 +198,8 @@ export const PokerCanvas = {
     this.renderers.totalPot.render(this.state.totalPot);
 
     const payoutChipsContainer = new PIXI.Container();
+    payoutChipsContainer.zIndex = 10; // Above community cards during animation
+
     const payoutText = new PIXI.Text({
       text: `$${event.amount}`,
       style: { fontSize: 18, fill: 0xffd700, fontWeight: "bold" },
@@ -228,7 +236,11 @@ export const PokerCanvas = {
         originalPositions.set(participantRenderer, {
           x: participantRenderer.betAreaContainer.x,
           y: participantRenderer.betAreaContainer.y,
+          zIndex: participantRenderer.betAreaContainer.zIndex,
         });
+
+        // Raise zIndex during animation to appear above community cards
+        participantRenderer.betAreaContainer.zIndex = 10;
 
         const globalTarget = this.renderers.totalPot
           .getContainer()
@@ -268,6 +280,7 @@ export const PokerCanvas = {
       const orig = originalPositions.get(participantRenderer);
       participantRenderer.betAreaContainer.x = orig.x;
       participantRenderer.betAreaContainer.y = orig.y;
+      participantRenderer.betAreaContainer.zIndex = orig.zIndex || 5;
     });
   },
 
@@ -320,27 +333,59 @@ export const PokerCanvas = {
     this.containers.tableContainer = new PIXI.Container();
     this.containers.tableContainer.position.set(0, 0);
 
-    // Create table with fixed dimensions
+    // Create table with fixed dimensions (rounded rectangle like poker room)
     const tableGraphics = new PIXI.Graphics();
+    const halfW = TABLE_WIDTH / 2;
+    const halfH = TABLE_HEIGHT / 2;
 
     // Outer glow/shadow effect
-    tableGraphics.ellipse(0, 4, TABLE_RADIUS_X + 15, TABLE_RADIUS_Y + 15);
+    tableGraphics.roundRect(
+      -halfW - 15,
+      -halfH - 11,
+      TABLE_WIDTH + 30,
+      TABLE_HEIGHT + 30,
+      TABLE_BORDER_RADIUS + 10,
+    );
     tableGraphics.fill({ color: 0x000000, alpha: 0.03 });
 
     // Main table felt
-    tableGraphics.ellipse(0, 0, TABLE_RADIUS_X, TABLE_RADIUS_Y);
+    tableGraphics.roundRect(
+      -halfW,
+      -halfH,
+      TABLE_WIDTH,
+      TABLE_HEIGHT,
+      TABLE_BORDER_RADIUS,
+    );
     tableGraphics.fill(0x35654d);
 
     // Inner felt highlight
-    tableGraphics.ellipse(0, -10, TABLE_RADIUS_X - 20, TABLE_RADIUS_Y - 15);
+    tableGraphics.roundRect(
+      -halfW + 20,
+      -halfH + 10,
+      TABLE_WIDTH - 40,
+      TABLE_HEIGHT - 30,
+      TABLE_BORDER_RADIUS - 20,
+    );
     tableGraphics.fill(0x3d7359);
 
     // Table rail (border)
-    tableGraphics.ellipse(0, 0, TABLE_RADIUS_X, TABLE_RADIUS_Y);
+    tableGraphics.roundRect(
+      -halfW,
+      -halfH,
+      TABLE_WIDTH,
+      TABLE_HEIGHT,
+      TABLE_BORDER_RADIUS,
+    );
     tableGraphics.stroke({ width: 12, color: 0x5c3d2e }); // Wood color
 
     // Inner rail edge
-    tableGraphics.ellipse(0, 0, TABLE_RADIUS_X - 6, TABLE_RADIUS_Y - 4);
+    tableGraphics.roundRect(
+      -halfW + 6,
+      -halfH + 4,
+      TABLE_WIDTH - 12,
+      TABLE_HEIGHT - 8,
+      TABLE_BORDER_RADIUS - 6,
+    );
     tableGraphics.stroke({ width: 2, color: 0x8b6914 }); // Gold trim
 
     this.containers.tableContainer.addChild(tableGraphics);
@@ -365,7 +410,7 @@ export const PokerCanvas = {
     );
     this.renderers.totalPot.render(this.state.totalPot);
 
-    this.renderers.totalPot.getContainer().y += 20;
+    this.renderers.totalPot.getContainer().y += 50;
 
     // Initialize CommunityCardsRenderer
     this.renderers.communityCards = new CommunityCardsRenderer(
@@ -391,6 +436,26 @@ export const PokerCanvas = {
 
       participantRenderer.render();
     });
+
+    // Initialize DealerButtonRenderer
+    this.renderers.dealerButton = new DealerButtonRenderer(
+      () => this.state,
+      (participantId) => {
+        const renderer = this.renderers.participants.get(participantId);
+        if (renderer) {
+          return {
+            x: renderer.container.x,
+            y: renderer.container.y,
+          };
+        }
+        return { x: 0, y: 0 };
+      },
+    );
+
+    this.containers.tableContainer.addChild(
+      this.renderers.dealerButton.getContainer(),
+    );
+    this.renderers.dealerButton.render();
   },
 
   async rebuildCanvas() {
@@ -445,14 +510,7 @@ export const PokerCanvas = {
     this.app.renderer.resolution = resolution;
     this.app.renderer.resize(width, height);
 
-    const scaleX = width / BASE_WIDTH;
-    const scaleY = height / BASE_HEIGHT;
-
-    // Use min for uniform scaling, but set a minimum based on width
-    const uniformScale = Math.min(scaleX, scaleY);
-    const minScale = scaleX * 0.6; // Don't go below 60% of width-based scale
-
-    const scale = Math.max(uniformScale, minScale);
+    const scale = width / BASE_WIDTH / 1.3; // Scale up to fill more screen
 
     this.containers.container.scale.set(scale);
     this.containers.container.x = width / 2;
