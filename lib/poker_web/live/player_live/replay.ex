@@ -147,7 +147,7 @@ defmodule PokerWeb.PlayerLive.Replay do
       <!-- Replay controls -->
       <div
         class="flex justify-center pt-4"
-        style="transform: scale(var(--game-scale, 1)); transform-origin: 0 0; z-index: 10; width: calc(100vw / var(--game-scale, 1)); position: absolute; left: 0; top: 0"
+        style="transform: scale(var(--game-scale, 1)) translateX(-50%); transform-origin: 0 0; z-index: 10; width: calc(50vw / var(--game-scale, 1)); position: absolute; left: 50%"
       >
         <div
           class="replay-controls"
