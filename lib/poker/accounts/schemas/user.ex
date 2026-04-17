@@ -3,6 +3,7 @@ defmodule Poker.Accounts.Schemas.User do
 
   schema "users" do
     field :email, :string
+    field :nickname, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
@@ -28,6 +29,36 @@ defmodule Poker.Accounts.Schemas.User do
     |> cast(attrs, [:email, :role])
     |> validate_required([:role])
     |> validate_email(opts)
+  end
+
+  @doc """
+  A user changeset for updating the nickname.
+
+  ## Options
+
+    * `:validate_unique` - Set to false if you don't want to validate the
+      uniqueness of the nickname, useful when displaying live validations.
+      Defaults to `true`.
+  """
+  def nickname_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:nickname])
+    |> validate_required([:nickname])
+    |> validate_length(:nickname, min: 3, max: 20)
+    |> validate_format(:nickname, ~r/^[a-zA-Z0-9_]+$/,
+      message: "can only contain letters, numbers, and underscores"
+    )
+    |> maybe_validate_unique_nickname(opts)
+  end
+
+  defp maybe_validate_unique_nickname(changeset, opts) do
+    if Keyword.get(opts, :validate_unique, true) do
+      changeset
+      |> unsafe_validate_unique(:nickname, Poker.Repo)
+      |> unique_constraint(:nickname)
+    else
+      changeset
+    end
   end
 
   defp validate_email(changeset, opts) do

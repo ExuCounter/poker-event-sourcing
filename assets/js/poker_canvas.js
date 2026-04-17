@@ -378,6 +378,7 @@ export const PokerCanvas = {
         participant.id,
         this.containers.tableContainer,
         () => ({ ...this.state, currentUserId: this.currentUserId }),
+        () => this.lobbyState,
       );
 
       this.renderers.participants.set(participant.id, participantRenderer);

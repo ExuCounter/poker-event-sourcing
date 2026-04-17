@@ -58,7 +58,8 @@ defmodule Poker.Tables.Projectors.TableLobby do
 
     participant_data = %{
       player_id: player_id,
-      email: user.email
+      email: user.email,
+      nickname: user.nickname
     }
 
     multi

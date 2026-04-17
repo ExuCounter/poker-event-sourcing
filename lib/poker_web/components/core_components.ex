@@ -209,7 +209,7 @@ defmodule PokerWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-slate-700 dark:text-slate-300">{@label}</span>
         <select
           id={@id}
           name={@name}
@@ -230,7 +230,7 @@ defmodule PokerWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-slate-700 dark:text-slate-300">{@label}</span>
         <textarea
           id={@id}
           name={@name}
@@ -251,7 +251,7 @@ defmodule PokerWeb.CoreComponents do
     ~H"""
     <div class="fieldset mb-2">
       <label>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="label mb-1 text-slate-700 dark:text-slate-300">{@label}</span>
         <input
           type={@type}
           name={@name}

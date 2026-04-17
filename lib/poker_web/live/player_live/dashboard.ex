@@ -129,7 +129,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     name="table[small_blind]"
                     label="Small Blind"
                     value="10"
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -139,7 +139,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     name="table[big_blind]"
                     label="Big Blind"
                     value="20"
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -149,7 +149,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     name="table[starting_stack]"
                     label="Starting Stack"
                     value="1000"
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -159,7 +159,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     name="table[timeout_seconds]"
                     label="Timeout (seconds)"
                     value="90"
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                   />
                 </div>
 
@@ -170,7 +170,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     label="Table Type"
                     options={[{"6-Max", "six_max"}]}
                     value="six_max"
-                    class="w-full select select-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+                    class="w-full select select-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
                   />
                 </div>
 

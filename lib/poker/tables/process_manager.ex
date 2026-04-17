@@ -264,6 +264,10 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def apply(%__MODULE__{} = state, %TableFinished{} = _event) do
+    if state.current_timeout_job_id do
+      Oban.cancel_job(state.current_timeout_job_id)
+    end
+
     %__MODULE__{state | table_status: :finished}
   end
 

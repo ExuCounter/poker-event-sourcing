@@ -17,9 +17,10 @@ import {
 } from "../constants.js";
 
 export class ParticipantRenderer {
-  constructor(participantId, tableContainer, getState) {
+  constructor(participantId, tableContainer, getState, getLobbyState) {
     this.participantId = participantId;
     this.getState = getState;
+    this.getLobbyState = getLobbyState;
     this.tableContainer = tableContainer;
 
     this.container = new PIXI.Container();
@@ -172,23 +173,11 @@ export class ParticipantRenderer {
 
     const isFolded =
       participant.handStatus === "folded" || participant.isSittingOut;
-    const isActive = participant.isActive || false;
 
     this.hoodContainer.zIndex = 2; // Above cards
     this.hoodContainer.position.set(0, CARD_OVERLAP); // Position below cards top
 
     const hood = new PIXI.Graphics();
-
-    if (isActive) {
-      hood.roundRect(
-        -2,
-        -2,
-        HOOD_WIDTH + 4,
-        HOOD_HEIGHT + 4,
-        HOOD_BORDER_RADIUS + 2,
-      );
-      hood.fill({ color: PARTICIPANT_COLORS.activeGlow, alpha: 0.8 });
-    }
 
     // Main background
     hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
@@ -215,16 +204,12 @@ export class ParticipantRenderer {
 
     this.hoodContainer.addChild(divider);
 
-    //     const lobbyUser = this.pokerCanvas.lobbyState.participants.find(
-    //       (p) => p.id === participant.player_id,
-    //     );
+    const lobbyState = this.getLobbyState();
+    const lobbyUser = lobbyState.participants.find(
+      (p) => p.playerId === participant.playerId,
+    );
 
-    //     const displayName = this.truncateText(
-    //       lobbyUser?.email?.split("@")[0] || "Player",
-    //       12,
-    //     );
-
-    const displayName = this.truncateText("Player", 12);
+    const displayName = this.truncateText(lobbyUser?.nickname, 12);
 
     const nameText = new PIXI.Text({
       text: displayName,
@@ -388,65 +373,156 @@ export class ParticipantRenderer {
   }
 
   renderTimeoutProgress() {
-    // Remove existing progress arc if any
+    // Remove existing progress border if any
     if (this.progressArc) {
       this.hoodContainer.removeChild(this.progressArc);
       this.progressArc = null;
     }
 
     const state = this.getState();
-    const participant = state.participants.find(
-      (p) => p.id === this.participantId,
-    );
 
-    if (!participant?.isActive || !state.timeoutInfo) return;
+    // Check if this participant is the active player (whose turn it is)
+    const isActive = state.currentTurn?.participantId === this.participantId;
+
+    if (!isActive || !state.timeoutInfo) return;
 
     // Calculate time remaining
     const startedAt = new Date(state.timeoutInfo.startedAt);
     const now = new Date();
     const elapsed = (now - startedAt) / 1000; // seconds
     const remaining = Math.max(0, state.timeoutInfo.timeoutSeconds - elapsed);
-    const progress = remaining / state.timeoutInfo.timeoutSeconds;
 
-    // Determine arc color based on remaining time (blue → yellow → red)
-    let arcColor;
-    if (progress > 0.5) {
-      arcColor = 0x2563eb; // Blue (primary)
-    } else if (progress > 0.25) {
-      arcColor = 0xfbbf24; // Yellow/amber
+    // Only show timer when 15 seconds or less remain
+    const TIMER_SHOW_THRESHOLD = 15;
+    if (remaining > TIMER_SHOW_THRESHOLD || remaining <= 0) return;
+
+    // Progress is based on the 15-second window (full at 15s, empty at 0s)
+    const progress = remaining / TIMER_SHOW_THRESHOLD;
+
+    // Determine border color based on remaining time (green → yellow → red)
+    // 15-10s: green, 10-5s: yellow, <5s: red
+    let borderColor;
+    if (remaining > 10) {
+      borderColor = 0x4ade80; // Green
+    } else if (remaining > 5) {
+      borderColor = 0xfbbf24; // Yellow/amber
     } else {
-      arcColor = 0xef4444; // Red
+      borderColor = 0xef4444; // Red
     }
 
-    // Create circular progress arc
+    // Draw rounded rectangle border that shrinks with progress
     const graphics = new PIXI.Graphics();
-    const radius = 60; // Adjust based on hood size
-    const lineWidth = 3;
-    const startAngle = -Math.PI / 2; // Start at top
-    const endAngle = startAngle + 2 * Math.PI * progress;
+    const lineWidth = 4;
+    const padding = 3; // Offset from hood edge
+    const w = HOOD_WIDTH + padding * 2;
+    const h = HOOD_HEIGHT + padding * 2;
+    const r = HOOD_BORDER_RADIUS + padding;
+    const left = -padding;
+    const top = -padding;
+    const right = left + w;
+    const bottom = top + h;
 
-    graphics.arc(HOOD_WIDTH / 2, HOOD_HEIGHT / 2, radius, startAngle, endAngle);
-    graphics.stroke({ color: arcColor, width: lineWidth });
+    // Calculate perimeter
+    const straightH = w - 2 * r;
+    const straightV = h - 2 * r;
+    const cornerLen = (Math.PI / 2) * r;
+    const totalPerimeter = 2 * straightH + 2 * straightV + 4 * cornerLen;
+    const drawLength = totalPerimeter * progress;
+
+    // Path points going clockwise from top-center
+    const halfTop = straightH / 2;
+
+    // Cumulative lengths at the END of each segment
+    const cumLengths = [
+      halfTop,                                    // 0: top-right line
+      halfTop + cornerLen,                        // 1: top-right corner
+      halfTop + cornerLen + straightV,            // 2: right line
+      halfTop + 2 * cornerLen + straightV,        // 3: bottom-right corner
+      halfTop + 2 * cornerLen + straightV + straightH,  // 4: bottom line
+      halfTop + 3 * cornerLen + straightV + straightH,  // 5: bottom-left corner
+      halfTop + 3 * cornerLen + 2 * straightV + straightH,  // 6: left line
+      halfTop + 4 * cornerLen + 2 * straightV + straightH,  // 7: top-left corner
+      totalPerimeter,                             // 8: top-left line (back to center)
+    ];
+
+    // Start at exact top-center of the hood (not padded area)
+    const startX = HOOD_WIDTH / 2;
+    const startY = top;
+    graphics.moveTo(startX, startY);
+
+    let prevCum = 0;
+
+    // Segment 0: Top edge right half (going right)
+    if (drawLength > 0) {
+      const segLen = Math.min(halfTop, drawLength);
+      graphics.lineTo(startX + segLen, top);
+    }
+    prevCum = cumLengths[0];
+
+    // Segment 1: Top-right corner
+    if (drawLength > prevCum) {
+      const segLen = Math.min(cornerLen, drawLength - prevCum);
+      const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
+      graphics.arc(right - r, top + r, r, -Math.PI / 2, -Math.PI / 2 + angleSpan);
+    }
+    prevCum = cumLengths[1];
+
+    // Segment 2: Right edge (going down)
+    if (drawLength > prevCum) {
+      const segLen = Math.min(straightV, drawLength - prevCum);
+      graphics.lineTo(right, top + r + segLen);
+    }
+    prevCum = cumLengths[2];
+
+    // Segment 3: Bottom-right corner
+    if (drawLength > prevCum) {
+      const segLen = Math.min(cornerLen, drawLength - prevCum);
+      const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
+      graphics.arc(right - r, bottom - r, r, 0, angleSpan);
+    }
+    prevCum = cumLengths[3];
+
+    // Segment 4: Bottom edge (going left)
+    if (drawLength > prevCum) {
+      const segLen = Math.min(straightH, drawLength - prevCum);
+      graphics.lineTo(right - r - segLen, bottom);
+    }
+    prevCum = cumLengths[4];
+
+    // Segment 5: Bottom-left corner
+    if (drawLength > prevCum) {
+      const segLen = Math.min(cornerLen, drawLength - prevCum);
+      const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
+      graphics.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI / 2 + angleSpan);
+    }
+    prevCum = cumLengths[5];
+
+    // Segment 6: Left edge (going up)
+    if (drawLength > prevCum) {
+      const segLen = Math.min(straightV, drawLength - prevCum);
+      graphics.lineTo(left, bottom - r - segLen);
+    }
+    prevCum = cumLengths[6];
+
+    // Segment 7: Top-left corner
+    if (drawLength > prevCum) {
+      const segLen = Math.min(cornerLen, drawLength - prevCum);
+      const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
+      graphics.arc(left + r, top + r, r, Math.PI, Math.PI + angleSpan);
+    }
+    prevCum = cumLengths[7];
+
+    // Segment 8: Top edge left half (going right back to center)
+    if (drawLength > prevCum) {
+      const segLen = Math.min(halfTop, drawLength - prevCum);
+      // We're at (left + r, top) after the corner, go right
+      graphics.lineTo(left + r + segLen, top);
+    }
+
+    graphics.stroke({ color: borderColor, width: lineWidth });
 
     this.progressArc = graphics;
     this.hoodContainer.addChild(graphics);
-
-    // Show countdown when < 10s
-    if (remaining < 10 && remaining > 0) {
-      this.renderCountdown(Math.ceil(remaining), remaining <= 5);
-    } else if (this.countdownText) {
-      this.hoodContainer.removeChild(this.countdownText);
-      this.countdownText = null;
-    }
-
-    // Play alert sound at 5 seconds (once)
-    if (remaining <= 5 && remaining > 4.9 && !this.alertSoundPlayed) {
-      this.playTimeoutAlert();
-      this.alertSoundPlayed = true;
-    }
-    if (remaining > 5) {
-      this.alertSoundPlayed = false; // Reset for next timeout
-    }
   }
 
   renderCountdown(seconds, shouldPulse = false) {

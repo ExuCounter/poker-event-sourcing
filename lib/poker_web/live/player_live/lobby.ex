@@ -93,14 +93,24 @@ defmodule PokerWeb.PlayerLive.Lobby do
             navigate={~p"/"}
             class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
           >
-            <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            <svg
+              class="w-4 h-4 group-hover:-translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Tables List
           </.link>
         </div>
-
-        <!-- Header -->
+        
+    <!-- Header -->
         <div class="mb-8">
           <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">Table Lobby</h1>
           <p class="text-slate-600 dark:text-slate-400">Get ready to play some poker</p>
@@ -127,42 +137,54 @@ defmodule PokerWeb.PlayerLive.Lobby do
             <div class="p-6">
               <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Table Type</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Table Type
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white capitalize">
                     {String.replace(to_string(@lobby.table_type), "_", " ")}
                   </p>
                 </div>
 
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Small Blind</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Small Blind
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white">
                     <span class="text-emerald-600 dark:text-emerald-400">$</span>{@lobby.small_blind}
                   </p>
                 </div>
 
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Big Blind</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Big Blind
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white">
                     <span class="text-emerald-600 dark:text-emerald-400">$</span>{@lobby.big_blind}
                   </p>
                 </div>
 
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Starting Stack</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Starting Stack
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white">
                     <span class="text-emerald-600 dark:text-emerald-400">$</span>{@lobby.starting_stack}
                   </p>
                 </div>
 
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Players</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Players
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white">
                     {@lobby.seated_count}<span class="text-slate-400 dark:text-slate-500">/{@lobby.seats_count}</span>
                   </p>
                 </div>
 
                 <div class="space-y-1">
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Available Seats</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Available Seats
+                  </p>
                   <p class="text-lg font-semibold text-slate-900 dark:text-white">
                     {@lobby.seats_count - @lobby.seated_count}
                   </p>
@@ -170,12 +192,13 @@ defmodule PokerWeb.PlayerLive.Lobby do
               </div>
             </div>
           </div>
-
-          <!-- Players Card -->
+          
+    <!-- Players Card -->
           <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <h2 class="text-xl font-semibold text-slate-900 dark:text-white">
-                Players <span class="text-slate-500 dark:text-slate-400">({@lobby.seated_count})</span>
+                Players
+                <span class="text-slate-500 dark:text-slate-400">({@lobby.seated_count})</span>
               </h2>
             </div>
 
@@ -183,12 +206,24 @@ defmodule PokerWeb.PlayerLive.Lobby do
               <%= if Enum.empty?(@lobby.participants) do %>
                 <div class="py-12 text-center">
                   <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 mb-4">
-                    <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    <svg
+                      class="w-8 h-8 text-slate-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                      />
                     </svg>
                   </div>
                   <p class="text-slate-500 dark:text-slate-400 font-medium">Waiting for players</p>
-                  <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Be the first to join this table</p>
+                  <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">
+                    Be the first to join this table
+                  </p>
                 </div>
               <% else %>
                 <div class="grid sm:grid-cols-2 gap-3 mb-6">
@@ -210,23 +245,27 @@ defmodule PokerWeb.PlayerLive.Lobby do
                   <% end %>
                 </div>
               <% end %>
-
-              <!-- Action Buttons -->
+              
+    <!-- Action Buttons -->
               <div class="flex flex-wrap gap-3">
                 <%= cond do %>
-                  <% user_has_joined?(@lobby.participants, @user_id) && @lobby.status == :live -> %>
+                  <% user_has_joined?(@lobby.participants, @user_id) && Enum.any?([:paused, :live], & &1 == @lobby.status) -> %>
                     <.button
                       navigate={~p"/tables/#{@lobby.id}/game"}
                       class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       <span class="flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"
+                          />
                         </svg>
                         Enter Game
                       </span>
                     </.button>
-
                   <% @lobby.seated_count < @lobby.seats_count -> %>
                     <.button
                       phx-click="join_table"
@@ -234,16 +273,30 @@ defmodule PokerWeb.PlayerLive.Lobby do
                     >
                       <span class="flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                          />
                         </svg>
                         Join Table
                       </span>
                     </.button>
-
                   <% true -> %>
                     <div class="flex-1 flex items-center justify-center px-6 py-3 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <svg class="w-5 h-5 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      <svg
+                        class="w-5 h-5 text-slate-400 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
                       </svg>
                       <span class="text-slate-600 dark:text-slate-400 font-medium">
                         Table Full ({@lobby.seats_count} max)
@@ -258,8 +311,18 @@ defmodule PokerWeb.PlayerLive.Lobby do
                   >
                     <span class="flex items-center justify-center gap-2">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       Start Game
                     </span>
