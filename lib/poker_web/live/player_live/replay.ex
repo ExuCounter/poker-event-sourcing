@@ -144,54 +144,56 @@ defmodule PokerWeb.PlayerLive.Replay do
     <.flash kind={:error} flash={@flash} />
     <.flash kind={:info} flash={@flash} />
     <div style="height: 100vh; position: relative; overflow: hidden;">
-      <!-- Replay controls -->
-      <div
-        class="flex justify-center pt-4"
-        style="transform: scale(var(--game-scale, 1)) translateX(-50%); transform-origin: 0 0; z-index: 10; width: calc(50vw / var(--game-scale, 1)); position: absolute; left: 50%"
-      >
+      <!-- Replay controls - bottom right -->
+      <div style="transform: scale(var(--game-scale, 1)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1)); position: absolute; bottom: 0; left: 0;">
         <div
-          class="replay-controls"
-          style="background: rgba(0, 0, 0, 0.8); padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px;"
+          class="absolute bottom-[16px] right-[16px]"
+          style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;"
         >
-          <button
-            phx-click="step_backward"
-            disabled={@replay.current_step == 0}
-            style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
-            class={if @replay.current_step == 0, do: "opacity-50 cursor-not-allowed", else: ""}
+          <div
+            class="replay-controls"
+            style="background: rgba(0, 0, 0, 0.8); padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;"
           >
-            ← Previous
-          </button>
+            <button
+              phx-click="step_backward"
+              disabled={@replay.current_step == 0}
+              style="padding: 8px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
+              class={if @replay.current_step == 0, do: "opacity-50 cursor-not-allowed", else: ""}
+            >
+              ←
+            </button>
 
-          <button
-            phx-click="toggle_play"
-            style="padding: 6px 14px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold;"
-          >
-            {if @replay.playing, do: "⏸ Pause", else: "▶ Play"}
-          </button>
+            <button
+              phx-click="toggle_play"
+              style="padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;"
+            >
+              {if @replay.playing, do: "⏸", else: "▶"}
+            </button>
 
-          <button
-            phx-click="step_forward"
-            disabled={@replay.current_step >= @replay.total_steps}
-            style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
-            class={
-              if @replay.current_step >= @replay.total_steps,
-                do: "opacity-50 cursor-not-allowed",
-                else: ""
-            }
-          >
-            Next →
-          </button>
+            <button
+              phx-click="step_forward"
+              disabled={@replay.current_step >= @replay.total_steps}
+              style="padding: 8px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
+              class={
+                if @replay.current_step >= @replay.total_steps,
+                  do: "opacity-50 cursor-not-allowed",
+                  else: ""
+              }
+            >
+              →
+            </button>
 
-          <button
-            phx-click="reset"
-            style="padding: 6px 12px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;"
-          >
-            ↺ Reset
-          </button>
+            <button
+              phx-click="reset"
+              style="padding: 8px 10px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
+            >
+              ↺
+            </button>
 
-          <span style="color: white; font-size: 13px; margin-left: 8px; font-family: monospace;">
-            Step {@replay.current_step} / {@replay.total_steps}
-          </span>
+            <span style="color: white; font-size: 12px; margin-left: 4px; font-family: monospace;">
+              {@replay.current_step}/{@replay.total_steps}
+            </span>
+          </div>
         </div>
       </div>
       

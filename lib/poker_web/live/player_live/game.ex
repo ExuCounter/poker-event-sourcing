@@ -260,7 +260,7 @@ defmodule PokerWeb.PlayerLive.Game do
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
         <!-- Sit Out/In Button - bottom-left corner -->
         <%= if @current_participant do %>
-          <div class="absolute left-5 bottom-5 z-10">
+          <div class="absolute left-5 bottom-5 z-10" style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;">
             <button
               phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
               class={[
@@ -274,7 +274,7 @@ defmodule PokerWeb.PlayerLive.Game do
             >
               <span class="flex items-center gap-1.5">
                 <%= if @current_participant.is_sitting_out do %>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -290,7 +290,7 @@ defmodule PokerWeb.PlayerLive.Game do
                   </svg>
                   Sit In
                 <% else %>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -306,26 +306,26 @@ defmodule PokerWeb.PlayerLive.Game do
         <% end %>
         
     <!-- Action Controls - positioned and scaled -->
-        <div class="origin-bottom-right absolute bottom-[16px] right-[16px]">
+        <div class="absolute bottom-[16px] right-[16px]" style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;">
           <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
-            <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border-2 border-gray-700 flex flex-col">
-              
+            <div class="bg-gray-900 rounded-xl p-4 shadow-2xl border-2 border-gray-700 flex flex-col">
+
     <!-- Raise Controls -->
               <%= if @game_view.valid_actions.raise do %>
-                <div class="flex flex-row gap-4 mb-5">
-                  <div class="flex gap-3 flex-wrap">
+                <div class="flex flex-row gap-3 mb-3">
+                  <div class="flex gap-2 flex-wrap">
                     <%= for preset <- @game_view.valid_actions.raise.presets do %>
                       <button
                         type="button"
                         phx-click="update_raise_amount"
                         phx-value-raise_amount={preset.value}
-                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-md px-3 rounded"
+                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-3 py-1.5 rounded"
                       >
                         {preset.label}
                       </button>
                     <% end %>
                   </div>
-                  <div class="flex flex-col gap-2 flex-1">
+                  <div class="flex flex-col gap-0.5 flex-1">
                     <form phx-change="update_raise_amount">
                       <input
                         type="range"
@@ -336,7 +336,7 @@ defmodule PokerWeb.PlayerLive.Game do
                         class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
                       />
                     </form>
-                    <div class="flex justify-between text-md text-gray-500 font-bold">
+                    <div class="flex justify-between text-sm text-gray-500 font-bold">
                       <span>{@game_view.valid_actions.raise.min}</span>
                       <span>{@game_view.valid_actions.raise.max}</span>
                     </div>
@@ -344,12 +344,12 @@ defmodule PokerWeb.PlayerLive.Game do
                 </div>
               <% end %>
 
-              <div class="flex gap-3 items-center">
+              <div class="flex gap-2 items-center">
                 <!-- Fold Button -->
                 <%= if @game_view.valid_actions.fold do %>
                   <.button
                     phx-click="fold_hand"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Fold
                   </.button>
@@ -358,30 +358,30 @@ defmodule PokerWeb.PlayerLive.Game do
                 <%= if @game_view.valid_actions.check do %>
                   <.button
                     phx-click="check_hand"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Check
                   </.button>
                 <% end %>
-                
+
     <!-- Call Button -->
                 <%= if @game_view.valid_actions.call do %>
                   <.button
                     phx-click="call_hand"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Call {@game_view.valid_actions.call.amount}
                   </.button>
                 <% end %>
-                
+
     <!-- Raise Controls -->
                 <%= if @game_view.valid_actions.raise do %>
                   <.button
                     phx-click="raise_hand"
                     phx-value-amount={@raise_amount}
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-8 py-4 rounded-lg text-base"
+                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
-                    <div class="w-[120px] text-center">
+                    <div class="w-[110px] text-center">
                       Raise {@raise_amount}
                     </div>
                   </.button>

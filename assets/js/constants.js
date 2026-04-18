@@ -16,42 +16,42 @@ export const TABLE_BORDER_RADIUS = 450;
 // ============================================================================
 // CARD DIMENSIONS
 // ============================================================================
-export const CARD_WIDTH = 80;
-export const CARD_HEIGHT = 110;
-export const CARD_BORDER_RADIUS = 8;
-export const COMMUNITY_CARD_SPACING = CARD_WIDTH + 10;
+export const CARD_WIDTH = 90;
+export const CARD_HEIGHT = 124;
+export const CARD_BORDER_RADIUS = 9;
+export const COMMUNITY_CARD_SPACING = CARD_WIDTH + 11;
 export const HOLE_CARD_SPACING = CARD_WIDTH;
 
 // Card back pattern dimensions
 export const CARD_PATTERN = {
   x: 5,
   y: 5,
-  width: 70,
-  height: 100,
-  borderRadius: 6,
+  width: 80,
+  height: 114,
+  borderRadius: 7,
 };
 
 // Card diamond decoration
 export const CARD_DIAMOND_COORDS = {
-  center: { x: 35, y: 15 },
-  right: { x: 50, y: 50 },
-  bottom: { x: 35, y: 85 },
-  left: { x: 20, y: 50 },
+  center: { x: 40, y: 17 },
+  right: { x: 56, y: 56 },
+  bottom: { x: 40, y: 96 },
+  left: { x: 23, y: 56 },
 };
 
 // ============================================================================
 // CARD TYPOGRAPHY
 // ============================================================================
 export const CARD_FONT_SIZES = {
-  rank: 30,
-  smallSuit: 30,
-  bigSuit: 70,
+  rank: 34,
+  smallSuit: 34,
+  bigSuit: 78,
 };
 
 export const CARD_TEXT_POSITIONS = {
-  rank: { x: 6, y: 4 },
-  smallSuit: { x: 8, y: 32 },
-  bigSuit: { x: 52, y: 75 },
+  rank: { x: 7, y: 4 },
+  smallSuit: { x: 9, y: 36 },
+  bigSuit: { x: 58, y: 84 },
 };
 
 // ============================================================================
@@ -101,11 +101,11 @@ export const CHIP_COLORS = {
 // ============================================================================
 // PARTICIPANT / HOOD LAYOUT
 // ============================================================================
-export const HOOD_WIDTH = 160;
-export const HOOD_HEIGHT = 84;
-export const HOOD_BORDER_RADIUS = 20;
-export const HOOD_PADDING = 14;
-export const CARD_OVERLAP = 70;
+export const HOOD_WIDTH = 180;
+export const HOOD_HEIGHT = 95;
+export const HOOD_BORDER_RADIUS = 22;
+export const HOOD_PADDING = 16;
+export const CARD_OVERLAP = 79;
 export const CARD_OFFSET_X = 0;
 
 // ============================================================================

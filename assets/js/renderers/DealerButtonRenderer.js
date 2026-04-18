@@ -12,7 +12,7 @@ export class DealerButtonRenderer {
   }
 
   #createButton() {
-    const buttonRadius = 14;
+    const buttonRadius = 16;
 
     // Shadow
     const shadow = new PIXI.Graphics();
@@ -33,7 +33,7 @@ export class DealerButtonRenderer {
       text: "D",
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: "bold",
         fill: 0x1a1a1a,
       },

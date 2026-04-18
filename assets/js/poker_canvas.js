@@ -85,6 +85,7 @@ export const PokerCanvas = {
   },
 
   async runAnimation(event) {
+    console.log(event);
     // Skip animation when backend signals instant jump (queue >= 20 events)
     if (event.skipAnimation) {
       return;
@@ -411,6 +412,7 @@ export const PokerCanvas = {
     this.renderers.totalPot.render(this.state.totalPot);
 
     this.renderers.totalPot.getContainer().y += 50;
+    this.renderers.totalPot.getContainer().zIndex = 5;
 
     // Initialize CommunityCardsRenderer
     this.renderers.communityCards = new CommunityCardsRenderer(
@@ -514,7 +516,8 @@ export const PokerCanvas = {
     const scaleY = height / BASE_HEIGHT;
     const fitScale = Math.min(scaleX, scaleY);
 
-    // Boost scale by 1.25x but cap it so table never overflows viewport
+    // Boost scale by 1.3x but cap it so table never overflows viewport
+    // Also cap at 1.3 to prevent table from growing at low browser zoom (25%, 50%, 70%)
     const maxScale = Math.min(width / TABLE_WIDTH, height / TABLE_HEIGHT) * 0.9;
     const scale = Math.min(fitScale * 1.3, maxScale);
 
@@ -523,6 +526,10 @@ export const PokerCanvas = {
     this.containers.container.y = height / 2;
 
     document.documentElement.style.setProperty("--game-scale", scale);
+
+    // Boost buttons on smaller screens to maintain touch-friendly size
+    const buttonBoost = scale < 1 ? Math.min(1 / scale, 1.5) : 1;
+    document.documentElement.style.setProperty("--button-boost", buttonBoost);
   },
 
   clear() {

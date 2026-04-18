@@ -22,14 +22,14 @@ export class TotalPotRenderer {
     const text = new PIXI.Text({
       text: `$${totalPot}`,
       style: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "bold",
         fill: "#e2e2e2",
       },
     });
 
     text.anchor.set(0.5, 0);
-    text.position.set(0, chipsContainer.y + 25);
+    text.position.set(0, chipsContainer.y + 28);
     this.container.addChild(text);
 
     return this.container;

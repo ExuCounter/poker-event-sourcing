@@ -72,7 +72,7 @@ export class ChipsRenderer {
     const text = new PIXI.Text({
       text: value.toString(),
       style: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: "bold",
         fill: color === CHIP_COLORS[1] ? 0x1a1a1a : 0xffffff,
         fontFamily: "Arial, sans-serif",

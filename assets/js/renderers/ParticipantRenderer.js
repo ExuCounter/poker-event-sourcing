@@ -132,7 +132,7 @@ export class ParticipantRenderer {
       const chipsText = new PIXI.Text({
         text: this.formatChips(participant.betThisRound),
         style: {
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: "bold",
           fill: "#e2e2e2",
         },
@@ -221,7 +221,7 @@ export class ParticipantRenderer {
     const nickname = lobbyUser?.nickname || "??";
 
     // Render avatar circle
-    const avatarRadius = 14;
+    const avatarRadius = 16;
     const avatarX = HOOD_PADDING + avatarRadius;
     const avatarY = HOOD_HEIGHT / 4 + 2;
     const avatarColor = this.#getAvatarColor(nickname, isFolded);
@@ -238,7 +238,7 @@ export class ParticipantRenderer {
       text: initials,
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: "bold",
         fill: 0xffffff,
       },
@@ -253,7 +253,7 @@ export class ParticipantRenderer {
       text: displayName,
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: "bold",
         fill: isFolded
           ? PARTICIPANT_COLORS.textFolded
@@ -271,7 +271,7 @@ export class ParticipantRenderer {
       text: this.formatChips(participant.chips),
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "bold",
         fill: isFolded
           ? PARTICIPANT_COLORS.chipsFolded
@@ -451,8 +451,8 @@ export class ParticipantRenderer {
 
     // Calculate bet position - inset from player toward table center
     // But also offset to the side to avoid community cards
-    const betInsetY = 130;
-    const betInsetX = 100;
+    const betInsetY = 135;
+    const betInsetX = 110;
     const sideOffset = 80; // Horizontal offset to avoid center
     let betX = pos.x;
     let betY = pos.y;
@@ -711,13 +711,13 @@ export class ParticipantRenderer {
       this.countdownText = new PIXI.Text({
         text: seconds.toString(),
         style: {
-          fontSize: 24,
+          fontSize: 27,
           fontWeight: "bold",
           fill: 0xff0000,
         },
       });
       this.countdownText.anchor.set(0.5);
-      this.countdownText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT + 30);
+      this.countdownText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT + 32);
       this.hoodContainer.addChild(this.countdownText);
     } else {
       this.countdownText.text = seconds.toString();
