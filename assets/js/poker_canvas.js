@@ -510,7 +510,13 @@ export const PokerCanvas = {
     this.app.renderer.resolution = resolution;
     this.app.renderer.resize(width, height);
 
-    const scale = width / BASE_WIDTH / 1.3; // Scale up to fill more screen
+    const scaleX = width / BASE_WIDTH;
+    const scaleY = height / BASE_HEIGHT;
+    const fitScale = Math.min(scaleX, scaleY);
+
+    // Boost scale by 1.25x but cap it so table never overflows viewport
+    const maxScale = Math.min(width / TABLE_WIDTH, height / TABLE_HEIGHT) * 0.9;
+    const scale = Math.min(fitScale * 1.3, maxScale);
 
     this.containers.container.scale.set(scale);
     this.containers.container.x = width / 2;
