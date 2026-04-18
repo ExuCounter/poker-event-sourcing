@@ -52,14 +52,10 @@ defmodule Poker.Tables.Views.GameStateBuilder do
           |> Commanded.EventStore.stream_forward(stream_id, snapshot.source_version + 1)
           |> Enum.to_list()
 
-        dbg(snapshot.source_version)
-
         aggregate =
           events_after_snapshot
           |> Enum.map(& &1.data)
           |> Enum.reduce(snapshot.data, &Table.apply(&2, &1))
-
-        dbg(aggregate.participants)
 
         %{aggregate: aggregate, latest_version: get_latest_version(events_after_snapshot)}
       else
@@ -130,8 +126,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     calculate_actions = Keyword.get(opts, :calculate_actions, true)
 
     current_participant = find_participant_by_player_id(aggregate, player_id)
-
-    dbg(aggregate.status)
 
     %{
       table_status: aggregate.status,
@@ -292,9 +286,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   end
 
   defp find_participant_by_player_id(_, _), do: nil
-
-  defp get_small_blind(%{settings: %{small_blind: sb}}), do: sb
-  defp get_small_blind(_), do: 0
 
   defp get_big_blind(%{settings: %{big_blind: bb}}), do: bb
   defp get_big_blind(_), do: 0

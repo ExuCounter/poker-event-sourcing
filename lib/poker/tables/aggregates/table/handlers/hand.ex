@@ -16,7 +16,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     SmallBlindPosted,
     BigBlindPosted,
     ParticipantToActSelected,
-    PotsRecalculated,
     HandFinished,
     TableFinished,
     TablePaused,
@@ -63,7 +62,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   def handle(%{hand: nil}, %FinishHand{}),
     do: {:error, :no_active_hand}
 
-  def handle(%{hand: %{id: hand_id} = hand}, %FinishHand{hand_id: command_hand_id} = _command)
+  def handle(%{hand: %{id: hand_id}}, %FinishHand{hand_id: command_hand_id})
       when hand_id != command_hand_id do
     {:error, :hand_id_mismatch}
   end
@@ -300,13 +299,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         end)
       end)
     end)
-    |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
-      %HandFinished{
-        table_id: table.id,
-        hand_id: hand_id,
-        finish_reason: reason
-      }
-    end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       busted_participants =
         Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
@@ -318,6 +310,13 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           table_id: table.id
         }
       end)
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
+      %HandFinished{
+        table_id: table.id,
+        hand_id: hand_id,
+        finish_reason: reason
+      }
     end)
   end
 end

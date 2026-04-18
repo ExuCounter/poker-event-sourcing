@@ -367,7 +367,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
     test "fold participant hand should start a new table hand", ctx do
       ctx = ctx |> exec(:start_table)
-      ctx = ctx |> exec(:fold_hand)
+      _ctx = ctx |> exec(:fold_hand)
 
       assert_receive_event(
         Poker.App,

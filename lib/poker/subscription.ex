@@ -24,9 +24,6 @@ defmodule Poker.Subscription do
 
   @impl true
   def handle_info({:events, events}, %{subscription: subscription} = state) do
-    # Process the events here
-    dbg(events)
-
     # Acknowledge events after processing
     :ok = EventStore.ack(subscription, events)
 

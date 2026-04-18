@@ -62,8 +62,4 @@ defmodule Poker.Tables.Aggregates.Table.Position do
   defp calculate_six_handed_position(3), do: :utg
   defp calculate_six_handed_position(4), do: :hijack
   defp calculate_six_handed_position(5), do: :cutoff
-
-  defp find_participant_by_id(table, participant_id) do
-    Enum.find(table.participants, &(&1.id == participant_id))
-  end
 end

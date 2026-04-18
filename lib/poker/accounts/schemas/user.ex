@@ -26,9 +26,23 @@ defmodule Poker.Accounts.Schemas.User do
   """
   def email_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :role])
+    |> cast(attrs, [:email, :role, :nickname])
     |> validate_required([:role])
     |> validate_email(opts)
+    |> maybe_validate_nickname(opts)
+  end
+
+  defp maybe_validate_nickname(changeset, opts) do
+    if get_change(changeset, :nickname) do
+      changeset
+      |> validate_length(:nickname, min: 3, max: 20)
+      |> validate_format(:nickname, ~r/^[a-zA-Z0-9_]+$/,
+        message: "can only contain letters, numbers, and underscores"
+      )
+      |> maybe_validate_unique_nickname(opts)
+    else
+      changeset
+    end
   end
 
   @doc """

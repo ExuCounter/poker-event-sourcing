@@ -33,16 +33,13 @@ defmodule Poker.Tables.EventTransformer do
       iex> transform(%HandStarted{table_id: "123"}, %{event_id: "uuid-123", stream_version: 5})
       %{table_id: "123", type: "HandStarted", event_id: "uuid-123", stream_version: 5, timing: %{duration: 1000}}
   """
+  # From EventStore (wrapped event)
   def transform(%{data: event, event_id: event_id, stream_version: stream_version})
       when is_struct(event) do
     do_transform(event, event_id, stream_version)
   end
 
-  def transform(event, %{event_id: event_id, stream_version: stream_version})
-      when is_struct(event) do
-    do_transform(event, event_id, stream_version)
-  end
-
+  # From struct with event_id field
   def transform(event) when is_struct(event) and is_map_key(event, :event_id) do
     event_id = Map.get(event, :event_id)
     stream_version = Map.get(event, :stream_version)
@@ -53,6 +50,12 @@ defmodule Poker.Tables.EventTransformer do
   def transform(event)
       when is_map(event) and is_map_key(event, :type) and is_map_key(event, :event_id) do
     event
+  end
+
+  # From Commanded metadata (2-arity)
+  def transform(event, %{event_id: event_id, stream_version: stream_version})
+      when is_struct(event) do
+    do_transform(event, event_id, stream_version)
   end
 
   defp do_transform(event, event_id, stream_version) do

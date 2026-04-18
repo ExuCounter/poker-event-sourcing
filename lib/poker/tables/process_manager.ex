@@ -1,4 +1,15 @@
 defmodule Poker.Tables.ProcessManager do
+  @moduledoc """
+  Process manager that orchestrates poker table workflows.
+
+  Handles the automatic progression of hands:
+  - Starts new hands after table starts or hand finishes
+  - Advances rounds after all players act
+  - Manages player timeouts via Oban jobs
+  - Auto-folds sitting-out players when it's their turn
+  - Pauses/resumes table based on player availability
+  """
+
   use Commanded.ProcessManagers.ProcessManager,
     application: Poker.App,
     name: "Poker.Tables.ProcessManager",

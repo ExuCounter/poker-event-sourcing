@@ -94,90 +94,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     end
   end
 
-  # Private function following TimeoutParticipant pattern
-  defp handle_sit_out_during_hand(
-         %{
-           hand: %{id: table_hand_id},
-           round: %{id: round_id, type: round_type}
-         } = table,
-         command,
-         participant_hand
-       ) do
-    table
-    |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      [
-        %ParticipantFolded{
-          id: participant_hand.id,
-          participant_id: participant_hand.participant_id,
-          table_hand_id: table_hand_id,
-          table_id: command.table_id,
-          status: :folded,
-          round: round_type,
-          folded_at: DateTime.utc_now()
-        },
-        %ParticipantSatOut{
-          participant_id: participant_hand.participant_id,
-          table_id: command.table_id
-        }
-      ]
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      all_acted? = Helpers.all_acted?(table)
-      all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
-
-      cond do
-        all_folded_except_one? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_folded
-            }
-          ]
-
-        all_acted? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_acted
-            }
-          ]
-
-        true ->
-          # Only select next participant if round is not complete
-          next_participant = Helpers.find_next_participant_to_act(table)
-
-          if next_participant do
-            %ParticipantToActSelected{
-              table_id: table.id,
-              round_id: round_id,
-              participant_id: next_participant.id,
-              timeout_seconds: table.settings.timeout_seconds,
-              started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-            }
-          else
-            nil
-          end
-      end
-    end)
-  end
-
   def handle(table, %SitInParticipant{} = command) do
     participant = Enum.find(table.participants, &(&1.player_id == command.player_id))
 
@@ -328,5 +244,89 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     if length(participants) < max_players,
       do: :ok,
       else: {:error, :table_full}
+  end
+
+  # Private function following TimeoutParticipant pattern
+  defp handle_sit_out_during_hand(
+         %{
+           hand: %{id: table_hand_id},
+           round: %{id: round_id, type: round_type}
+         } = table,
+         command,
+         participant_hand
+       ) do
+    table
+    |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn _table ->
+      [
+        %ParticipantFolded{
+          id: participant_hand.id,
+          participant_id: participant_hand.participant_id,
+          table_hand_id: table_hand_id,
+          table_id: command.table_id,
+          status: :folded,
+          round: round_type,
+          folded_at: DateTime.utc_now()
+        },
+        %ParticipantSatOut{
+          participant_id: participant_hand.participant_id,
+          table_id: command.table_id
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      all_acted? = Helpers.all_acted?(table)
+      all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
+
+      cond do
+        all_folded_except_one? ->
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_folded
+            }
+          ]
+
+        all_acted? ->
+          [
+            %PotsRecalculated{
+              table_id: table.id,
+              hand_id: table.hand.id,
+              pots: Pot.recalculate_pots(table.participant_hands)
+            },
+            %RoundCompleted{
+              id: round_id,
+              hand_id: table_hand_id,
+              type: round_type,
+              table_id: table.id,
+              reason: :all_acted
+            }
+          ]
+
+        true ->
+          # Only select next participant if round is not complete
+          next_participant = Helpers.find_next_participant_to_act(table)
+
+          if next_participant do
+            %ParticipantToActSelected{
+              table_id: table.id,
+              round_id: round_id,
+              participant_id: next_participant.id,
+              timeout_seconds: table.settings.timeout_seconds,
+              started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+          else
+            nil
+          end
+      end
+    end)
   end
 end

@@ -1,4 +1,31 @@
 defmodule Poker.Tables do
+  @moduledoc """
+  Tables context - public API for poker table operations.
+
+  This module provides the main interface for interacting with poker tables.
+  It dispatches commands to the event-sourced aggregate and queries projections.
+
+  ## Architecture
+
+  Tables uses Event Sourcing via Commanded:
+  - Commands are validated and dispatched to aggregates
+  - Events are stored and projected to read models
+  - Process managers orchestrate workflows (hand progression, timeouts)
+
+  ## Example Usage
+
+      # Create a new table
+      {:ok, %{table_id: id}} = Tables.create_table(user_id, %{small_blind: 10})
+
+      # Join a table
+      {:ok, participant_id} = Tables.join_participant(table_id, player_id)
+
+      # Player actions
+      :ok = Tables.fold_hand(table_id, player_id)
+      :ok = Tables.call_hand(table_id, player_id)
+      :ok = Tables.raise_hand(table_id, player_id, 100)
+  """
+
   alias Poker.Tables.Commands.{
     CreateTable,
     JoinTableParticipant,

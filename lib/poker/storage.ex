@@ -16,11 +16,15 @@ defmodule Poker.Storage do
   end
 
   defp reset_readstore do
-    config = Application.get_env(:poker, Poker.Repo)
+    config =
+      Application.get_env(:poker, Poker.Repo)
+      |> Keyword.drop([:pool, :pool_size])
 
     {:ok, conn} = Postgrex.start_link(config)
 
     Postgrex.query!(conn, truncate_readstore_tables(), [])
+
+    GenServer.stop(conn)
   end
 
   defp truncate_readstore_tables do

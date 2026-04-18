@@ -1,4 +1,11 @@
 defmodule Poker.Tables.Policy do
+  @moduledoc """
+  Authorization policy for table operations.
+
+  Implements Bodyguard.Policy to authorize user actions on tables.
+  Currently handles owner-only operations like starting a table.
+  """
+
   @behaviour Bodyguard.Policy
 
   def aggregate_table(table_id) do
@@ -15,7 +22,7 @@ defmodule Poker.Tables.Policy do
     if table.creator_id == user.id do
       :ok
     else
-      {:error, "You are not owner of the table."}
+      {:error, :not_table_owner}
     end
   end
 end

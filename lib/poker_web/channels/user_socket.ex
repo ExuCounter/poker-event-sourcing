@@ -10,7 +10,7 @@ defmodule PokerWeb.UserSocket do
   # Uncomment the following line to define a "room:*" topic
   # pointing to the `PokerWeb.RoomChannel`:
   #
-  channel "table:*", PokerWeb.TableChannel
+  # channel "room:*", PokerWeb.RoomChannel
   #
   # To create a channel file, use the mix task:
   #

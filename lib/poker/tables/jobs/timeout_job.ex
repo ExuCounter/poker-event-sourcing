@@ -1,4 +1,12 @@
 defmodule Poker.Tables.Jobs.TimeoutJob do
+  @moduledoc """
+  Oban job that handles player action timeouts.
+
+  Scheduled by the ProcessManager when a player's turn starts.
+  When executed, folds the player's hand if they haven't acted.
+  The aggregate validates if the timeout is still relevant.
+  """
+
   use Oban.Worker, queue: :tables, max_attempts: 1
 
   alias Poker.Tables

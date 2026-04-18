@@ -25,9 +25,11 @@ defmodule Poker.SeedFactorySchema do
 
   command :create_player do
     param(:email, generate: &Faker.Internet.email/0)
+    param(:nickname, generate: fn -> "player_#{:rand.uniform(999_999)}" end)
 
     resolve(fn args ->
-      {:ok, user} = Poker.Accounts.register_user(%{email: args.email, role: :player})
+      {:ok, user} =
+        Poker.Accounts.register_user(%{email: args.email, role: :player, nickname: args.nickname})
 
       {:ok, %{player: user}}
     end)
@@ -80,7 +82,11 @@ defmodule Poker.SeedFactorySchema do
         if args.generate_players do
           for _ <- 1..args.generate_players do
             {:ok, player} =
-              Poker.Accounts.register_user(%{email: Faker.Internet.email(), role: :player})
+              Poker.Accounts.register_user(%{
+                email: Faker.Internet.email(),
+                role: :player,
+                nickname: "player_#{:rand.uniform(999_999)}"
+              })
 
             player
           end
@@ -153,6 +159,24 @@ defmodule Poker.SeedFactorySchema do
       acting_player_id = get_acting_player_id(args.table)
 
       :ok = Poker.Tables.call_hand(args.table.id, acting_player_id)
+
+      table = aggregate_state(:table, args.table.id)
+      positions = get_table_positions(table)
+
+      {:ok, %{table: table, positions: positions}}
+    end)
+
+    update(:table)
+    update(:positions)
+  end
+
+  command :check_hand do
+    param(:table, entity: :table)
+
+    resolve(fn args ->
+      acting_player_id = get_acting_player_id(args.table)
+
+      :ok = Poker.Tables.check_hand(args.table.id, acting_player_id)
 
       table = aggregate_state(:table, args.table.id)
       positions = get_table_positions(table)

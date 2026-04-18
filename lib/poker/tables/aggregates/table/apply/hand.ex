@@ -48,7 +48,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
         %ParticipantShowdownCardsRevealed{
           participant_id: participant_id,
           hole_cards: hole_cards
-        } = event
+        }
       ) do
     revealed_cards = Map.get(table, :revealed_cards, %{})
     updated_revealed_cards = Map.put(revealed_cards, participant_id, hole_cards)

@@ -135,8 +135,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Actions do
           round: %{
             id: round_id,
             type: round_type,
-            participant_to_act_id: participant_to_act_id,
-            acted_participant_ids: acted_participant_ids
+            participant_to_act_id: participant_to_act_id
           }
         } = table,
         %{player_id: player_id} = command

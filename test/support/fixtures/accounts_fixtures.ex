@@ -8,14 +8,17 @@ defmodule Poker.AccountsFixtures do
 
   alias Poker.Accounts
   alias Poker.Accounts.Scope
-  alias Poker.Accounts.Schemas.{User, UserToken}
+  alias Poker.Accounts.Schemas.UserToken
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
+  def unique_user_nickname, do: "player_#{:rand.uniform(999_999)}"
   def valid_user_password, do: "hello world!"
 
   def valid_user_attributes(attrs \\ %{}) do
     Enum.into(attrs, %{
-      email: unique_user_email()
+      email: unique_user_email(),
+      nickname: unique_user_nickname(),
+      role: :player
     })
   end
 

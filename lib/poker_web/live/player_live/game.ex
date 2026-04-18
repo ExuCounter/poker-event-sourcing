@@ -206,6 +206,26 @@ defmodule PokerWeb.PlayerLive.Game do
 
   # Helper functions
   defp format_error(%{message: message}), do: message
+  defp format_error(reason) when is_binary(reason), do: reason
+
+  defp format_error(reason) when is_atom(reason) do
+    case reason do
+      :no_active_hand -> "No active hand in progress"
+      :not_your_turn -> "It's not your turn to act"
+      :participant_not_found -> "You are not a participant at this table"
+      :insufficient_chips -> "Not enough chips for this action"
+      :already_folded -> "You have already folded"
+      :already_sat_out -> "You are already sitting out"
+      :table_not_started -> "The table has not started yet"
+      :table_finished -> "The table has finished"
+      :stale_timeout -> "Action already processed"
+      :not_table_owner -> "Only the table owner can perform this action"
+      :not_enough_participants -> "Not enough participants to start"
+      :table_already_started -> "The table has already started"
+      _ -> "Action failed: #{reason}"
+    end
+  end
+
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
 
   defp find_current_participant(participants, player_id) when is_list(participants) do

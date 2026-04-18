@@ -19,7 +19,6 @@ defmodule Poker.HandEvaluator do
       participant_hands
       |> Enum.filter(&(not is_nil(&1.hole_cards)))
       |> Enum.map(fn hand ->
-        dbg(hand)
         hole_cards = hand |> Map.get(:hole_cards) |> then(&Card.to_comparison_hand/1)
 
         {hand_rank, best_hand} = Poker.Comparison.best_hand(hole_cards, community_cards)
@@ -34,8 +33,6 @@ defmodule Poker.HandEvaluator do
         }
       end)
       |> Enum.sort_by(& &1.hand_value, :desc)
-
-    dbg(values)
 
     max_value = values |> hd() |> Map.get(:hand_value)
 
