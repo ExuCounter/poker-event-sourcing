@@ -137,7 +137,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         else
           aggregate.community_cards
         end,
-      hole_cards: get_player_hole_cards(aggregate, current_participant),
       participants: build_participants_list(aggregate, player_id, visibility_mode),
       valid_actions:
         if calculate_actions do
