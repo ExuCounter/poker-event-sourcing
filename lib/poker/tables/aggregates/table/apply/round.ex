@@ -1,11 +1,16 @@
 defmodule Poker.Tables.Aggregates.Table.Apply.Round do
   @moduledoc """
-  Handles round event application.
+  Applies betting round events to aggregate state.
+
+  Handles the following events:
+  - `RoundStarted` - Initializes a new betting round (pre-flop, flop, turn, river)
+  - `RoundCompleted` - Resets round-specific state after round ends
   """
 
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Events.{RoundStarted, RoundCompleted}
 
+  @doc "Initializes a new betting round with community cards."
   def apply(
         %Table{participant_hands: participant_hands, community_cards: community_cards} = table,
         %RoundStarted{} = event
@@ -30,6 +35,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Round do
     }
   end
 
+  # Resets bet_this_round for all participant hands.
   def apply(%Table{} = table, %RoundCompleted{}) do
     updated_participant_hands = Enum.map(table.participant_hands, &%{&1 | bet_this_round: 0})
 

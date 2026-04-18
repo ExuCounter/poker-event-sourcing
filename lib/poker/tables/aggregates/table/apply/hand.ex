@@ -1,6 +1,13 @@
 defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
   @moduledoc """
-  Handles hand event application.
+  Applies hand-related events to aggregate state.
+
+  Handles the following events:
+  - `HandStarted` - Initializes a new hand with empty state
+  - `ParticipantHandGiven` - Assigns hole cards and position to a participant
+  - `ParticipantShowdownCardsRevealed` - Records revealed cards at showdown
+  - `PayoutDistributed` - Awards chips to winner and records payout
+  - `HandFinished` - Marks the hand as complete
   """
 
   alias Poker.Tables.Aggregates.Table
@@ -13,6 +20,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     PayoutDistributed
   }
 
+  @doc "Initializes a new hand with empty state."
   def apply(%Table{prev_hand_id: prev_hand_id} = table, %HandStarted{} = event) do
     hand = %{id: event.id}
 
@@ -29,6 +37,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     |> Map.put(:status, :live)
   end
 
+  # Assigns hole cards and position to a participant.
   def apply(%Table{participant_hands: participant_hands} = table, %ParticipantHandGiven{} = event) do
     new_participant_hand = %{
       id: event.id,
@@ -44,6 +53,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     %Table{table | participant_hands: participant_hands ++ [new_participant_hand]}
   end
 
+  # Records revealed cards at showdown.
   def apply(
         %Table{} = table,
         %ParticipantShowdownCardsRevealed{
@@ -57,6 +67,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     Map.put(table, :revealed_cards, updated_revealed_cards)
   end
 
+  # Awards chips to winner and records payout.
   def apply(
         %Table{participants: participants, payouts: payouts} = table,
         %PayoutDistributed{} = event
@@ -88,6 +99,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     }
   end
 
+  # Marks the hand as finished.
   def apply(%Table{hand: hand} = table, %HandFinished{hand_id: hand_id}) do
     finished_hand = Map.put(hand, :status, :finished)
 

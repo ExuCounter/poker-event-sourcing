@@ -1,6 +1,25 @@
 defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
   @moduledoc """
-  Handles participant event application.
+  Applies participant-related events to aggregate state.
+
+  Handles the following event categories:
+
+  ## Membership Events
+  - `ParticipantJoined` - Adds a new participant to the table
+  - `ParticipantSatOut` - Marks participant as sitting out
+  - `ParticipantSatIn` - Marks participant as active
+  - `ParticipantBusted` - Marks participant as busted (out of chips)
+  - `ParticipantTimedOut` - Informational event (no state change)
+
+  ## Betting Action Events
+  - `ParticipantFolded` - Updates hand status and adds to acted list
+  - `ParticipantChecked` - Adds participant to acted list
+  - `ParticipantCalled` - Deducts chips, updates bets, adds to acted list
+  - `ParticipantRaised` - Deducts chips, updates bets, resets acted list
+  - `ParticipantWentAllIn` - Deducts chips, updates bets, adjusts acted list
+
+  ## Turn Management
+  - `ParticipantToActSelected` - Updates current participant to act
   """
 
   alias Poker.Tables.Aggregates.Table
@@ -20,6 +39,11 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     ParticipantTimedOut
   }
 
+  # =============================================================================
+  # MEMBERSHIP EVENTS
+  # =============================================================================
+
+  @doc "Adds a new participant to the table."
   def apply(%Table{participants: participants} = table, %ParticipantJoined{} = event) do
     new_participant = %{
       id: event.id,
@@ -33,25 +57,32 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     %Table{table | participants: participants ++ [new_participant]}
   end
 
+  # Marks participant as sitting out.
   def apply(%Table{} = table, %ParticipantSatOut{} = event) do
     Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: true})
   end
 
+  # Marks participant as active (not sitting out).
   def apply(%Table{} = table, %ParticipantSatIn{} = event) do
     Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: false})
   end
 
+  # Marks participant as busted (out of chips).
   def apply(%Table{} = table, %ParticipantBusted{participant_id: participant_id}) do
     Helpers.update_participant(table, participant_id, &%{&1 | status: :busted})
   end
 
+  # Handles timeout event (informational only, no state change).
   def apply(%Table{} = table, %ParticipantTimedOut{} = _event) do
-    # No state change needed - this is informational
     # The actual state changes come from ParticipantFolded and ParticipantSatOut
     table
   end
 
-  # Participant action events - Fold
+  # =============================================================================
+  # BETTING ACTION EVENTS
+  # =============================================================================
+
+  # Marks participant hand as folded and adds to acted list.
   def apply(%Table{round: round} = table, %ParticipantFolded{} = event) do
     updated_round = %{
       round
@@ -65,7 +96,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     |> Map.put(:round, updated_round)
   end
 
-  # Participant action events - Check
+  # Adds participant to acted list (no chips change).
   def apply(%Table{round: round} = table, %ParticipantChecked{} = event) do
     updated_round = %{
       round
@@ -79,7 +110,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     |> Map.put(:round, updated_round)
   end
 
-  # Participant action events - Call
+  # Deducts chips for call amount, updates bets, adds to acted list.
   def apply(%Table{round: round} = table, %ParticipantCalled{} = event) do
     updated_round = %{
       round
@@ -99,7 +130,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     |> Map.put(:round, updated_round)
   end
 
-  # Participant action events - Raise
+  # Deducts chips for raise, updates bets, resets acted list (others must act again).
   def apply(%Table{round: round} = table, %ParticipantRaised{} = event) do
     updated_round = %{
       round
@@ -119,7 +150,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     |> Map.put(:round, updated_round)
   end
 
-  # Participant action events - All-in
+  # Puts participant all-in, adjusts acted list based on bet amounts.
   def apply(%Table{round: round} = table, %ParticipantWentAllIn{} = event) do
     acted_participant_ids =
       Enum.reject(round.acted_participant_ids, fn id ->
@@ -146,7 +177,11 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     |> Map.put(:round, updated_round)
   end
 
-  # Participant to act selected
+  # =============================================================================
+  # TURN MANAGEMENT
+  # =============================================================================
+
+  # Updates which participant is currently to act.
   def apply(%Table{round: round} = table, %ParticipantToActSelected{} = event) do
     %Table{
       table

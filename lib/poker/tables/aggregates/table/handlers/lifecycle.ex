@@ -1,15 +1,30 @@
 defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
   @moduledoc """
-  Handles table lifecycle operations: creation, starting, and finishing.
+  Handles table lifecycle commands.
+
+  This module processes the following commands:
+  - `CreateTable` - Creates a new table with settings
+  - `StartTable` - Starts the table (requires 2+ participants)
+  - `FinishTable` - Ends the table
+  - `PauseTable` - Pauses a live table
+  - `ResumeTable` - Resumes a paused table
+
+  ## Validation Rules
+  - Tables can only be started from waiting status
+  - Tables require at least 2 participants to start
+  - Pausing requires a live table
+  - Resuming requires a paused table with available participants
   """
 
   alias Poker.Tables.Commands.{CreateTable, StartTable, FinishTable, PauseTable, ResumeTable}
   alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed}
   alias Poker.Tables.Aggregates.Table.Helpers
 
-  @doc """
-  Handles table lifecycle commands.
-  """
+  # =============================================================================
+  # CREATE TABLE
+  # =============================================================================
+
+  @doc "Creates a new table with the specified settings."
   def handle(_table, %CreateTable{} = command) do
     %TableCreated{
       id: command.table_id,
@@ -23,9 +38,14 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
     }
   end
 
+  # =============================================================================
+  # START TABLE
+  # =============================================================================
+
   def handle(%{status: status}, %StartTable{}) when status != :waiting,
     do: {:error, :table_already_started}
 
+  # Starts the table if there are enough participants.
   def handle(%{participants: participants} = table, %StartTable{}) do
     if length(participants) >= 2 do
       %TableStarted{
@@ -37,6 +57,11 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
     end
   end
 
+  # =============================================================================
+  # FINISH TABLE
+  # =============================================================================
+
+  # Finishes the table with the given reason.
   def handle(_table, %FinishTable{} = command) do
     %TableFinished{
       table_id: command.table_id,
@@ -44,7 +69,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
     }
   end
 
-  # Pause handlers
+  # =============================================================================
+  # PAUSE TABLE
+  # =============================================================================
+
   def handle(%{status: :finished}, %PauseTable{}),
     do: {:error, :table_finished}
 
@@ -54,6 +82,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
   def handle(%{status: :waiting}, %PauseTable{}),
     do: {:error, :table_not_started}
 
+  # Pauses a live table.
   def handle(table, %PauseTable{} = command) do
     %TablePaused{
       table_id: table.id,
@@ -61,10 +90,14 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
     }
   end
 
-  # Resume handlers
+  # =============================================================================
+  # RESUME TABLE
+  # =============================================================================
+
   def handle(%{status: status}, %ResumeTable{}) when status != :paused,
     do: {:error, :table_not_paused}
 
+  # Resumes a paused table if participants are available.
   def handle(table, %ResumeTable{}) do
     if Helpers.has_participant_not_sitting_out?(table.participants) do
       %TableResumed{table_id: table.id}

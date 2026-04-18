@@ -1,7 +1,22 @@
 defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   @moduledoc """
-  Handles hand lifecycle for poker tables.
-  Manages starting hands, dealing cards, posting blinds, and finishing hands.
+  Handles hand lifecycle commands for poker tables.
+
+  This module processes the following commands:
+  - `StartHand` - Starts a new hand (deals cards, posts blinds)
+  - `FinishHand` - Completes a hand (determines winners, distributes pots)
+
+  ## Hand Start Flow
+  1. Move dealer button
+  2. Generate and shuffle deck
+  3. Start pre-flop round
+  4. Deal hole cards to each participant
+  5. Post small and big blinds
+  6. Select first participant to act
+
+  ## Hand Finish Scenarios
+  - `:all_folded` - All but one player folded, winner takes pot
+  - `:showdown` - Multiple players remain, best hand wins
   """
 
   alias Poker.Tables.Commands.{StartHand, FinishHand}
@@ -27,37 +42,38 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   alias Poker.Tables.Aggregates.Table.Helpers
   alias Poker.Tables.Aggregates.Table.Position
 
-  @doc """
-  Handles hand commands.
-  """
+  # =============================================================================
+  # START HAND
+  # =============================================================================
+
+  @doc "Starts a new hand or pauses/finishes table if not enough players."
   def handle(table, %StartHand{} = command) do
-    # Only count participants who are active AND not sitting out
     playing_participants = Helpers.filter_playing_participants(table.participants)
 
     cond do
-      # Not enough playing participants - check if we should finish or pause
       length(playing_participants) < 2 ->
         active_participants = Helpers.filter_active_participants(table.participants)
 
         if length(active_participants) < 2 do
-          # No one left - finish table
           %TableFinished{
             table_id: table.id,
             reason: :completed
           }
         else
-          # People are sitting out - pause table
           %TablePaused{
             table_id: table.id,
             reason: :all_sitting_out
           }
         end
 
-      # Normal case - start hand with playing participants
       true ->
         start_hand(table, command.hand_id)
     end
   end
+
+  # =============================================================================
+  # FINISH HAND
+  # =============================================================================
 
   def handle(%{hand: nil}, %FinishHand{}),
     do: {:error, :no_active_hand}
@@ -67,10 +83,15 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     {:error, :hand_id_mismatch}
   end
 
+  # Finishes the hand with the given reason (:all_folded or :showdown).
   def handle(table, %FinishHand{} = command),
     do: finish_hand(table, command.finish_reason)
 
-  def start_hand(table, hand_id) do
+  # =============================================================================
+  # PRIVATE - HAND START
+  # =============================================================================
+
+  defp start_hand(table, hand_id) do
     # Only deal cards to participants who are active and not sitting out
     playing_participants = Helpers.filter_playing_participants(table.participants)
 
@@ -186,7 +207,11 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
   end
 
-  def finish_hand(table, :all_folded = reason) do
+  # =============================================================================
+  # PRIVATE - HAND FINISH
+  # =============================================================================
+
+  defp finish_hand(table, :all_folded = reason) do
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn %{
@@ -240,7 +265,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
   end
 
-  def finish_hand(table, :showdown = reason) do
+  defp finish_hand(table, :showdown = reason) do
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn %{

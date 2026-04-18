@@ -1,21 +1,37 @@
 defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
   @moduledoc """
-  Handles round lifecycle and management for poker hands.
-  Manages transitions between pre-flop, flop, turn, and river.
+  Handles betting round commands for poker hands.
+
+  This module processes the `StartRound` command to transition between:
+  - Pre-flop → Flop (3 community cards)
+  - Flop → Turn (1 community card)
+  - Turn → River (1 community card)
+
+  ## Round Start Flow
+  1. Deal community cards from deck
+  2. Reset bets for the new round
+  3. Select first participant to act (left of dealer)
+
+  ## Special Cases
+  - **Runout**: When only one player can act (others all-in), rounds
+    complete immediately without betting
+  - **Hand ID mismatch**: Rejects stale commands from previous hands
   """
 
   alias Poker.Tables.Commands.StartRound
   alias Poker.Tables.Events.{RoundStarted, RoundCompleted, DeckUpdated, ParticipantToActSelected}
   alias Poker.Tables.Aggregates.Table.Helpers
 
-  @doc """
-  Handles round commands.
-  """
+  # =============================================================================
+  # START ROUND
+  # =============================================================================
+
   def handle(%{hand: %{id: hand_id}}, %StartRound{hand_id: command_hand_id} = _command)
       when hand_id != command_hand_id do
     {:error, :hand_id_mismatch}
   end
 
+  # Handles case when no participant can act (completes round immediately).
   def handle(
         %{participant_to_act_id: nil} = table,
         %StartRound{hand_id: _command_hand_id} = _command
@@ -29,6 +45,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
     }
   end
 
+  # Starts a new betting round, handling runout scenarios.
   def handle(table, %StartRound{} = command) do
     if Helpers.runout?(table) do
       table

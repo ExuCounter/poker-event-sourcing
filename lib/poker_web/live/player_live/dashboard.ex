@@ -14,22 +14,44 @@ defmodule PokerWeb.PlayerLive.Dashboard do
 
   @impl true
   def handle_event("create_table", %{"table" => params}, socket) do
-    settings = %{
-      small_blind: String.to_integer(params["small_blind"]),
-      big_blind: String.to_integer(params["big_blind"]),
-      starting_stack: String.to_integer(params["starting_stack"]),
-      timeout_seconds: String.to_integer(params["timeout_seconds"]),
-      table_type: String.to_existing_atom(params["table_type"])
-    }
+    with {:ok, small_blind} <- parse_integer(params["small_blind"], "small blind"),
+         {:ok, big_blind} <- parse_integer(params["big_blind"], "big blind"),
+         {:ok, starting_stack} <- parse_integer(params["starting_stack"], "starting stack"),
+         {:ok, timeout_seconds} <- parse_integer(params["timeout_seconds"], "timeout"),
+         {:ok, table_type} <- parse_table_type(params["table_type"]) do
+      settings = %{
+        small_blind: small_blind,
+        big_blind: big_blind,
+        starting_stack: starting_stack,
+        timeout_seconds: timeout_seconds,
+        table_type: table_type
+      }
 
-    case Tables.create_table(socket.assigns.current_scope, settings) do
-      {:ok, %{table_id: table_id}} ->
-        {:noreply, push_navigate(socket, to: ~p"/tables/#{table_id}/lobby")}
+      case Tables.create_table(socket.assigns.current_scope, settings) do
+        {:ok, %{table_id: table_id}} ->
+          {:noreply, push_navigate(socket, to: ~p"/tables/#{table_id}/lobby")}
 
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to create table: #{inspect(reason)}")}
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to create table: #{inspect(reason)}")}
+      end
+    else
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
     end
   end
+
+  defp parse_integer(value, field_name) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, _} when int > 0 -> {:ok, int}
+      {_, _} -> {:error, "#{field_name} must be a positive number"}
+      :error -> {:error, "Invalid #{field_name}"}
+    end
+  end
+
+  defp parse_integer(_, field_name), do: {:error, "Invalid #{field_name}"}
+
+  defp parse_table_type("six_max"), do: {:ok, :six_max}
+  defp parse_table_type(_), do: {:error, "Invalid table type"}
 
   @impl true
   def handle_info({:table_list, _event, _data}, socket) do

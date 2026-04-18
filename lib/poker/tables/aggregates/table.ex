@@ -88,22 +88,16 @@ defmodule Poker.Tables.Aggregates.Table do
   def execute(table, %cmd{} = command)
       when cmd in [
              JoinTableParticipant,
-             SitOutParticipant,
-             SitInParticipant
-           ] do
-    Handlers.Participants.handle(table, command)
-  end
-
-  def execute(table, %cmd{} = command)
-      when cmd in [
              ParticipantFold,
              ParticipantCheck,
              ParticipantCall,
              ParticipantRaise,
              ParticipantAllIn,
-             TimeoutParticipant
+             TimeoutParticipant,
+             SitOutParticipant,
+             SitInParticipant
            ] do
-    Handlers.Actions.handle(table, command)
+    Handlers.Participants.handle(table, command)
   end
 
   def execute(table, %cmd{} = command)

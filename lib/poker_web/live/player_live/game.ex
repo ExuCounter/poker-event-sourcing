@@ -100,11 +100,15 @@ defmodule PokerWeb.PlayerLive.Game do
   end
 
   def handle_event("raise_hand", %{"amount" => amount}, socket) do
-    {amount, _} = Integer.parse(amount)
+    case Integer.parse(amount) do
+      {amount_int, _} ->
+        case Tables.raise_hand(socket.assigns.current_scope, socket.assigns.table_id, amount_int) do
+          :ok -> {:noreply, socket}
+          {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
+        end
 
-    case Tables.raise_hand(socket.assigns.current_scope, socket.assigns.table_id, amount) do
-      :ok -> {:noreply, socket}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
+      :error ->
+        {:noreply, put_flash(socket, :error, "Invalid raise amount")}
     end
   end
 
@@ -116,9 +120,13 @@ defmodule PokerWeb.PlayerLive.Game do
   end
 
   def handle_event("update_raise_amount", %{"raise_amount" => amount}, socket) do
-    {amount_int, _} = Integer.parse(amount)
+    case Integer.parse(amount) do
+      {amount_int, _} ->
+        {:noreply, assign(socket, raise_amount: amount_int)}
 
-    {:noreply, assign(socket, raise_amount: amount_int)}
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("sit_out", _params, socket) do

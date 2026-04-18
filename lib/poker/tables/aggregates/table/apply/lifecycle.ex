@@ -1,11 +1,19 @@
 defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   @moduledoc """
-  Handles table lifecycle event application (creation, start, finish).
+  Applies table lifecycle events to aggregate state.
+
+  Handles the following events:
+  - `TableCreated` - Initializes a new table with settings and empty participants
+  - `TableStarted` - Transitions table to live status
+  - `TableFinished` - Marks table as finished
+  - `TablePaused` - Pauses the table (e.g., when all players sit out)
+  - `TableResumed` - Resumes a paused table
   """
 
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed}
 
+  @doc "Initializes table state from creation event."
   def apply(%Table{} = _table, %TableCreated{} = created) do
     settings = %{
       small_blind: created.small_blind,
@@ -27,18 +35,22 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
     }
   end
 
+  # Updates table status to live.
   def apply(%Table{} = table, %TableStarted{} = event) do
     %Table{table | status: event.status}
   end
 
+  # Marks table as finished.
   def apply(%Table{} = table, %TableFinished{}) do
     %Table{table | status: :finished}
   end
 
+  # Pauses the table.
   def apply(%Table{} = table, %TablePaused{}) do
     %Table{table | status: :paused}
   end
 
+  # Resumes a paused table.
   def apply(%Table{} = table, %TableResumed{}) do
     %Table{table | status: :live}
   end

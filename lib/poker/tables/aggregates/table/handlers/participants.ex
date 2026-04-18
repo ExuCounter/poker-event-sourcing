@@ -1,7 +1,17 @@
 defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   @moduledoc """
-  Handles participant-related operations for poker tables.
-  Manages joining, sitting out, and sitting in.
+  Handles all participant-related operations for poker tables.
+
+  This module handles:
+  - Joining/leaving tables
+  - Sitting out/in
+  - Betting actions (fold, check, call, raise, all-in)
+  - Timeouts
+
+  For betting actions during a hand, this module:
+  1. Validates it's the participant's turn
+  2. Creates the action event
+  3. Handles round completion (via Helpers.handle_post_action/1)
   """
 
   alias Poker.Tables.Commands.{
@@ -12,7 +22,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantCheck,
     ParticipantCall,
     ParticipantRaise,
-    ParticipantAllIn
+    ParticipantAllIn,
+    TimeoutParticipant
   }
 
   alias Poker.Tables.Events.{
@@ -24,20 +35,19 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantCalled,
     ParticipantRaised,
     ParticipantWentAllIn,
-    ParticipantToActSelected
+    ParticipantTimedOut
   }
 
   alias Poker.Tables.Aggregates.Table.Helpers
-  alias Poker.Tables.Aggregates.Table.Pot
-  alias Poker.Tables.Events.{PotsRecalculated, RoundCompleted}
 
   @max_players %{
     six_max: 6
   }
 
-  @doc """
-  Handles participant commands.
-  """
+  # =============================================================================
+  # JOIN TABLE
+  # =============================================================================
+
   def handle(%{status: status}, %JoinTableParticipant{}) when status in [:live, :finished],
     do: {:error, :cannot_join_started_or_finished_table}
 
@@ -65,152 +75,193 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     end
   end
 
-  def handle(table, %SitOutParticipant{} = command) do
-    participant = Enum.find(table.participants, &(&1.player_id == command.player_id))
+  # =============================================================================
+  # SIT OUT / SIT IN
+  # =============================================================================
 
-    if participant.is_sitting_out do
-      {:error, :already_sat_out}
-    else
-      # Check if participant is in an active hand
-      participant_hand =
-        if table.hand && table.participant_hands do
-          Enum.find(table.participant_hands, fn hand ->
-            hand.participant_id == participant.id && hand.status == :playing
-          end)
-        else
-          nil
-        end
+  def handle(table, %SitOutParticipant{player_id: player_id} = command) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
 
-      if participant_hand do
-        # Active hand - use Multi pattern to fold, sit out, and switch turns
-        handle_sit_out_during_hand(table, command, participant_hand)
-      else
-        # No active hand - just sit out (no turn switching needed)
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
+
+      participant.is_sitting_out ->
+        {:error, :already_sat_out}
+
+      in_active_hand?(table, participant) ->
+        sit_out_during_hand(table, command, participant)
+
+      true ->
         %ParticipantSatOut{
           participant_id: participant.id,
           table_id: command.table_id
         }
-      end
     end
   end
 
-  def handle(table, %SitInParticipant{} = command) do
-    participant = Enum.find(table.participants, &(&1.player_id == command.player_id))
+  def handle(table, %SitInParticipant{player_id: player_id} = command) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
 
-    if participant && participant.is_sitting_out do
-      %ParticipantSatIn{
-        participant_id: participant.id,
-        table_id: command.table_id
-      }
-    else
-      :ok
-    end
-  end
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
 
-  def handle(table, %ParticipantFold{} = command) do
-    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
-      participant_hand =
-        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+      not participant.is_sitting_out ->
+        {:error, :not_sitting_out}
 
-      %ParticipantFolded{
-        id: participant_hand.id,
-        participant_id: participant.id,
-        table_hand_id: table.hand.id,
-        table_id: table.id,
-        status: :folded,
-        round: table.round.type,
-        folded_at: DateTime.utc_now()
-      }
-    end
-  end
-
-  def handle(table, %ParticipantCheck{} = command) do
-    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
-      participant_hand =
-        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
-
-      %ParticipantChecked{
-        id: participant_hand.id,
-        participant_id: participant.id,
-        table_hand_id: table.hand.id,
-        table_id: table.id,
-        status: :playing,
-        round: table.round.type
-      }
-    end
-  end
-
-  def handle(table, %ParticipantCall{} = command) do
-    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
-      last_bet_amount =
-        table.participant_hands
-        |> Enum.map(& &1.bet_this_round)
-        |> Enum.max()
-
-      participant_hand =
-        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
-
-      call_amount =
-        [last_bet_amount - participant_hand.bet_this_round, participant.chips]
-        |> Enum.filter(&(&1 >= 0))
-        |> Enum.min()
-
-      if participant.chips < call_amount do
-        {:error, :insufficient_chips}
-      else
-        %ParticipantCalled{
-          id: participant_hand.id,
+      true ->
+        %ParticipantSatIn{
           participant_id: participant.id,
-          table_hand_id: table.id,
-          table_id: table.id,
-          status: :playing,
-          amount: call_amount,
-          round: table.round.type
+          table_id: command.table_id
         }
-      end
     end
   end
 
-  def handle(table, %ParticipantRaise{} = command) do
-    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
-      participant_hand =
-        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+  # =============================================================================
+  # TIMEOUT
+  # =============================================================================
 
-      raise_amount = command.amount - participant_hand.bet_this_round
+  def handle(%{hand: nil}, %TimeoutParticipant{}),
+    do: {:error, :no_active_hand}
 
-      if participant.chips < raise_amount do
-        {:error, :insufficient_chips}
-      else
-        if participant.chips == raise_amount do
-          %ParticipantWentAllIn{
-            id: participant_hand.id,
-            participant_id: participant.id,
-            table_hand_id: table.hand.id,
-            table_id: table.id,
-            status: :playing,
-            amount: participant.chips,
-            round: table.round.type
-          }
-        else
-          %ParticipantRaised{
-            id: participant_hand.id,
-            participant_id: participant.id,
-            table_hand_id: table.hand.id,
-            table_id: table.id,
-            status: :playing,
-            amount: raise_amount,
-            round: table.round.type
-          }
-        end
-      end
+  def handle(
+        %{round: %{participant_to_act_id: participant_to_act_id, id: round_id}},
+        %TimeoutParticipant{participant_id: participant_id, round_id: command_round_id}
+      )
+      when participant_to_act_id != participant_id or round_id != command_round_id do
+    {:error, :stale_timeout}
+  end
+
+  def handle(table, %TimeoutParticipant{} = command) do
+    participant_hand = find_participant_hand(table, command.participant_id)
+
+    table
+    |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn _table ->
+      [
+        %ParticipantTimedOut{
+          id: UUIDv7.generate(),
+          table_id: command.table_id,
+          participant_id: command.participant_id,
+          round_id: command.round_id
+        },
+        %ParticipantFolded{
+          id: participant_hand.id,
+          participant_id: command.participant_id,
+          table_hand_id: table.hand.id,
+          table_id: command.table_id,
+          status: :folded,
+          round: table.round.type,
+          folded_at: DateTime.utc_now()
+        },
+        %ParticipantSatOut{
+          table_id: command.table_id,
+          participant_id: command.participant_id
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(&Helpers.handle_post_action/1)
+  end
+
+  # =============================================================================
+  # BETTING ACTIONS (Fold, Check, Call, Raise, All-In)
+  # =============================================================================
+
+  def handle(
+        %{round: %{participant_to_act_id: participant_to_act_id}} = table,
+        %cmd{player_id: player_id} = command
+      )
+      when cmd in [
+             ParticipantFold,
+             ParticipantCheck,
+             ParticipantCall,
+             ParticipantRaise,
+             ParticipantAllIn
+           ] do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
+
+      participant.id != participant_to_act_id ->
+        {:error,
+         %{status: :not_participants_turn, message: "It's not this participant's turn to act"}}
+
+      true ->
+        table
+        |> Commanded.Aggregate.Multi.new()
+        |> Commanded.Aggregate.Multi.execute(fn tbl -> build_action_event(tbl, command) end)
+        |> Commanded.Aggregate.Multi.execute(&Helpers.handle_post_action/1)
     end
   end
 
-  def handle(table, %ParticipantAllIn{} = command) do
-    with {:ok, participant} <- find_participant_by_player_id(table, command.player_id) do
-      participant_hand =
-        Enum.find(table.participant_hands, fn hand -> hand.participant_id == participant.id end)
+  # =============================================================================
+  # EVENT BUILDERS (Private)
+  # =============================================================================
 
+  defp build_action_event(table, %ParticipantFold{player_id: player_id}) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
+
+    %ParticipantFolded{
+      id: participant_hand.id,
+      participant_id: participant.id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :folded,
+      round: table.round.type,
+      folded_at: DateTime.utc_now()
+    }
+  end
+
+  defp build_action_event(table, %ParticipantCheck{player_id: player_id}) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
+
+    %ParticipantChecked{
+      id: participant_hand.id,
+      participant_id: participant.id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :playing,
+      round: table.round.type
+    }
+  end
+
+  defp build_action_event(table, %ParticipantCall{player_id: player_id}) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
+
+    last_bet_amount =
+      table.participant_hands
+      |> Enum.map(& &1.bet_this_round)
+      |> Enum.max()
+
+    call_amount =
+      [last_bet_amount - participant_hand.bet_this_round, participant.chips]
+      |> Enum.filter(&(&1 >= 0))
+      |> Enum.min()
+
+    %ParticipantCalled{
+      id: participant_hand.id,
+      participant_id: participant.id,
+      table_hand_id: table.id,
+      table_id: table.id,
+      status: :playing,
+      amount: call_amount,
+      round: table.round.type
+    }
+  end
+
+  defp build_action_event(table, %ParticipantRaise{player_id: player_id, amount: amount}) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
+
+    raise_amount = amount - participant_hand.bet_this_round
+
+    if participant.chips == raise_amount do
       %ParticipantWentAllIn{
         id: participant_hand.id,
         participant_id: participant.id,
@@ -220,18 +271,75 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         amount: participant.chips,
         round: table.round.type
       }
+    else
+      %ParticipantRaised{
+        id: participant_hand.id,
+        participant_id: participant.id,
+        table_hand_id: table.hand.id,
+        table_id: table.id,
+        status: :playing,
+        amount: raise_amount,
+        round: table.round.type
+      }
     end
   end
 
-  defp find_participant_by_player_id(table, player_id) do
-    case Enum.find(table.participants, &(&1.player_id == player_id)) do
-      nil ->
-        {:error,
-         %{status: :participant_not_found, message: "You are not a participant at this table"}}
+  defp build_action_event(table, %ParticipantAllIn{player_id: player_id}) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
 
-      participant ->
-        {:ok, participant}
-    end
+    %ParticipantWentAllIn{
+      id: participant_hand.id,
+      participant_id: participant.id,
+      table_hand_id: table.hand.id,
+      table_id: table.id,
+      status: :playing,
+      amount: participant.chips,
+      round: table.round.type
+    }
+  end
+
+  # =============================================================================
+  # PRIVATE HELPERS
+  # =============================================================================
+
+  defp in_active_hand?(table, participant) do
+    table.hand != nil and
+      table.participant_hands != nil and
+      Enum.any?(table.participant_hands, fn hand ->
+        hand.participant_id == participant.id && hand.status == :playing
+      end)
+  end
+
+  defp find_participant_hand(table, participant_id) do
+    Enum.find(table.participant_hands, fn hand ->
+      hand.participant_id == participant_id
+    end)
+  end
+
+  defp sit_out_during_hand(table, command, participant) do
+    participant_hand = find_participant_hand(table, participant.id)
+
+    table
+    |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn _table ->
+      [
+        %ParticipantFolded{
+          id: participant_hand.id,
+          participant_id: participant.id,
+          table_hand_id: table.hand.id,
+          table_id: command.table_id,
+          status: :folded,
+          round: table.round.type,
+          folded_at: DateTime.utc_now()
+        },
+        %ParticipantSatOut{
+          participant_id: participant.id,
+          table_id: command.table_id
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(&Helpers.handle_post_action/1)
   end
 
   defp validate_not_already_joined(participants, player_id) do
@@ -244,89 +352,5 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     if length(participants) < max_players,
       do: :ok,
       else: {:error, :table_full}
-  end
-
-  # Private function following TimeoutParticipant pattern
-  defp handle_sit_out_during_hand(
-         %{
-           hand: %{id: table_hand_id},
-           round: %{id: round_id, type: round_type}
-         } = table,
-         command,
-         participant_hand
-       ) do
-    table
-    |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn _table ->
-      [
-        %ParticipantFolded{
-          id: participant_hand.id,
-          participant_id: participant_hand.participant_id,
-          table_hand_id: table_hand_id,
-          table_id: command.table_id,
-          status: :folded,
-          round: round_type,
-          folded_at: DateTime.utc_now()
-        },
-        %ParticipantSatOut{
-          participant_id: participant_hand.participant_id,
-          table_id: command.table_id
-        }
-      ]
-    end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      all_acted? = Helpers.all_acted?(table)
-      all_folded_except_one? = Helpers.all_folded_except_one_participant?(table)
-
-      cond do
-        all_folded_except_one? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_folded
-            }
-          ]
-
-        all_acted? ->
-          [
-            %PotsRecalculated{
-              table_id: table.id,
-              hand_id: table.hand.id,
-              pots: Pot.recalculate_pots(table.participant_hands)
-            },
-            %RoundCompleted{
-              id: round_id,
-              hand_id: table_hand_id,
-              type: round_type,
-              table_id: table.id,
-              reason: :all_acted
-            }
-          ]
-
-        true ->
-          # Only select next participant if round is not complete
-          next_participant = Helpers.find_next_participant_to_act(table)
-
-          if next_participant do
-            %ParticipantToActSelected{
-              table_id: table.id,
-              round_id: round_id,
-              participant_id: next_participant.id,
-              timeout_seconds: table.settings.timeout_seconds,
-              started_at: DateTime.utc_now() |> DateTime.to_iso8601()
-            }
-          else
-            nil
-          end
-      end
-    end)
   end
 end
