@@ -13,12 +13,6 @@ defmodule Poker.Tables.ProcessManagerTest do
 
   describe "process manager - hand lifecycle" do
     setup ctx do
-      players =
-        for _ <- 1..3 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table,
         type: :six_max,
@@ -29,7 +23,7 @@ defmodule Poker.Tables.ProcessManagerTest do
           timeout_seconds: 60
         }
       )
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 3)
     end
 
     test "starts hand when table starts", ctx do
@@ -73,12 +67,6 @@ defmodule Poker.Tables.ProcessManagerTest do
 
   describe "process manager - round progression" do
     setup ctx do
-      players =
-        for _ <- 1..2 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table,
         type: :six_max,
@@ -89,7 +77,7 @@ defmodule Poker.Tables.ProcessManagerTest do
           timeout_seconds: 60
         }
       )
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 2)
     end
 
     test "advances to flop after pre-flop all acted", ctx do
@@ -151,12 +139,6 @@ defmodule Poker.Tables.ProcessManagerTest do
 
   describe "process manager - table pause/resume" do
     setup ctx do
-      players =
-        for _ <- 1..2 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table,
         type: :six_max,
@@ -167,7 +149,7 @@ defmodule Poker.Tables.ProcessManagerTest do
           timeout_seconds: 60
         }
       )
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 2)
     end
 
     test "pauses table when not enough playing participants", ctx do
@@ -216,12 +198,6 @@ defmodule Poker.Tables.ProcessManagerTest do
 
   describe "process manager - sitting out auto-fold" do
     setup ctx do
-      players =
-        for _ <- 1..3 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table,
         type: :six_max,
@@ -232,7 +208,7 @@ defmodule Poker.Tables.ProcessManagerTest do
           timeout_seconds: 60
         }
       )
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 3)
     end
 
     test "auto-folds for sitting out player when their turn comes", ctx do

@@ -23,6 +23,12 @@ defmodule Poker.SeedFactorySchema do
     |> Enum.into(%{})
   end
 
+  defp table_with_positions(table_id) do
+    table = aggregate_state(:table, table_id)
+    positions = get_table_positions(table)
+    %{table: table, positions: positions}
+  end
+
   command :create_player do
     param(:email, generate: &Faker.Internet.email/0)
     param(:nickname, generate: fn -> "player_#{:rand.uniform(999_999)}" end)
@@ -52,21 +58,13 @@ defmodule Poker.SeedFactorySchema do
     )
 
     resolve(fn args ->
-      settings = args.settings |> Map.put(:table_type, args.type)
+      settings = Map.put(args.settings, :table_type, args.type)
 
       {:ok, %{table_id: table_id}} = Poker.Tables.create_table(args.player.id, settings)
 
-      aggregate_state = aggregate_state(:table, table_id)
+      table = aggregate_state(:table, table_id)
 
-      if args.subscribe_to_pub_sub? do
-        Poker.TableEvents.subscribe_to_table(table_id)
-
-        ExUnit.Callbacks.on_exit(fn ->
-          Poker.TableEvents.unsubscribe_from_table(table_id)
-        end)
-      end
-
-      {:ok, %{table: aggregate_state}}
+      {:ok, %{table: table}}
     end)
 
     produce(:table)
@@ -117,11 +115,7 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       :ok = Poker.Tables.start_table(args.table.id)
-
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -142,10 +136,7 @@ defmodule Poker.SeedFactorySchema do
           args.amount
         )
 
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -157,13 +148,8 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.call_hand(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -175,13 +161,8 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.check_hand(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -193,13 +174,8 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.all_in_hand(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -211,13 +187,8 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.fold_hand(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-      positions = get_table_positions(table)
-
-      {:ok, %{table: table, positions: positions}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
@@ -231,18 +202,15 @@ defmodule Poker.SeedFactorySchema do
       args.table.participants
       |> Enum.each(fn _participant ->
         table = aggregate_state(:table, args.table.id)
-
         acting_player_id = get_acting_player_id(table)
-
         :ok = Poker.Tables.call_hand(args.table.id, acting_player_id)
       end)
 
-      table = aggregate_state(:table, args.table.id)
-
-      {:ok, %{table: table}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
+    update(:positions)
   end
 
   command :start_runout do
@@ -252,18 +220,15 @@ defmodule Poker.SeedFactorySchema do
       args.table.participants
       |> Enum.each(fn _ ->
         table = aggregate_state(:table, args.table.id)
-
         acting_player_id = get_acting_player_id(table)
-
         :ok = Poker.Tables.all_in_hand(args.table.id, acting_player_id)
       end)
 
-      table = aggregate_state(:table, args.table.id)
-
-      {:ok, %{table: table}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
+    update(:positions)
   end
 
   command :sit_out do
@@ -271,15 +236,12 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.sit_out_participant(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-
-      {:ok, %{table: table}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
+    update(:positions)
   end
 
   command :sit_in do
@@ -287,15 +249,12 @@ defmodule Poker.SeedFactorySchema do
 
     resolve(fn args ->
       acting_player_id = get_acting_player_id(args.table)
-
       :ok = Poker.Tables.sit_in_participant(args.table.id, acting_player_id)
-
-      table = aggregate_state(:table, args.table.id)
-
-      {:ok, %{table: table}}
+      {:ok, table_with_positions(args.table.id)}
     end)
 
     update(:table)
+    update(:positions)
   end
 
   def get_acting_player_id(table) do

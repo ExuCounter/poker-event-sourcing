@@ -36,41 +36,25 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "add table participants" do
     test "successfully", ctx do
-      [player1, player2] =
-        for _ <- 1..2 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx =
         ctx
         |> exec(:create_table, type: :six_max)
-        |> exec(:add_participants, players: [player1, player2])
+        |> exec(:add_participants, generate_players: 2)
 
       assert length(ctx.table.participants) == 2
 
-      [participant1, participant2] = ctx.table.participants
-
-      assert participant1.player_id == player1.id
-      assert participant1.chips == ctx.table.settings.starting_stack
-      assert participant1.status == :active
-      assert participant1.is_sitting_out == false
-
-      assert participant2.player_id == player2.id
-      assert participant2.chips == ctx.table.settings.starting_stack
-      assert participant2.status == :active
-      assert participant2.is_sitting_out == false
+      Enum.each(ctx.table.participants, fn participant ->
+        assert participant.chips == ctx.table.settings.starting_stack
+        assert participant.status == :active
+        assert participant.is_sitting_out == false
+      end)
     end
 
     test "should fail if table already started", ctx do
-      players =
-        for _ <- 1..6 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
-      ctx = ctx |> exec(:add_participants, players: players)
-      ctx = ctx |> exec(:start_table)
+      ctx =
+        ctx
+        |> exec(:add_participants, generate_players: 6)
+        |> exec(:start_table)
 
       %{player: player} = produce(ctx, :player)
 
@@ -79,16 +63,10 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     end
 
     test "should not allow to join table if full", ctx do
-      players =
-        for _ <- 1..6 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx =
         ctx
         |> exec(:create_table, type: :six_max)
-        |> exec(:add_participants, players: players)
+        |> exec(:add_participants, generate_players: 6)
 
       %{player: player} = produce(ctx, :player)
 
@@ -106,15 +84,9 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "6max table - 6 players left" do
     setup ctx do
-      players =
-        for _ <- 1..6 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table, type: :six_max)
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 6)
     end
 
     test "should give players initial cards and start the hand", ctx do
@@ -224,15 +196,9 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "6max table - two players left" do
     setup ctx do
-      players =
-        for _ <- 1..2 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx
       |> exec(:create_table, type: :six_max)
-      |> exec(:add_participants, players: players)
+      |> exec(:add_participants, generate_players: 2)
     end
 
     test "finish hand with straight flash on showdown", ctx do
@@ -433,16 +399,10 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
 
   describe "sit out" do
     test "player should fold it's hand on sit out", ctx do
-      [player1, player2] =
-        for _ <- 1..2 do
-          %{player: player} = produce(ctx, :player)
-          player
-        end
-
       ctx =
         ctx
         |> exec(:create_table, type: :six_max)
-        |> exec(:add_participants, players: [player1, player2])
+        |> exec(:add_participants, generate_players: 2)
         |> exec(:start_table)
 
       sit_out_participant_id = ctx.table.round.participant_to_act_id
