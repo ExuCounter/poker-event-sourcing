@@ -140,9 +140,9 @@ defmodule PokerWeb.PlayerLive.Game do
   # Speed multipliers based on queue size thresholds
   # Format: {min_queue_size, multiplier} - :skip means instant jump
   @speed_multipliers [
-    {20, :skip},
-    {15, 0.25},
-    {10, 0.5}
+    {25, :skip},
+    {20, 0.30},
+    {15, 0.70}
   ]
 
   defp process_next_event(socket) do
@@ -260,7 +260,10 @@ defmodule PokerWeb.PlayerLive.Game do
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
         <!-- Sit Out/In Button - bottom-left corner -->
         <%= if @current_participant do %>
-          <div class="absolute left-5 bottom-5 z-10" style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;">
+          <div
+            class="absolute left-5 bottom-5 z-10"
+            style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;"
+          >
             <button
               phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
               class={[
@@ -306,10 +309,13 @@ defmodule PokerWeb.PlayerLive.Game do
         <% end %>
         
     <!-- Action Controls - positioned and scaled -->
-        <div class="absolute bottom-[16px] right-[16px]" style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;">
+        <div
+          class="absolute bottom-[16px] right-[16px]"
+          style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;"
+        >
           <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
             <div class="bg-gray-900 rounded-xl p-4 shadow-2xl border-2 border-gray-700 flex flex-col">
-
+              
     <!-- Raise Controls -->
               <%= if @game_view.valid_actions.raise do %>
                 <div class="flex flex-row gap-3 mb-3">
@@ -363,7 +369,7 @@ defmodule PokerWeb.PlayerLive.Game do
                     Check
                   </.button>
                 <% end %>
-
+                
     <!-- Call Button -->
                 <%= if @game_view.valid_actions.call do %>
                   <.button
@@ -373,7 +379,7 @@ defmodule PokerWeb.PlayerLive.Game do
                     Call {@game_view.valid_actions.call.amount}
                   </.button>
                 <% end %>
-
+                
     <!-- Raise Controls -->
                 <%= if @game_view.valid_actions.raise do %>
                   <.button

@@ -24,6 +24,12 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.Participan
   def decode(%Poker.Tables.Events.ParticipantFolded{} = event) do
     {:ok, folded_at, _offset} = DateTime.from_iso8601(event.folded_at)
 
-    %Poker.Tables.Events.ParticipantFolded{event | folded_at: folded_at}
+    status =
+      case event.status do
+        status when is_atom(status) -> status
+        status when is_binary(status) -> String.to_existing_atom(status)
+      end
+
+    %Poker.Tables.Events.ParticipantFolded{event | folded_at: folded_at, status: status}
   end
 end

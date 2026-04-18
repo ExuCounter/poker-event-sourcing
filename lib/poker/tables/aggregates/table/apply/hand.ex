@@ -25,6 +25,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
     |> Map.put(:pots, [])
     |> Map.put(:remaining_deck, nil)
     |> Map.put(:payouts, [])
+    |> Map.put(:revealed_cards, %{})
     |> Map.put(:status, :live)
   end
 

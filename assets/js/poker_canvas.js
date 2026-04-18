@@ -97,6 +97,7 @@ export const PokerCanvas = {
       case "ParticipantRaised":
         this.stopTimeoutAnimation();
         this.sounds.raise.play();
+        this.showActionIndicator(event.participantId, "RAISE");
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -116,10 +117,14 @@ export const PokerCanvas = {
         break;
       case "ParticipantFolded":
         this.stopTimeoutAnimation();
+        this.showActionIndicator(event.participantId, "FOLD");
+        await this.animateFoldCards(event, timing);
+        await this.wait(timing.duration / 3);
         this.rerenderParticipant(event.participantId);
         break;
       case "ParticipantCalled":
         this.stopTimeoutAnimation();
+        this.showActionIndicator(event.participantId, "CALL");
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -133,6 +138,7 @@ export const PokerCanvas = {
         break;
       case "ParticipantWentAllIn":
         this.stopTimeoutAnimation();
+        this.showActionIndicator(event.participantId, "ALL IN");
         await this.animateBetChipsUpdated(event, timing);
         this.rerenderParticipant(event.participantId);
         break;
@@ -146,7 +152,9 @@ export const PokerCanvas = {
         break;
       case "HandFinished":
         this.stopTimeoutAnimation();
-        await this.wait(timing.duration);
+        if (event.finishReason !== "all_folded") {
+          await this.wait(timing.duration);
+        }
         await this.handleHandFinish(event, timing);
         break;
       case "PotsRecalculated":
@@ -157,6 +165,7 @@ export const PokerCanvas = {
         break;
       case "ParticipantChecked":
         this.stopTimeoutAnimation();
+        this.showActionIndicator(event.participantId, "CHECK");
         break;
       case "TableStarted":
       case "TablePaused":
@@ -177,6 +186,20 @@ export const PokerCanvas = {
 
     if (currentParticipant.id !== event.participantId) {
       await renderer.flipHoleCards(event.holeCards, timing);
+    }
+  },
+
+  showActionIndicator(participantId, actionType) {
+    const renderer = this.renderers.participants.get(participantId);
+    if (renderer) {
+      renderer.showActionIndicator(actionType);
+    }
+  },
+
+  async animateFoldCards(event, timing) {
+    const renderer = this.renderers.participants.get(event.participantId);
+    if (renderer) {
+      await renderer.animateFold(this.containers.tableContainer, timing);
     }
   },
 
@@ -238,10 +261,12 @@ export const PokerCanvas = {
           x: participantRenderer.betAreaContainer.x,
           y: participantRenderer.betAreaContainer.y,
           zIndex: participantRenderer.betAreaContainer.zIndex,
+          containerZIndex: participantRenderer.container.zIndex,
         });
 
         // Raise zIndex during animation to appear above community cards
         participantRenderer.betAreaContainer.zIndex = 10;
+        participantRenderer.container.zIndex = 50;
 
         const globalTarget = this.renderers.totalPot
           .getContainer()
@@ -282,6 +307,7 @@ export const PokerCanvas = {
       participantRenderer.betAreaContainer.x = orig.x;
       participantRenderer.betAreaContainer.y = orig.y;
       participantRenderer.betAreaContainer.zIndex = orig.zIndex || 5;
+      participantRenderer.container.zIndex = orig.containerZIndex || 0;
     });
   },
 
@@ -333,6 +359,7 @@ export const PokerCanvas = {
     // Table container at center of base dimensions (0,0 since parent is centered)
     this.containers.tableContainer = new PIXI.Container();
     this.containers.tableContainer.position.set(0, 0);
+    this.containers.tableContainer.sortableChildren = true;
 
     // Create table with fixed dimensions (rounded rectangle like poker room)
     const tableGraphics = new PIXI.Graphics();
@@ -457,6 +484,7 @@ export const PokerCanvas = {
     this.containers.tableContainer.addChild(
       this.renderers.dealerButton.getContainer(),
     );
+    this.renderers.dealerButton.getContainer().zIndex = 100; // Always on top
     this.renderers.dealerButton.render();
   },
 

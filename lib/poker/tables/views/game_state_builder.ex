@@ -215,9 +215,11 @@ defmodule Poker.Tables.Views.GameStateBuilder do
        )
        when is_list(participants) do
     participant_hands = Map.get(aggregate, :participant_hands, [])
+    revealed_cards = Map.get(aggregate, :revealed_cards, %{})
 
     Enum.map(participants, fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
+      hand_status = get_participant_hand_status(participant_hand)
 
       # Determine hole cards based on visibility mode
       hole_cards =
@@ -225,21 +227,41 @@ defmodule Poker.Tables.Views.GameStateBuilder do
           {:paused, _visibility_mode, _current_player_id} ->
             []
 
-          # Live mode: only show current player's cards
+          # Live mode: only show current player's cards (unless folded)
           {_table_status, :live, ^current_player_id} ->
-            get_player_hole_cards(aggregate, participant)
+            if hand_status == :folded do
+              []
+            else
+              get_player_hole_cards(aggregate, participant)
+            end
 
           # Replay mode: show current player's cards OR revealed showdown cards
           {_table_status, :replay, ^current_player_id} ->
-            get_player_hole_cards(aggregate, participant)
-
-          _ ->
-            player_cards = get_player_hole_cards(aggregate, participant)
-
-            if player_cards == [] do
+            if hand_status == :folded do
               []
             else
-              [nil, nil]
+              get_player_hole_cards(aggregate, participant)
+            end
+
+          _ ->
+            # Check if this participant has revealed showdown cards
+            case Map.get(revealed_cards, participant.id) do
+              nil ->
+                # No revealed cards - check if they have cards at all
+                player_cards = get_player_hole_cards(aggregate, participant)
+
+                cond do
+                  # No cards
+                  player_cards == [] -> []
+                  # Folded - cards are gone (animated away)
+                  hand_status == :folded -> []
+                  # Has cards but hidden (face down)
+                  true -> [nil, nil]
+                end
+
+              showdown_cards ->
+                # Show the revealed showdown cards
+                showdown_cards
             end
         end
 
@@ -250,7 +272,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         position: get_participant_position(participant_hand),
         status: participant.status,
         bet_this_round: get_bet_this_round(participant_hand),
-        hand_status: get_participant_hand_status(participant_hand),
+        hand_status: hand_status,
         hole_cards: hole_cards,
         is_sitting_out: participant.is_sitting_out
       }

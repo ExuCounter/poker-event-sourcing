@@ -27,6 +27,11 @@ export class ParticipantRenderer {
     this.container = new PIXI.Container();
     this.container.sortableChildren = true;
 
+    // Separate container for action indicator (not cleared on render)
+    this.actionIndicatorOverlay = new PIXI.Container();
+    this.actionIndicatorOverlay.sortableChildren = true;
+    this.actionIndicatorOverlay.zIndex = 100; // Always on top
+
     this.holeCardsContainer = new PIXI.Container();
 
     this.hoodContainer = new PIXI.Container();
@@ -34,6 +39,7 @@ export class ParticipantRenderer {
     this.betAreaContainer = new PIXI.Container();
 
     this.tableContainer.addChild(this.container);
+    this.container.addChild(this.actionIndicatorOverlay);
 
     // Timeout progress properties
     this.progressArc = null;
@@ -44,6 +50,152 @@ export class ParticipantRenderer {
 
     // Hood text elements for partial updates
     this.balanceText = null;
+
+    // Action indicator properties
+    this.actionIndicatorContainer = null;
+    this.actionIndicatorTween = null;
+  }
+
+  // Action indicator colors
+  static ACTION_COLORS = {
+    RAISE: 0xfbbf24,
+    CALL: 0x4ade80,
+    CHECK: 0x60a5fa,
+    FOLD: 0xef4444,
+    "ALL IN": 0xf97316,
+  };
+
+  async showActionIndicator(actionType) {
+    // Kill existing tween if running
+    if (this.actionIndicatorTween) {
+      this.actionIndicatorTween.kill();
+      this.actionIndicatorTween = null;
+    }
+
+    // Remove old action indicator if exists
+    if (this.actionIndicatorContainer) {
+      if (
+        this.actionIndicatorOverlay.children.includes(
+          this.actionIndicatorContainer,
+        )
+      ) {
+        this.actionIndicatorOverlay.removeChild(this.actionIndicatorContainer);
+      }
+      this.actionIndicatorContainer = null;
+    }
+
+    // Create action indicator container
+    this.actionIndicatorContainer = new PIXI.Container();
+    this.actionIndicatorContainer.zIndex = 10;
+
+    // Position over hood (hood is at y = CARD_OVERLAP)
+    this.actionIndicatorContainer.position.set(0, CARD_OVERLAP);
+
+    // Semi-transparent background overlay covering upper half of hood
+    const overlay = new PIXI.Graphics();
+    overlay.roundRect(
+      2,
+      2,
+      HOOD_WIDTH - 4,
+      HOOD_HEIGHT / 2 - 4,
+      HOOD_BORDER_RADIUS - 2,
+    );
+    overlay.fill({ color: 0x000000, alpha: 0.85 });
+    this.actionIndicatorContainer.addChild(overlay);
+
+    // Action text
+    const actionText = new PIXI.Text({
+      text: actionType,
+      style: {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 22,
+        fontWeight: "bold",
+        fill: ParticipantRenderer.ACTION_COLORS[actionType] || 0xffffff,
+      },
+    });
+    actionText.anchor.set(0.5, 0.5);
+    actionText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 4);
+    this.actionIndicatorContainer.addChild(actionText);
+
+    this.actionIndicatorContainer.alpha = 0;
+    this.actionIndicatorOverlay.addChild(this.actionIndicatorContainer);
+
+    // Animate: fade in, stay, fade out
+    return new Promise((resolve) => {
+      this.actionIndicatorTween = gsap.timeline({
+        onComplete: () => {
+          if (
+            this.actionIndicatorContainer &&
+            this.actionIndicatorOverlay.children.includes(
+              this.actionIndicatorContainer,
+            )
+          ) {
+            this.actionIndicatorOverlay.removeChild(
+              this.actionIndicatorContainer,
+            );
+          }
+          this.actionIndicatorContainer = null;
+          this.actionIndicatorTween = null;
+          resolve();
+        },
+      });
+
+      this.actionIndicatorTween
+        .to(this.actionIndicatorContainer, { alpha: 1, duration: 0.15 })
+        .to(this.actionIndicatorContainer, { alpha: 1, duration: 1.0 })
+        .to(this.actionIndicatorContainer, { alpha: 0, duration: 0.3 });
+    });
+  }
+
+  async animateFold(tableContainer, timing) {
+    // If no cards to animate, skip
+    if (this.holeCardsContainer.children.length === 0) {
+      return;
+    }
+
+    // Get table center position in local coordinates
+    const tableCenterGlobal = tableContainer.getGlobalPosition();
+    const tableCenterLocal = this.container.toLocal(tableCenterGlobal);
+
+    // Raise zIndex so cards animate above other elements
+    const originalZIndex = this.container.zIndex;
+    this.container.zIndex = 60;
+
+    const duration = timing.duration / 1000;
+    const staggerDelay = 0.08; // Delay between each card
+    const cards = [...this.holeCardsContainer.children];
+
+    // Animate each card individually with stagger and sideways spread
+    const animations = cards.map((card, index) => {
+      // Add sideways spread - first card goes slightly left, second slightly right
+      const spreadX = (index === 0 ? -30 : 30) + (Math.random() * 20 - 10);
+      const spreadY = Math.random() * 20 - 10;
+
+      // Random rotation for natural throw effect
+      const rotation = Math.random() * 0.5 - 0.25 + (index === 0 ? -0.2 : 0.2);
+
+      // Target position (relative to holeCardsContainer)
+      const targetX = tableCenterLocal.x - HOOD_WIDTH / 2 + spreadX - card.x;
+      const targetY = tableCenterLocal.y - CARD_HEIGHT / 2 + spreadY - card.y;
+
+      return gsap.to(card, {
+        x: card.x + targetX,
+        y: card.y + targetY,
+        alpha: 0,
+        rotation: rotation,
+        duration: duration,
+        delay: index * staggerDelay,
+        ease: "power2.in",
+      });
+    });
+
+    await Promise.all(animations);
+
+    // Restore zIndex and clear cards
+    this.container.zIndex = originalZIndex;
+    this.holeCardsContainer.removeChildren();
+    this.holeCardsContainer.alpha = 1;
+    this.holeCardsContainer.position.set(0, 0);
   }
 
   getContainer() {
@@ -63,6 +215,9 @@ export class ParticipantRenderer {
     this.#renderHood();
     this.renderHoleCards();
     this.#renderChips();
+
+    // Re-add action indicator overlay (it persists across renders)
+    this.container.addChild(this.actionIndicatorOverlay);
   }
 
   renderHood() {
