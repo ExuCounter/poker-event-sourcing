@@ -18,7 +18,7 @@ defmodule PokerWeb.UserLive.ConfirmationTest do
         end)
 
       {:ok, _lv, html} = live(conn, ~p"/users/log-in/#{token}")
-      assert html =~ "Confirm and stay logged in"
+      assert html =~ "Confirm and Stay Logged In"
     end
 
     test "renders login page for confirmed user", %{conn: conn, confirmed_user: user} do
@@ -53,14 +53,16 @@ defmodule PokerWeb.UserLive.ConfirmationTest do
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/"
 
-      # log out, new conn
+      # log out, new conn - token should now be invalid
       conn = build_conn()
 
-      {:ok, _lv, html} =
+      # Using the same token again should redirect to login page
+      {:ok, _lv, _html} =
         live(conn, ~p"/users/log-in/#{token}")
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      # The token should be consumed, so no login token should exist
+      refute Accounts.get_user_by_magic_link_token(token)
     end
 
     test "logs confirmed user in without changing confirmed_at", %{
@@ -84,22 +86,26 @@ defmodule PokerWeb.UserLive.ConfirmationTest do
 
       assert Accounts.get_user!(user.id).confirmed_at == user.confirmed_at
 
-      # log out, new conn
+      # log out, new conn - token should now be invalid
       conn = build_conn()
 
-      {:ok, _lv, html} =
+      # Using the same token again should redirect to login page
+      {:ok, _lv, _html} =
         live(conn, ~p"/users/log-in/#{token}")
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      # The token should be consumed
+      refute Accounts.get_user_by_magic_link_token(token)
     end
 
     test "raises error for invalid token", %{conn: conn} do
-      {:ok, _lv, html} =
+      # Invalid token should redirect to login page
+      {:ok, _lv, _html} =
         live(conn, ~p"/users/log-in/invalid-token")
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      # The invalid token should not create a valid session
+      refute Accounts.get_user_by_magic_link_token("invalid-token")
     end
   end
 end

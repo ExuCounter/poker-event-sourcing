@@ -19,6 +19,11 @@ defmodule PokerWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # Tidewave MCP integration - must be before body parsers
+  if Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
@@ -29,10 +34,6 @@ defmodule PokerWeb.Endpoint do
     from: :poker,
     gzip: not code_reloading?,
     only: PokerWeb.static_paths()
-
-  if Code.ensure_loaded?(Tidewave) do
-    plug Tidewave
-  end
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

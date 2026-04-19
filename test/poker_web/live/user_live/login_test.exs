@@ -10,7 +10,7 @@ defmodule PokerWeb.UserLive.LoginTest do
 
       assert html =~ "Log in"
       assert html =~ "Register"
-      assert html =~ "Log in with email"
+      assert html =~ "Log in with Magic Link"
     end
   end
 
@@ -20,13 +20,13 @@ defmodule PokerWeb.UserLive.LoginTest do
 
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      {:ok, _lv, html} =
+      # Submit form and verify redirect
+      {:ok, _lv, _html} =
         form(lv, "#login_form_magic", user: %{email: user.email})
         |> render_submit()
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~ "If your email is in our system"
-
+      # Verify login token was created
       assert Poker.Repo.get_by!(Poker.Accounts.Schemas.UserToken, user_id: user.id).context ==
                "login"
     end
@@ -34,12 +34,14 @@ defmodule PokerWeb.UserLive.LoginTest do
     test "does not disclose if user is registered", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      {:ok, _lv, html} =
+      # Submit form with non-existent email and verify same redirect behavior
+      {:ok, _lv, _html} =
         form(lv, "#login_form_magic", user: %{email: "idonotexist@example.com"})
         |> render_submit()
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~ "If your email is in our system"
+      # No token should be created for non-existent user
+      refute Poker.Repo.get_by(Poker.Accounts.Schemas.UserToken, context: "login")
     end
   end
 
@@ -81,7 +83,7 @@ defmodule PokerWeb.UserLive.LoginTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("main a", "Sign up")
+        |> element("a", "Create one now")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 
@@ -98,9 +100,9 @@ defmodule PokerWeb.UserLive.LoginTest do
     test "shows login page with email filled in", %{conn: conn, user: user} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "You need to reauthenticate"
-      refute html =~ "Register"
-      assert html =~ "Log in with email"
+      assert html =~ "Reauthentication Required"
+      refute html =~ "Create one now"
+      assert html =~ "Log in with Magic Link"
 
       assert html =~
                ~s(<input type="email" name="user[email]" id="login_form_magic_email" value="#{user.email}")

@@ -261,12 +261,7 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
           assert event.amount == ctx.table.settings.big_blind * 2
           assert event.pot_type == :main
 
-          assert event.hand_rank ==
-                   %{
-                     display_name: "Straight Flush",
-                     ranks: ["A"],
-                     type: "straight_flush"
-                   }
+          assert event.hand_rank == {:straight_flush, :A}
         end
       )
 

@@ -31,13 +31,7 @@ config :poker, Poker.App,
     event_store: Poker.EventStore
   ],
   pub_sub: :local,
-  registry: :local,
-  snapshotting: %{
-    Poker.Tables.Aggregates.Table => [
-      snapshot_every: 10,
-      snapshot_version: 6
-    ]
-  }
+  registry: :local
 
 # Configures the endpoint
 config :poker, PokerWeb.Endpoint,

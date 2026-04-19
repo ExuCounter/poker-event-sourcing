@@ -30,7 +30,7 @@ defmodule PokerWeb.UserLive.RegistrationTest do
         |> element("#registration_form")
         |> render_change(user: %{"email" => "with spaces"})
 
-      assert result =~ "Register"
+      assert result =~ "Create Account"
       assert result =~ "must have the @ sign and no spaces"
     end
   end
@@ -40,14 +40,18 @@ defmodule PokerWeb.UserLive.RegistrationTest do
       {:ok, lv, _html} = live(conn, ~p"/users/register")
 
       email = unique_user_email()
-      form = form(lv, "#registration_form", user: valid_user_attributes(email: email))
+      form = form(lv, "#registration_form", user: %{email: email})
 
-      {:ok, _lv, html} =
+      # Submit form and verify redirect to login page
+      {:ok, _lv, _html} =
         render_submit(form)
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert html =~
-               ~r/An email was sent to .*, please access it to confirm your account/
+      # Verify user was created and confirmation token was generated
+      user = Poker.Accounts.get_user_by_email(email)
+      assert user
+      assert Poker.Repo.get_by!(Poker.Accounts.Schemas.UserToken, user_id: user.id).context ==
+               "login"
     end
 
     test "renders errors for duplicated email", %{conn: conn} do
@@ -72,7 +76,7 @@ defmodule PokerWeb.UserLive.RegistrationTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("main a", "Log in")
+        |> element("a", "Log in here")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/log-in")
 

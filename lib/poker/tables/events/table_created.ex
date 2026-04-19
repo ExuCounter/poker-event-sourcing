@@ -23,11 +23,13 @@ defmodule Poker.Tables.Events.TableCreated do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.TableCreated do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.TableCreated{status: status, table_type: table_type} = event) do
     %Poker.Tables.Events.TableCreated{
       event
-      | status: status |> String.to_existing_atom(),
-        table_type: table_type |> String.to_existing_atom()
+      | status: AtomDecoder.decode(:table_status, status),
+        table_type: AtomDecoder.decode(:table_type, table_type)
     }
   end
 end

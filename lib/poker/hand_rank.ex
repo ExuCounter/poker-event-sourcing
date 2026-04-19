@@ -17,45 +17,26 @@ defmodule Poker.HandRank do
           | {:high_card, atom(), atom(), atom(), atom(), atom()}
 
   @doc """
-  Encode hand rank tuple to string for storage.
+  Encode hand rank tuple to list for JSON storage.
 
   ## Examples
 
       iex> Poker.HandRank.encode({:straight_flush, :A})
-      "straight_flush:A"
+      ["straight_flush", "A"]
 
       iex> Poker.HandRank.encode({:flush, :h, :A, :K, :J, 7, 5})
-      "flush:h:A:K:J:7:5"
+      ["flush", "h", "A", "K", "J", 7, 5]
 
       iex> Poker.HandRank.encode({:full_house, :A, :K})
-      "full_house:A:K"
+      ["full_house", "A", "K"]
   """
   def encode(hand_rank_tuple) when is_tuple(hand_rank_tuple) do
     hand_rank_tuple
     |> Tuple.to_list()
-    |> Enum.map(&to_string/1)
-    |> Enum.join(":")
-  end
-
-  @doc """
-  Decode hand rank string to tuple.
-
-  ## Examples
-
-      iex> Poker.HandRank.decode("straight_flush:A")
-      {:straight_flush, :A}
-
-      iex> Poker.HandRank.decode("flush:h:A:K:J:7:5")
-      {:flush, :h, :A, :K, :J, 7, 5}
-
-      iex> Poker.HandRank.decode("full_house:A:K")
-      {:full_house, :A, :K}
-  """
-  def decode(hand_rank_string) when is_binary(hand_rank_string) do
-    hand_rank_string
-    |> String.split(":")
-    |> Enum.map(&parse_component/1)
-    |> List.to_tuple()
+    |> Enum.map(fn
+      int when is_integer(int) -> int
+      atom -> Atom.to_string(atom)
+    end)
   end
 
   @doc "Convert to display format"
@@ -108,13 +89,6 @@ defmodule Poker.HandRank do
       ranks: Enum.map(ranks, &to_string/1),
       display_name: to_display_name(hand_rank_tuple)
     }
-  end
-
-  defp parse_component(component) do
-    case Integer.parse(component) do
-      {int, ""} -> int
-      :error -> String.to_atom(component)
-    end
   end
 
   defp suit_to_string(:h), do: "hearts"

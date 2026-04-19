@@ -29,7 +29,16 @@ defmodule Poker.Accounts.Schemas.User do
     |> cast(attrs, [:email, :role, :nickname])
     |> validate_required([:role])
     |> validate_email(opts)
+    |> maybe_set_default_nickname()
     |> maybe_validate_nickname(opts)
+  end
+
+  defp maybe_set_default_nickname(changeset) do
+    if get_field(changeset, :nickname) do
+      changeset
+    else
+      put_change(changeset, :nickname, "player_#{:rand.uniform(999_999)}")
+    end
   end
 
   defp maybe_validate_nickname(changeset, opts) do

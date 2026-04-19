@@ -4,7 +4,12 @@ defmodule Poker.Tables.Events.TableStarted do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.TableStarted do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.TableStarted{status: status} = event) do
-    %Poker.Tables.Events.TableStarted{event | status: status |> String.to_existing_atom()}
+    %Poker.Tables.Events.TableStarted{
+      event
+      | status: AtomDecoder.decode(:table_status, status)
+    }
   end
 end

@@ -37,6 +37,7 @@ defmodule Poker.Tables.ProcessManager do
 
   alias Poker.Tables.Commands.{StartHand, StartRound, FinishHand, ResumeTable, ParticipantFold}
   alias Poker.Tables.Jobs.TimeoutJob
+  alias Poker.Tables.AtomDecoder
 
   @derive Jason.Encoder
   defstruct [:id, :timeout_seconds, :current_timeout_job_id, :table_status, :participants]
@@ -130,8 +131,8 @@ defmodule Poker.Tables.ProcessManager do
         %Poker.Tables.ProcessManager{},
         %RoundCompleted{} = event
       ) do
-    round_type = event.type |> String.to_existing_atom()
-    reason = event.reason |> String.to_existing_atom()
+    round_type = AtomDecoder.decode(:round_type, event.type)
+    reason = AtomDecoder.decode(:round_reason, event.reason)
 
     cond do
       # If all players folded except one, finish the hand immediately

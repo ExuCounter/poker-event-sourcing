@@ -25,11 +25,13 @@ defmodule Poker.Tables.Events.ParticipantHandGiven do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantHandGiven do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.ParticipantHandGiven{} = event) do
     %Poker.Tables.Events.ParticipantHandGiven{
       event
-      | status: String.to_atom(event.status),
-        position: String.to_atom(event.position)
+      | status: AtomDecoder.decode(:participant_status, event.status),
+        position: AtomDecoder.decode(:participant_position, event.position)
     }
   end
 end

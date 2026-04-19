@@ -8,6 +8,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   """
 
   alias Poker.Tables.Aggregates.Table
+  alias Poker.Tables.Queries.HandEvents
 
   @doc """
   Builds a complete player game view for a specific table and player.
@@ -39,81 +40,56 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   @doc """
   Replays events from EventStore to build aggregate state.
 
+  Uses hand histories as checkpoints for efficient replay.
   Supports incremental updates when `since_version` is provided.
-  Returns map with aggregate, new events, and latest stream version.
+  Returns map with aggregate and latest stream version.
   """
   def replay_events(table_id, since_version \\ nil) do
     stream_id = "table-#{table_id}"
 
-    if is_nil(since_version) do
-      with {:ok, snapshot} <- Commanded.EventStore.read_snapshot(Poker.App, stream_id) do
-        events_after_snapshot =
-          Poker.App
-          |> Commanded.EventStore.stream_forward(stream_id, snapshot.source_version + 1)
-          |> Enum.to_list()
-
-        aggregate =
-          events_after_snapshot
-          |> Enum.map(& &1.data)
-          |> Enum.reduce(snapshot.data, &Table.apply(&2, &1))
-
-        %{aggregate: aggregate, latest_version: get_latest_version(events_after_snapshot)}
+    hand_history =
+      if since_version do
+        HandEvents.get_hand_history_for_version(table_id, since_version)
       else
-        {:error, :snapshot_not_found} ->
-          all_events =
-            Poker.App
-            |> Commanded.EventStore.stream_forward(stream_id)
-            |> Enum.to_list()
-
-          aggregate =
-            all_events
-            |> Enum.map(& &1.data)
-            |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
-
-          %{aggregate: aggregate, latest_version: get_latest_version(all_events)}
+        HandEvents.get_latest_hand_history(table_id)
       end
+
+    if hand_history do
+      initial_aggregate = :erlang.binary_to_term(hand_history.initial_state)
+
+      events =
+        Poker.App
+        |> Commanded.EventStore.stream_forward(stream_id, hand_history.start_version)
+        |> limit_events(since_version, hand_history.start_version)
+        |> Enum.to_list()
+
+      aggregate =
+        events
+        |> Enum.map(& &1.data)
+        |> Enum.reduce(initial_aggregate, &Table.apply(&2, &1))
+
+      %{aggregate: aggregate, latest_version: since_version || get_latest_version(events)}
     else
-      hand_history = find_hand_history_for_version(table_id, since_version)
+      # No hand history - replay from beginning (table creation, joins, etc.)
+      all_events =
+        Poker.App
+        |> Commanded.EventStore.stream_forward(stream_id)
+        |> limit_events(since_version, 0)
+        |> Enum.to_list()
 
-      if hand_history do
-        initial_aggregate = :erlang.binary_to_term(hand_history.initial_state)
+      aggregate =
+        all_events
+        |> Enum.map(& &1.data)
+        |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
 
-        hand_events =
-          Commanded.EventStore.stream_forward(
-            Poker.App,
-            stream_id,
-            hand_history.start_version
-          )
-          |> Enum.take(since_version - hand_history.start_version + 1)
-          |> Enum.to_list()
-
-        hand_events = Enum.to_list(hand_events)
-
-        aggregate =
-          hand_events
-          |> Enum.map(& &1.data)
-          |> Enum.reduce(initial_aggregate, &Table.apply(&2, &1))
-
-        %{aggregate: aggregate, latest_version: since_version}
-      else
-        all_events =
-          Commanded.EventStore.stream_forward(
-            Poker.App,
-            stream_id,
-            0
-          )
-          |> Enum.to_list()
-
-        all_events = Enum.to_list(all_events)
-
-        aggregate =
-          all_events
-          |> Enum.map(& &1.data)
-          |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
-
-        %{aggregate: aggregate, latest_version: since_version}
-      end
+      %{aggregate: aggregate, latest_version: since_version || get_latest_version(all_events)}
     end
+  end
+
+  defp limit_events(stream, nil, _start_version), do: stream
+
+  defp limit_events(stream, since_version, start_version) do
+    Stream.take(stream, since_version - start_version + 1)
   end
 
   @doc """
@@ -159,19 +135,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       nil -> nil
       event -> event.stream_version
     end
-  end
-
-  defp find_hand_history_for_version(table_id, version) do
-    import Ecto.Query
-
-    from(h in Poker.Tables.Projections.HandHistory,
-      where:
-        h.table_id == ^table_id and
-          h.start_version <= ^version and
-          (is_nil(h.end_version) or h.end_version >= ^version),
-      limit: 1
-    )
-    |> Poker.Repo.one()
   end
 
   defp get_hand_status(%{hand: %{status: status}}), do: status

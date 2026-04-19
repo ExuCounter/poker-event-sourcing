@@ -21,15 +21,15 @@ defmodule Poker.Tables.Events.ParticipantFolded do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantFolded do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.ParticipantFolded{} = event) do
     {:ok, folded_at, _offset} = DateTime.from_iso8601(event.folded_at)
 
-    status =
-      case event.status do
-        status when is_atom(status) -> status
-        status when is_binary(status) -> String.to_existing_atom(status)
-      end
-
-    %Poker.Tables.Events.ParticipantFolded{event | folded_at: folded_at, status: status}
+    %Poker.Tables.Events.ParticipantFolded{
+      event
+      | folded_at: folded_at,
+        status: AtomDecoder.decode(:participant_status, event.status)
+    }
   end
 end

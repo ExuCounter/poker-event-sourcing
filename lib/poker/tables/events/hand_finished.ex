@@ -13,10 +13,12 @@ defmodule Poker.Tables.Events.HandFinished do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.HandFinished do
-  def decode(%Poker.Tables.Events.HandFinished{} = event) do
+  alias Poker.Tables.AtomDecoder
+
+  def decode(%Poker.Tables.Events.HandFinished{finish_reason: finish_reason} = event) do
     %Poker.Tables.Events.HandFinished{
       event
-      | finish_reason: String.to_existing_atom(event.finish_reason)
+      | finish_reason: AtomDecoder.decode(:hand_finish_reason, finish_reason)
     }
   end
 end

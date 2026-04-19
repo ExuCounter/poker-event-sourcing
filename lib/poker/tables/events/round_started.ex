@@ -17,7 +17,12 @@ defmodule Poker.Tables.Events.RoundStarted do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.RoundStarted do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.RoundStarted{type: type} = event) do
-    %Poker.Tables.Events.RoundStarted{event | type: type |> String.to_existing_atom()}
+    %Poker.Tables.Events.RoundStarted{
+      event
+      | type: AtomDecoder.decode(:round_type, type)
+    }
   end
 end

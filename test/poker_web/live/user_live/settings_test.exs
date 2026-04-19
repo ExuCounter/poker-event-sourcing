@@ -25,15 +25,15 @@ defmodule PokerWeb.UserLive.SettingsTest do
     end
 
     test "redirects if user is not in sudo mode", %{conn: conn} do
-      {:ok, conn} =
-        conn
-        |> log_in_user(user_fixture(),
-          token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
-        )
-        |> live(~p"/users/settings")
-        |> follow_redirect(conn, ~p"/users/log-in")
+      assert {:error, {:redirect, %{to: path, flash: flash}}} =
+               conn
+               |> log_in_user(user_fixture(),
+                 token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
+               )
+               |> live(~p"/users/settings")
 
-      assert conn.resp_body =~ "You must re-authenticate to access this page."
+      assert path == ~p"/users/log-in"
+      assert %{"error" => "You must re-authenticate to access this page."} = flash
     end
   end
 

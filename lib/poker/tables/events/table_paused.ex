@@ -4,7 +4,12 @@ defmodule Poker.Tables.Events.TablePaused do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.TablePaused do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.TablePaused{reason: reason} = event) do
-    %Poker.Tables.Events.TablePaused{event | reason: String.to_atom(reason)}
+    %Poker.Tables.Events.TablePaused{
+      event
+      | reason: AtomDecoder.decode(:table_pause_reason, reason)
+    }
   end
 end

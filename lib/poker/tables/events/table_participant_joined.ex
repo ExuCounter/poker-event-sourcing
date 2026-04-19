@@ -21,7 +21,12 @@ defmodule Poker.Tables.Events.ParticipantJoined do
 end
 
 defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantJoined do
+  alias Poker.Tables.AtomDecoder
+
   def decode(%Poker.Tables.Events.ParticipantJoined{status: status} = event) do
-    %Poker.Tables.Events.ParticipantJoined{event | status: status |> String.to_existing_atom()}
+    %Poker.Tables.Events.ParticipantJoined{
+      event
+      | status: AtomDecoder.decode(:participant_status, status)
+    }
   end
 end

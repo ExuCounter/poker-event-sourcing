@@ -12,6 +12,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   """
 
   alias Poker.Tables.Aggregates.Table
+  alias Poker.Tables.AtomDecoder
 
   def decode(%Table{} = table) do
     table
@@ -27,7 +28,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_status(%Table{status: nil} = table), do: table
 
   defp decode_status(%Table{status: status} = table) when is_binary(status) do
-    %{table | status: String.to_existing_atom(status)}
+    %{table | status: AtomDecoder.decode(:table_status, status)}
   end
 
   defp decode_status(table), do: table
@@ -44,7 +45,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
 
   defp decode_settings_map(%{"table_type" => table_type} = settings)
        when is_binary(table_type) do
-    %{settings | "table_type" => String.to_existing_atom(table_type)}
+    %{settings | "table_type" => AtomDecoder.decode(:table_type, table_type)}
   end
 
   defp decode_settings_map(settings), do: settings
@@ -61,7 +62,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_participants(table), do: table
 
   defp decode_participant(%{status: status} = participant) when is_binary(status) do
-    %{participant | status: String.to_existing_atom(status)}
+    %{participant | status: AtomDecoder.decode(:participant_status, status)}
   end
 
   defp decode_participant(participant), do: participant
@@ -84,13 +85,13 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   end
 
   defp decode_hand_position(%{position: position} = hand) when is_binary(position) do
-    %{hand | position: String.to_atom(position)}
+    %{hand | position: AtomDecoder.decode(:participant_position, position)}
   end
 
   defp decode_hand_position(hand), do: hand
 
   defp decode_hand_status(%{status: status} = hand) when is_binary(status) do
-    %{hand | status: String.to_atom(status)}
+    %{hand | status: AtomDecoder.decode(:participant_status, status)}
   end
 
   defp decode_hand_status(hand), do: hand
@@ -99,7 +100,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_round(%Table{round: nil} = table), do: table
 
   defp decode_round(%Table{round: %{type: type} = round} = table) when is_binary(type) do
-    updated_round = %{round | type: String.to_atom(type)}
+    updated_round = %{round | type: AtomDecoder.decode(:round_type, type)}
     %{table | round: updated_round}
   end
 
@@ -116,7 +117,7 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Aggregates.Table 
   defp decode_pots(table), do: table
 
   defp decode_pot(%{type: type} = pot) when is_binary(type) do
-    %{pot | type: String.to_atom(type)}
+    %{pot | type: AtomDecoder.decode(:pot_type, type)}
   end
 
   defp decode_pot(pot), do: pot

@@ -59,8 +59,6 @@ defmodule Poker.Tables.Aggregates.Table do
     TableResumed
   }
 
-  @derive Jason.Encoder
-
   defstruct [
     :id,
     :creator_id,

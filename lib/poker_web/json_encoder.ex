@@ -30,6 +30,12 @@ defmodule PokerWeb.JsonEncoder do
     Enum.map(list, &transform_keys/1)
   end
 
+  def transform_keys(tuple) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.map(&transform_keys/1)
+  end
+
   def transform_keys(value), do: value
 
   defp to_camel_case(atom) when is_atom(atom) do

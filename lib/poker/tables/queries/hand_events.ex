@@ -78,6 +78,36 @@ defmodule Poker.Tables.Queries.HandEvents do
     |> Poker.Repo.one()
   end
 
+  @doc """
+  Get the most recent hand history for a table (completed or in progress).
+  """
+  def get_latest_hand_history(table_id) do
+    import Ecto.Query
+
+    from(h in Poker.Tables.Projections.HandHistory,
+      where: h.table_id == ^table_id,
+      order_by: [desc: h.start_version],
+      limit: 1
+    )
+    |> Poker.Repo.one()
+  end
+
+  @doc """
+  Find the hand history that contains the given stream version.
+  """
+  def get_hand_history_for_version(table_id, version) do
+    import Ecto.Query
+
+    from(h in Poker.Tables.Projections.HandHistory,
+      where:
+        h.table_id == ^table_id and
+          h.start_version <= ^version and
+          (is_nil(h.end_version) or h.end_version >= ^version),
+      limit: 1
+    )
+    |> Poker.Repo.one()
+  end
+
   defp get_hand_events_from_history(hand_history) do
     stream_id = "table-#{hand_history.table_id}"
     count = hand_history.end_version - hand_history.start_version
