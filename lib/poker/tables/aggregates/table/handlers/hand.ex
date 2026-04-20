@@ -140,7 +140,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           id: UUIDv7.generate(),
           table_id: table.id,
           participant_id: participant.id,
-          table_hand_id: hand_id,
+          hand_id: hand_id,
           hole_cards: hole_cards,
           position: position,
           status: :playing,
@@ -155,43 +155,30 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       ]
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
-      if Helpers.heads_up?(table) do
-        sb_participant = Helpers.find_participant_by_position(table, :dealer)
-        hand = Helpers.find_participant_hand_by_position(table.participant_hands, :dealer)
+      sb_participant =
+        if Helpers.heads_up?(table) do
+          Helpers.find_participant_by_position(table, :dealer)
+        else
+          Helpers.find_participant_by_position(table, :small_blind)
+        end
 
-        %SmallBlindPosted{
-          id: UUIDv7.generate(),
-          table_id: table.id,
-          hand_id: hand_id,
-          participant_id: sb_participant.id,
-          amount: table.settings.small_blind,
-          participant_hand_id: if(hand, do: hand.id, else: nil)
-        }
-      else
-        sb_participant = Helpers.find_participant_by_position(table, :small_blind)
-        hand = Helpers.find_participant_hand_by_position(table.participant_hands, :small_blind)
-
-        %SmallBlindPosted{
-          id: UUIDv7.generate(),
-          table_id: table.id,
-          hand_id: hand_id,
-          participant_id: sb_participant.id,
-          amount: table.settings.small_blind,
-          participant_hand_id: hand.id
-        }
-      end
+      %SmallBlindPosted{
+        id: UUIDv7.generate(),
+        table_id: table.id,
+        hand_id: hand_id,
+        participant_id: sb_participant.id,
+        amount: table.settings.small_blind
+      }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       bb_participant = Helpers.find_participant_by_position(table, :big_blind)
-      hand = Helpers.find_participant_hand_by_position(table.participant_hands, :big_blind)
 
       %BigBlindPosted{
         id: UUIDv7.generate(),
         table_id: table.id,
         hand_id: hand_id,
         participant_id: bb_participant.id,
-        amount: table.settings.big_blind,
-        participant_hand_id: hand.id
+        amount: table.settings.big_blind
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->

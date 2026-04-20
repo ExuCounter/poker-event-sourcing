@@ -134,8 +134,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   end
 
   def handle(table, %TimeoutParticipant{} = command) do
-    participant_hand = find_participant_hand(table, command.participant_id)
-
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn _table ->
@@ -147,9 +145,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
           round_id: command.round_id
         },
         %ParticipantFolded{
-          id: participant_hand.id,
           participant_id: command.participant_id,
-          table_hand_id: table.hand.id,
+          hand_id: table.hand.id,
           table_id: command.table_id,
           status: :folded,
           round: table.round.type,
@@ -203,12 +200,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
   defp build_action_event(table, %ParticipantFold{player_id: player_id}) do
     participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
-    participant_hand = find_participant_hand(table, participant.id)
 
     %ParticipantFolded{
-      id: participant_hand.id,
       participant_id: participant.id,
-      table_hand_id: table.hand.id,
+      hand_id: table.hand.id,
       table_id: table.id,
       status: :folded,
       round: table.round.type,
@@ -218,12 +213,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
   defp build_action_event(table, %ParticipantCheck{player_id: player_id}) do
     participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
-    participant_hand = find_participant_hand(table, participant.id)
 
     %ParticipantChecked{
-      id: participant_hand.id,
       participant_id: participant.id,
-      table_hand_id: table.hand.id,
+      hand_id: table.hand.id,
       table_id: table.id,
       status: :playing,
       round: table.round.type
@@ -245,9 +238,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
       |> Enum.min()
 
     %ParticipantCalled{
-      id: participant_hand.id,
       participant_id: participant.id,
-      table_hand_id: table.id,
+      hand_id: table.hand.id,
       table_id: table.id,
       status: :playing,
       amount: call_amount,
@@ -263,9 +255,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
     if participant.chips == raise_amount do
       %ParticipantWentAllIn{
-        id: participant_hand.id,
         participant_id: participant.id,
-        table_hand_id: table.hand.id,
+        hand_id: table.hand.id,
         table_id: table.id,
         status: :playing,
         amount: participant.chips,
@@ -273,9 +264,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
       }
     else
       %ParticipantRaised{
-        id: participant_hand.id,
         participant_id: participant.id,
-        table_hand_id: table.hand.id,
+        hand_id: table.hand.id,
         table_id: table.id,
         status: :playing,
         amount: raise_amount,
@@ -286,12 +276,10 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
   defp build_action_event(table, %ParticipantAllIn{player_id: player_id}) do
     participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
-    participant_hand = find_participant_hand(table, participant.id)
 
     %ParticipantWentAllIn{
-      id: participant_hand.id,
       participant_id: participant.id,
-      table_hand_id: table.hand.id,
+      hand_id: table.hand.id,
       table_id: table.id,
       status: :playing,
       amount: participant.chips,
@@ -318,16 +306,13 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   end
 
   defp sit_out_during_hand(table, command, participant) do
-    participant_hand = find_participant_hand(table, participant.id)
-
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn _table ->
       [
         %ParticipantFolded{
-          id: participant_hand.id,
           participant_id: participant.id,
-          table_hand_id: table.hand.id,
+          hand_id: table.hand.id,
           table_id: command.table_id,
           status: :folded,
           round: table.round.type,
