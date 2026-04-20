@@ -50,9 +50,6 @@ defmodule Poker.Tables.ProcessManagerTest do
         |> exec(:fold_hand)
         |> exec(:fold_hand)
 
-      # Wait for process manager to process events
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       assert_receive_event(Poker.App, HandFinished, fn event ->
         assert event.table_id == ctx.table.id
         assert event.finish_reason == :all_folded
@@ -87,8 +84,6 @@ defmodule Poker.Tables.ProcessManagerTest do
         |> exec(:call_hand)
         |> exec(:check_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       # Verify round advanced to flop
       table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
       assert table.round.type == :flop
@@ -112,8 +107,6 @@ defmodule Poker.Tables.ProcessManagerTest do
         |> exec(:check_hand)
         |> exec(:check_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       # Verify hand finished at showdown
       assert_receive_event(Poker.App, HandFinished, fn event ->
         assert event.table_id == ctx.table.id
@@ -126,8 +119,6 @@ defmodule Poker.Tables.ProcessManagerTest do
         ctx
         |> exec(:start_table)
         |> exec(:fold_hand)
-
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
 
       # Verify hand finished early when all fold except one
       assert_receive_event(Poker.App, HandFinished, fn event ->
@@ -159,8 +150,6 @@ defmodule Poker.Tables.ProcessManagerTest do
         |> exec(:sit_out)
         |> exec(:fold_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       assert_receive_event(Poker.App, TablePaused, fn event ->
         assert event.table_id == ctx.table.id
       end)
@@ -176,16 +165,12 @@ defmodule Poker.Tables.ProcessManagerTest do
         |> exec(:sit_out)
         |> exec(:fold_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       # Table should be paused
       table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
       assert table.status == :paused
 
       # Sit back in
       ctx = ctx |> exec(:sit_in)
-
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
 
       assert_receive_event(Poker.App, TableResumed, fn event ->
         assert event.table_id == ctx.table.id
@@ -219,8 +204,6 @@ defmodule Poker.Tables.ProcessManagerTest do
 
       # First player sits out while it's their turn (causes fold + sit out)
       ctx = ctx |> exec(:sit_out)
-
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
 
       # Verify they folded
       assert_receive_event(Poker.App, ParticipantFolded, fn event ->

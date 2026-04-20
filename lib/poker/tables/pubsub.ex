@@ -1,4 +1,4 @@
-defmodule Poker.TableEvents do
+defmodule Poker.Tables.PubSub do
   def subscribe_to_table(table_id) do
     Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
   end

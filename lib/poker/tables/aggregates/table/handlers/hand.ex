@@ -283,7 +283,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           |> Enum.filter(&(&1.participant_id in pot.contributing_participant_ids))
 
         winners =
-          Poker.HandEvaluator.determine_winners(
+          Poker.Services.HandEvaluator.determine_winners(
             contributing_participant_hands,
             community_cards
           )

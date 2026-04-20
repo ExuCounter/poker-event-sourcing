@@ -180,8 +180,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
         |> exec(:call_hand)
         |> exec(:check_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       player_id = hd(ctx.table.participants).player_id
       view = GameStateBuilder.build(ctx.table.id, player_id)
 
@@ -285,8 +283,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
         |> exec(:call_hand)
         |> exec(:check_hand)
 
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
-
       player_id = hd(ctx.table.participants).player_id
       view = GameStateBuilder.build(ctx.table.id, player_id)
 
@@ -318,8 +314,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
 
       # First player folds
       _ctx = ctx |> exec(:fold_hand)
-
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
 
       view = GameStateBuilder.build(ctx.table.id, folded_participant.player_id)
 
@@ -394,8 +388,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
     test "paused table shows empty community cards and hole cards", ctx do
       # Sit out to pause the table (with 2 players, sitting out + fold = pause)
       _ctx = ctx |> exec(:sit_out) |> exec(:fold_hand)
-
-      Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
 
       table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
       assert table.status == :paused

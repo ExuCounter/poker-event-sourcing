@@ -99,7 +99,7 @@ defmodule Poker.Tables.Projectors.TableLobby do
   def after_update(%TableCreated{id: _table_id}, _metadata, _changes), do: :ok
 
   def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_lobby(table_id, :table_started)
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_started)
   end
 
   def after_update(
@@ -107,7 +107,7 @@ defmodule Poker.Tables.Projectors.TableLobby do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_lobby(table_id, :participant_joined, %{
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_joined, %{
       participant_id: participant_id
     })
   end
@@ -117,20 +117,20 @@ defmodule Poker.Tables.Projectors.TableLobby do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_lobby(table_id, :participant_busted, %{
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_busted, %{
       participant_id: participant_id
     })
   end
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_lobby(table_id, :table_finished)
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_finished)
   end
 
   def after_update(%TablePaused{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_lobby(table_id, :table_paused)
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_paused)
   end
 
   def after_update(%TableResumed{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_lobby(table_id, :table_resumed)
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_resumed)
   end
 end

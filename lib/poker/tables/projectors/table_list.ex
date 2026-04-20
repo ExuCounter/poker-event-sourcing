@@ -58,11 +58,11 @@ defmodule Poker.Tables.Projectors.TableList do
 
   @impl Commanded.Projections.Ecto
   def after_update(%TableCreated{id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table_list(table_id, :table_created)
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :table_created)
   end
 
   def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table_list(table_id, :table_started)
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :table_started)
   end
 
   def after_update(
@@ -70,7 +70,7 @@ defmodule Poker.Tables.Projectors.TableList do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table_list(table_id, :participant_joined, %{
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :participant_joined, %{
       participant_id: participant_id
     })
   end
@@ -80,20 +80,20 @@ defmodule Poker.Tables.Projectors.TableList do
         _metadata,
         _changes
       ) do
-    Poker.TableEvents.broadcast_table_list(table_id, :participant_busted, %{
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :participant_busted, %{
       participant_id: participant_id
     })
   end
 
   def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table_list(table_id, :table_finished)
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :table_finished)
   end
 
   def after_update(%TablePaused{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table_list(table_id, :table_paused)
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :table_paused)
   end
 
   def after_update(%TableResumed{table_id: table_id}, _metadata, _changes) do
-    Poker.TableEvents.broadcast_table_list(table_id, :table_resumed)
+    Poker.Tables.PubSub.broadcast_table_list(table_id, :table_resumed)
   end
 end

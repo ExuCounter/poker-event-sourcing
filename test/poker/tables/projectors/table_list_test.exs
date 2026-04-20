@@ -4,8 +4,8 @@ defmodule Poker.Tables.Projectors.TableListTest do
   import Poker.DeckFixtures
 
   setup do
-    Poker.TableEvents.subscribe_to_table_list()
-    on_exit(fn -> Poker.TableEvents.unsubscribe_from_table_list() end)
+    Poker.Tables.PubSub.subscribe_to_table_list()
+    on_exit(fn -> Poker.Tables.PubSub.unsubscribe_from_table_list() end)
   end
 
   describe "TableCreated event" do

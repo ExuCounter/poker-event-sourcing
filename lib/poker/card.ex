@@ -4,7 +4,7 @@ defmodule Poker.Card do
 
   Supports two formats:
   - Domain format: %{rank: :A | integer, suit: :hearts | :diamonds | :clubs | :spades}
-  - Comparison format: {:A | integer, :h | :d | :c | :s} (tuple for Poker.Comparison)
+  - Comparison format: {:A | integer, :h | :d | :c | :s} (tuple for Poker.Services.Comparison)
   """
 
   @type domain_card :: %{rank: rank(), suit: suit()}

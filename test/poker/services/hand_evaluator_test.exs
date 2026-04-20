@@ -1,7 +1,7 @@
-defmodule Poker.HandEvaluatorTest do
+defmodule Poker.Services.HandEvaluatorTest do
   use ExUnit.Case, async: true
 
-  alias Poker.HandEvaluator
+  alias Poker.Services.HandEvaluator
 
   describe "determine_winners/2 - Royal Flush" do
     test "royal flush beats straight flush" do

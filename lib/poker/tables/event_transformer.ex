@@ -13,7 +13,7 @@ defmodule Poker.Tables.EventTransformer do
   - timing (animation duration from AnimationDelays)
   """
 
-  alias PokerWeb.AnimationDelays
+  alias PokerWeb.PlayerLive.AnimationDelays
 
   @doc """
   Transforms a raw event into frontend format.

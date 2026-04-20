@@ -21,7 +21,7 @@ defmodule Poker.Tables.EventHandlers.TableEventBroadcaster do
     transformed_event = EventTransformer.transform(event, metadata)
 
     # Broadcast to PubSub
-    Poker.TableEvents.broadcast_table(
+    Poker.Tables.PubSub.broadcast_table(
       event.table_id,
       transformed_event.type,
       transformed_event

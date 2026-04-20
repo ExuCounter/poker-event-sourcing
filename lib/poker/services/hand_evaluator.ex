@@ -1,10 +1,11 @@
-defmodule Poker.HandEvaluator do
+defmodule Poker.Services.HandEvaluator do
   @moduledoc """
   Evaluates poker hands and determines winners.
   Pure deterministic logic for hand evaluation.
   """
 
   alias Poker.Card
+  alias Poker.Services.Comparison
 
   @doc """
   Determines the winners from a list of participant hands and community cards.
@@ -24,9 +25,9 @@ defmodule Poker.HandEvaluator do
       |> Enum.map(fn hand ->
         hole_cards = hand |> Map.get(:hole_cards) |> then(&Card.to_comparison_hand/1)
 
-        {hand_rank, best_hand} = Poker.Comparison.best_hand(hole_cards, community_cards)
+        {hand_rank, best_hand} = Comparison.best_hand(hole_cards, community_cards)
 
-        hand_value = Poker.Comparison.hand_value(best_hand)
+        hand_value = Comparison.hand_value(best_hand)
 
         %{
           participant_id: hand.participant_id,

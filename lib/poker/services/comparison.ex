@@ -4,7 +4,7 @@
 #
 # This module using the same namespace as our app, so we need to rename it to avoid conflicts.
 
-defmodule Poker.Comparison do
+defmodule Poker.Services.Comparison do
   @moduledoc """
   An Elixir library to work with Poker hands.
 

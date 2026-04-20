@@ -11,7 +11,7 @@ defimpl Jason.Encoder, for: Poker.Tables.Events.PayoutDistributed do
   end
 
   defp encode_hand_rank(nil), do: nil
-  defp encode_hand_rank(tuple) when is_tuple(tuple), do: Poker.HandRank.encode(tuple)
+  defp encode_hand_rank(tuple) when is_tuple(tuple), do: Poker.Services.HandRank.encode(tuple)
   defp encode_hand_rank(list) when is_list(list), do: list
 end
 

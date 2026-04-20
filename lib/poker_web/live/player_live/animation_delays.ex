@@ -1,4 +1,4 @@
-defmodule PokerWeb.AnimationDelays do
+defmodule PokerWeb.PlayerLive.AnimationDelays do
   @moduledoc """
   Centralized animation delay configuration.
   Returns timing maps with duration (and optionally stagger) in milliseconds.

@@ -1,4 +1,4 @@
-defmodule Poker.HandRank do
+defmodule Poker.Services.HandRank do
   @moduledoc """
   Hand rank encoding/decoding for storage and display.
 
@@ -21,13 +21,13 @@ defmodule Poker.HandRank do
 
   ## Examples
 
-      iex> Poker.HandRank.encode({:straight_flush, :A})
+      iex> Poker.Services.HandRank.encode({:straight_flush, :A})
       ["straight_flush", "A"]
 
-      iex> Poker.HandRank.encode({:flush, :h, :A, :K, :J, 7, 5})
+      iex> Poker.Services.HandRank.encode({:flush, :h, :A, :K, :J, 7, 5})
       ["flush", "h", "A", "K", "J", 7, 5]
 
-      iex> Poker.HandRank.encode({:full_house, :A, :K})
+      iex> Poker.Services.HandRank.encode({:full_house, :A, :K})
       ["full_house", "A", "K"]
   """
   def encode(hand_rank_tuple) when is_tuple(hand_rank_tuple) do
@@ -57,7 +57,7 @@ defmodule Poker.HandRank do
 
   ## Examples
 
-      iex> Poker.HandRank.to_map({:flush, :h, :A, :K, :J, 7, 5})
+      iex> Poker.Services.HandRank.to_map({:flush, :h, :A, :K, :J, 7, 5})
       %{
         type: "flush",
         suit: "hearts",
@@ -65,7 +65,7 @@ defmodule Poker.HandRank do
         display_name: "Flush"
       }
 
-      iex> Poker.HandRank.to_map({:straight_flush, :A})
+      iex> Poker.Services.HandRank.to_map({:straight_flush, :A})
       %{
         type: "straight_flush",
         ranks: ["A"],

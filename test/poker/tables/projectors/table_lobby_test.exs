@@ -6,8 +6,8 @@ defmodule Poker.Tables.Projectors.TableLobbyTest do
   setup ctx do
     ctx = ctx |> produce(:table)
 
-    Poker.TableEvents.subscribe_to_lobby(ctx.table.id)
-    on_exit(fn -> Poker.TableEvents.unsubscribe_from_lobby(ctx.table.id) end)
+    Poker.Tables.PubSub.subscribe_to_lobby(ctx.table.id)
+    on_exit(fn -> Poker.Tables.PubSub.unsubscribe_from_lobby(ctx.table.id) end)
 
     ctx
   end
