@@ -96,7 +96,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
         round_id: command.round_id,
         participant_id: participant_to_act.id,
         timeout_seconds: table.settings.timeout_seconds,
-        started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+        started_at: DateTime.utc_now()
       }
     ]
   end

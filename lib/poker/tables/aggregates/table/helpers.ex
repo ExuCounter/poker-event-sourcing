@@ -272,7 +272,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
         round_id: table.round.id,
         participant_id: next_participant.id,
         timeout_seconds: table.settings.timeout_seconds,
-        started_at: DateTime.utc_now() |> DateTime.to_iso8601()
+        started_at: DateTime.utc_now()
       }
     else
       nil

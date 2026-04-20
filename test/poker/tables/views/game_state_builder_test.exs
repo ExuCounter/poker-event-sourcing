@@ -429,4 +429,202 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
       assert view.valid_actions.raise == false
     end
   end
+
+  describe "replay_events/2 - basic replay without hand history" do
+    setup ctx do
+      ctx
+      |> exec(:create_table,
+        type: :six_max,
+        settings: %{
+          small_blind: 10,
+          big_blind: 20,
+          starting_stack: 1000,
+          timeout_seconds: 60
+        }
+      )
+      |> exec(:add_participants, generate_players: 2)
+    end
+
+    test "replays events from beginning and matches Commanded aggregate state", ctx do
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+
+      # Get Commanded aggregate state directly
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+
+    test "returns correct latest_version", ctx do
+      result = GameStateBuilder.replay_events(ctx.table.id)
+
+      assert %{latest_version: latest_version} = result
+      assert is_integer(latest_version)
+      assert latest_version > 0
+    end
+  end
+
+  describe "replay_events/2 - replay with hand history checkpoint" do
+    setup ctx do
+      ctx
+      |> exec(:create_table,
+        type: :six_max,
+        settings: %{
+          small_blind: 10,
+          big_blind: 20,
+          starting_stack: 1000,
+          timeout_seconds: 60
+        }
+      )
+      |> exec(:add_participants, generate_players: 2)
+      |> exec(:start_table)
+    end
+
+    test "replayed aggregate matches Commanded aggregate state after hand started", ctx do
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+
+    test "replayed aggregate matches after call action", ctx do
+      ctx = ctx |> exec(:call_hand)
+
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+
+    test "replayed aggregate matches after raise action", ctx do
+      ctx = ctx |> exec(:raise_hand, amount: 60)
+
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+
+    test "replayed aggregate matches after fold action", ctx do
+      ctx = ctx |> exec(:fold_hand)
+
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+
+    test "replayed aggregate matches after completing pre-flop round", ctx do
+      ctx =
+        ctx
+        |> exec(:call_hand)
+        |> exec(:check_hand)
+
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+  end
+
+  describe "replay_events/2 - incremental replay with since_version" do
+    setup ctx do
+      ctx
+      |> exec(:create_table,
+        type: :six_max,
+        settings: %{
+          small_blind: 10,
+          big_blind: 20,
+          starting_stack: 1000,
+          timeout_seconds: 60
+        }
+      )
+      |> exec(:add_participants, generate_players: 2)
+      |> exec(:start_table)
+    end
+
+    test "returns aggregate at specific version", ctx do
+      # Get latest version first
+      %{latest_version: latest_version} = GameStateBuilder.replay_events(ctx.table.id)
+
+      # Replay to a specific version
+      result = GameStateBuilder.replay_events(ctx.table.id, latest_version)
+
+      assert %{aggregate: aggregate, latest_version: ^latest_version} = result
+      assert aggregate.id == ctx.table.id
+    end
+
+    test "incremental replay produces same state as full replay", ctx do
+      # Full replay
+      %{aggregate: full_aggregate, latest_version: latest_version} =
+        GameStateBuilder.replay_events(ctx.table.id)
+
+      # Incremental replay to same version
+      %{aggregate: incremental_aggregate} =
+        GameStateBuilder.replay_events(ctx.table.id, latest_version)
+
+      assert full_aggregate == incremental_aggregate
+    end
+  end
+
+  describe "replay_events/2 - multi-player game consistency" do
+    setup ctx do
+      ctx
+      |> exec(:create_table,
+        type: :six_max,
+        settings: %{
+          small_blind: 10,
+          big_blind: 20,
+          starting_stack: 1000,
+          timeout_seconds: 60
+        }
+      )
+      |> exec(:add_participants, generate_players: 3)
+      |> exec(:start_table)
+    end
+
+    test "replayed aggregate matches throughout betting sequence", ctx do
+      # Initial state
+      assert_replay_matches_commanded(ctx.table.id)
+
+      # After first call
+      ctx = ctx |> exec(:call_hand)
+      assert_replay_matches_commanded(ctx.table.id)
+
+      # After second call
+      ctx = ctx |> exec(:call_hand)
+      assert_replay_matches_commanded(ctx.table.id)
+
+      # After check to complete pre-flop
+      ctx = ctx |> exec(:check_hand)
+      assert_replay_matches_commanded(ctx.table.id)
+    end
+
+    test "replayed aggregate matches after all-in", ctx do
+      ctx = ctx |> exec(:all_in_hand)
+
+      %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(ctx.table.id)
+      commanded_aggregate = get_commanded_aggregate(ctx.table.id)
+
+      assert replayed_aggregate == commanded_aggregate
+    end
+  end
+
+  # Helper to get Commanded aggregate state directly
+  defp get_commanded_aggregate(table_id) do
+    Poker.TestSupport.ProcessManagerAwaiter.wait_to_settle()
+
+    Commanded.Aggregates.Aggregate.aggregate_state(
+      Poker.App,
+      Poker.Tables.Aggregates.Table,
+      "table-" <> table_id
+    )
+  end
+
+  # Helper to assert replayed aggregate matches Commanded state
+  defp assert_replay_matches_commanded(table_id) do
+    %{aggregate: replayed_aggregate} = GameStateBuilder.replay_events(table_id)
+    commanded_aggregate = get_commanded_aggregate(table_id)
+
+    assert replayed_aggregate == commanded_aggregate
+  end
 end

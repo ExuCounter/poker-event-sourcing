@@ -31,7 +31,8 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.Participan
     %Poker.Tables.Events.ParticipantHandGiven{
       event
       | status: AtomDecoder.decode(:participant_status, event.status),
-        position: AtomDecoder.decode(:participant_position, event.position)
+        position: AtomDecoder.decode(:participant_position, event.position),
+        hole_cards: AtomDecoder.decode_cards(event.hole_cards)
     }
   end
 end

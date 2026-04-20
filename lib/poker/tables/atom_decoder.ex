@@ -260,4 +260,105 @@ defmodule Poker.Tables.AtomDecoder do
 
   defp decode_rank(int) when is_integer(int), do: int
   defp decode_rank(str) when is_binary(str), do: decode(:rank, str)
+
+  @doc """
+  Decodes a card from JSON map format to domain format.
+
+  ## Examples
+
+      iex> AtomDecoder.decode_card(%{"rank" => "A", "suit" => "spades"})
+      %{rank: :A, suit: :spades}
+
+      iex> AtomDecoder.decode_card(%{rank: "K", suit: "hearts"})
+      %{rank: :K, suit: :hearts}
+
+      iex> AtomDecoder.decode_card(%{rank: 7, suit: "diamonds"})
+      %{rank: 7, suit: :diamonds}
+
+      iex> AtomDecoder.decode_card(%{rank: :A, suit: :spades})
+      %{rank: :A, suit: :spades}
+  """
+  def decode_card(nil), do: nil
+
+  def decode_card(%{rank: rank, suit: suit}) when is_atom(rank) and is_atom(suit) do
+    # Already decoded
+    %{rank: rank, suit: suit}
+  end
+
+  def decode_card(%{rank: rank, suit: suit}) do
+    %{
+      rank: decode_card_rank(rank),
+      suit: decode(:suit, suit)
+    }
+  end
+
+  def decode_card(%{"rank" => rank, "suit" => suit}) do
+    %{
+      rank: decode_card_rank(rank),
+      suit: decode(:suit, suit)
+    }
+  end
+
+  @doc """
+  Decodes a list of cards from JSON format to domain format.
+
+  ## Examples
+
+      iex> AtomDecoder.decode_cards([%{"rank" => "A", "suit" => "spades"}, %{"rank" => "K", "suit" => "hearts"}])
+      [%{rank: :A, suit: :spades}, %{rank: :K, suit: :hearts}]
+  """
+  def decode_cards(nil), do: nil
+  def decode_cards(cards) when is_list(cards), do: Enum.map(cards, &decode_card/1)
+
+  defp decode_card_rank(rank) when is_integer(rank), do: rank
+  defp decode_card_rank(rank) when is_atom(rank), do: rank
+  defp decode_card_rank(rank) when is_binary(rank), do: decode(:rank, rank)
+
+  @doc """
+  Decodes a DateTime from ISO8601 string format.
+
+  ## Examples
+
+      iex> AtomDecoder.decode_datetime("2024-01-15T10:30:00Z")
+      ~U[2024-01-15 10:30:00Z]
+
+      iex> AtomDecoder.decode_datetime(~U[2024-01-15 10:30:00Z])
+      ~U[2024-01-15 10:30:00Z]
+  """
+  def decode_datetime(nil), do: nil
+  def decode_datetime(%DateTime{} = dt), do: dt
+
+  def decode_datetime(str) when is_binary(str) do
+    case DateTime.from_iso8601(str) do
+      {:ok, dt, _offset} -> dt
+      {:error, _} -> str
+    end
+  end
+
+  @doc """
+  Decodes a pot from JSON format to domain format.
+
+  ## Examples
+
+      iex> AtomDecoder.decode_pot(%{type: "main", amount: 100})
+      %{type: :main, amount: 100}
+
+      iex> AtomDecoder.decode_pot(%{type: :main, amount: 100})
+      %{type: :main, amount: 100}
+  """
+  def decode_pot(nil), do: nil
+
+  def decode_pot(%{type: type} = pot) when is_atom(type) do
+    pot
+  end
+
+  def decode_pot(%{type: type} = pot) when is_binary(type) do
+    %{pot | type: decode(:pot_type, type)}
+  end
+
+  @doc """
+  Decodes a list of pots from JSON format to domain format.
+  """
+  def decode_pots(nil), do: nil
+  def decode_pots(pots) when is_list(pots), do: Enum.map(pots, &decode_pot/1)
 end

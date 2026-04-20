@@ -13,3 +13,14 @@ defmodule Poker.Tables.Events.PotsRecalculated do
     :pots
   ]
 end
+
+defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.PotsRecalculated do
+  alias Poker.Tables.AtomDecoder
+
+  def decode(%Poker.Tables.Events.PotsRecalculated{} = event) do
+    %Poker.Tables.Events.PotsRecalculated{
+      event
+      | pots: AtomDecoder.decode_pots(event.pots)
+    }
+  end
+end

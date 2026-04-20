@@ -15,3 +15,15 @@ defmodule Poker.Tables.Events.ParticipantChecked do
     :round
   ]
 end
+
+defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantChecked do
+  alias Poker.Tables.AtomDecoder
+
+  def decode(%Poker.Tables.Events.ParticipantChecked{} = event) do
+    %Poker.Tables.Events.ParticipantChecked{
+      event
+      | status: AtomDecoder.decode(:participant_status, event.status),
+        round: AtomDecoder.decode(:round_type, event.round)
+    }
+  end
+end
