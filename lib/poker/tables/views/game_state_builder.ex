@@ -179,7 +179,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     participant_hands = Map.get(aggregate, :participant_hands, [])
     revealed_cards = Map.get(aggregate, :revealed_cards, %{})
 
-    Enum.map(participants, fn participant ->
+    participants
+    |> Enum.reject(&(&1.status == :busted))
+    |> Enum.map(fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
       hand_status = get_participant_hand_status(participant_hand)
 

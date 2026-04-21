@@ -371,9 +371,13 @@ defmodule Poker.Accounts.Aggregates.TablesTest do
     test "raise re-reraise re-reraise call should keep the same round", ctx do
       ctx = ctx |> exec(:start_table)
 
+      # Each raise must be at least current_bet + big_blind (20)
+      # Starting: BB = 20, so first raise min is 40
+      # After raise to 60: min is 60 + 20 = 80
+      # After raise to 100: min is 100 + 20 = 120
+      ctx = ctx |> exec(:raise_hand, amount: 60)
       ctx = ctx |> exec(:raise_hand, amount: 100)
-      ctx = ctx |> exec(:raise_hand, amount: 100)
-      ctx = ctx |> exec(:raise_hand, amount: 100)
+      ctx = ctx |> exec(:raise_hand, amount: 140)
 
       assert ctx.table.round.type == :pre_flop
 

@@ -216,7 +216,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           participant_hands
           |> Enum.filter(fn hand -> hand.folded_at != nil end)
           |> Enum.max_by(fn hand -> hand.folded_at end, DateTime)
-          |> then(& &1.id)
+          |> then(& &1.participant_id)
         end
 
       total_amount = Enum.reduce(pots, 0, fn pot, acc -> acc + pot.amount end)
@@ -238,6 +238,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       Enum.map(busted_participants, fn participant ->
         %ParticipantBusted{
           participant_id: participant.id,
+          player_id: participant.player_id,
           hand_id: table.hand.id,
           table_id: table.id
         }
@@ -318,6 +319,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       Enum.map(busted_participants, fn participant ->
         %ParticipantBusted{
           participant_id: participant.id,
+          player_id: participant.player_id,
           hand_id: table.hand.id,
           table_id: table.id
         }

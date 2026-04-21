@@ -80,8 +80,30 @@ defmodule Poker.Tables.Projectors.TableLobby do
     end)
   end)
 
-  project(%ParticipantBusted{table_id: id}, fn multi ->
-    Ecto.Multi.update_all(multi, :table, table_query(id), inc: [seated_count: -1])
+  project(%ParticipantBusted{table_id: id, player_id: player_id}, _metadata, fn multi ->
+    multi
+    |> Ecto.Multi.run(:get_table, fn _repo, _changes ->
+      case Poker.Repo.get(TableLobby, id) do
+        nil -> {:error, :table_not_found}
+        table -> {:ok, table}
+      end
+    end)
+    |> Ecto.Multi.update(:table, fn %{get_table: table} ->
+      updated_participants =
+        Enum.map(table.participants, fn participant ->
+          if participant.player_id == player_id do
+            %{participant | status: :busted}
+          else
+            participant
+          end
+        end)
+
+      table
+      |> Ecto.Changeset.change(%{
+        participants: updated_participants,
+        seated_count: table.seated_count - 1
+      })
+    end)
   end)
 
   project(%TableFinished{table_id: id}, fn multi ->

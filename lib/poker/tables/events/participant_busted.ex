@@ -3,11 +3,13 @@ defmodule Poker.Tables.Events.ParticipantBusted do
            only: [
              :table_id,
              :hand_id,
-             :participant_id
+             :participant_id,
+             :player_id
            ]}
   defstruct [
     :table_id,
     :hand_id,
-    :participant_id
+    :participant_id,
+    :player_id
   ]
 end

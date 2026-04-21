@@ -213,14 +213,23 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
   defp build_action_event(table, %ParticipantCheck{player_id: player_id}) do
     participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    participant_hand = find_participant_hand(table, participant.id)
 
-    %ParticipantChecked{
-      participant_id: participant.id,
-      hand_id: table.hand.id,
-      table_id: table.id,
-      status: :playing,
-      round: table.round.type
-    }
+    current_bet = get_current_bet(table)
+    my_bet = participant_hand.bet_this_round
+    call_amount = current_bet - my_bet
+
+    if call_amount > 0 do
+      {:error, %{status: :invalid_action, message: "Cannot check when there is a bet to call"}}
+    else
+      %ParticipantChecked{
+        participant_id: participant.id,
+        hand_id: table.hand.id,
+        table_id: table.id,
+        status: :playing,
+        round: table.round.type
+      }
+    end
   end
 
   defp build_action_event(table, %ParticipantCall{player_id: player_id}) do
@@ -251,26 +260,47 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
     participant_hand = find_participant_hand(table, participant.id)
 
-    raise_amount = amount - participant_hand.bet_this_round
+    current_bet = get_current_bet(table)
+    my_bet = participant_hand.bet_this_round
+    raise_amount = amount - my_bet
 
-    if participant.chips == raise_amount do
-      %ParticipantWentAllIn{
-        participant_id: participant.id,
-        hand_id: table.hand.id,
-        table_id: table.id,
-        status: :playing,
-        amount: participant.chips,
-        round: table.round.type
-      }
-    else
-      %ParticipantRaised{
-        participant_id: participant.id,
-        hand_id: table.hand.id,
-        table_id: table.id,
-        status: :playing,
-        amount: raise_amount,
-        round: table.round.type
-      }
+    # Minimum raise: must be at least current_bet + big_blind
+    min_raise_to = current_bet + table.settings.big_blind
+
+    cond do
+      # Cannot bet more chips than you have
+      raise_amount > participant.chips ->
+        {:error,
+         %{status: :invalid_action, message: "Cannot raise more than your total chips"}}
+
+      # If using all remaining chips, convert to all-in (valid regardless of minimum)
+      raise_amount == participant.chips ->
+        %ParticipantWentAllIn{
+          participant_id: participant.id,
+          hand_id: table.hand.id,
+          table_id: table.id,
+          status: :playing,
+          amount: participant.chips,
+          round: table.round.type
+        }
+
+      # Check minimum raise requirement
+      amount < min_raise_to ->
+        {:error,
+         %{
+           status: :invalid_action,
+           message: "Raise must be at least #{min_raise_to}"
+         }}
+
+      true ->
+        %ParticipantRaised{
+          participant_id: participant.id,
+          hand_id: table.hand.id,
+          table_id: table.id,
+          status: :playing,
+          amount: raise_amount,
+          round: table.round.type
+        }
     end
   end
 
@@ -303,6 +333,12 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     Enum.find(table.participant_hands, fn hand ->
       hand.participant_id == participant_id
     end)
+  end
+
+  defp get_current_bet(table) do
+    table.participant_hands
+    |> Enum.map(& &1.bet_this_round)
+    |> Enum.max(fn -> 0 end)
   end
 
   defp sit_out_during_hand(table, command, participant) do
