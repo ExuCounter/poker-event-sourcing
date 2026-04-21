@@ -233,7 +233,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
                         {String.first(participant.email) |> String.upcase()}
                       </div>
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        <p class="text-sm font-medium text-slate-900 dark:text-slate-600 truncate">
                           {participant.email}
                         </p>
                         <div class="flex items-center gap-1.5 mt-0.5">
