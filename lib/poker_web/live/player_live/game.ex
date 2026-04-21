@@ -266,10 +266,11 @@ defmodule PokerWeb.PlayerLive.Game do
       />
 
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
-        <!-- Sit Out/In Button - bottom-left corner -->
+        
+    <!-- Sit Out/In Button - bottom-left corner -->
         <%= if @current_participant do %>
           <div
-            class="absolute left-5 bottom-5 z-10"
+            class="absolute left-5 bottom-5 z-10 flex"
             style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;"
           >
             <button
@@ -313,6 +314,16 @@ defmodule PokerWeb.PlayerLive.Game do
                 <% end %>
               </span>
             </button>
+            <%= if @game_view.my_hand_rank do %>
+              <div>
+                <div class="px-3 py-1.5 rounded-lg">
+                  <span class="text-amber-400 text-[12px] font-semibold">
+                    {@game_view.my_hand_rank.display_name}
+                  </span>
+                </div>
+              </div>
+              <!-- Hand Rank Display - bottom-left corner, above sit out button -->
+            <% end %>
           </div>
         <% end %>
         

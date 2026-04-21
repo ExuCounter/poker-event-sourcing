@@ -7,6 +7,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   with configurable card visibility and action calculation.
   """
 
+  alias Poker.Card
+  alias Poker.Services.Comparison
+  alias Poker.Services.HandRank
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Queries.HandEvents
 
@@ -124,7 +127,13 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       hand_status: get_hand_status(aggregate),
       timeout_seconds: get_timeout_seconds(aggregate),
       current_turn: get_current_turn(aggregate),
-      timeout_info: build_timeout_info(aggregate)
+      timeout_info: build_timeout_info(aggregate),
+      my_hand_rank:
+        if aggregate.status == :paused do
+          nil
+        else
+          calculate_my_hand_rank(aggregate, current_participant)
+        end
     }
   end
 
@@ -297,6 +306,34 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   end
 
   defp build_timeout_info(_), do: nil
+
+  # MY HAND RANK CALCULATION
+
+  defp calculate_my_hand_rank(_aggregate, nil), do: nil
+
+  defp calculate_my_hand_rank(aggregate, participant) do
+    hole_cards = get_player_hole_cards(aggregate, participant)
+    community_cards = aggregate.community_cards || []
+
+    if hole_cards == [] do
+      nil
+    else
+      {hand_rank, _best_hand} =
+        Comparison.best_hand(
+          Card.to_comparison_hand(hole_cards),
+          Card.to_comparison_hand(community_cards)
+        )
+
+      if hand_rank do
+        %{
+          hand_rank: hand_rank,
+          display_name: HandRank.to_display_name(hand_rank)
+        }
+      else
+        nil
+      end
+    end
+  end
 
   # VALID ACTIONS CALCULATION
 

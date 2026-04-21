@@ -39,16 +39,97 @@ defmodule Poker.Services.HandRank do
     end)
   end
 
-  @doc "Convert to display format"
-  def to_display_name({:straight_flush, _}), do: "Straight Flush"
-  def to_display_name({:four_of_a_kind, _, _}), do: "Four of a Kind"
-  def to_display_name({:full_house, _, _}), do: "Full House"
-  def to_display_name({:flush, _, _, _, _, _, _}), do: "Flush"
-  def to_display_name({:straight, _}), do: "Straight"
-  def to_display_name({:three_of_a_kind, _, _, _}), do: "Three of a Kind"
-  def to_display_name({:two_pair, _, _, _}), do: "Two Pair"
-  def to_display_name({:one_pair, _, _, _, _}), do: "One Pair"
-  def to_display_name({:high_card, _, _, _, _, _}), do: "High Card"
+  @doc """
+  Convert to detailed display format with kickers.
+
+  ## Examples
+
+      iex> Poker.Services.HandRank.to_display_name({:straight_flush, :A})
+      "Royal Flush"
+
+      iex> Poker.Services.HandRank.to_display_name({:straight_flush, :K})
+      "Straight Flush, King High"
+
+      iex> Poker.Services.HandRank.to_display_name({:four_of_a_kind, :A, :K})
+      "Four Aces"
+
+      iex> Poker.Services.HandRank.to_display_name({:full_house, :A, :K})
+      "Full House, Aces over Kings"
+
+      iex> Poker.Services.HandRank.to_display_name({:two_pair, :K, :J, :9})
+      "Two Pair, Kings and Jacks"
+
+      iex> Poker.Services.HandRank.to_display_name({:one_pair, :A, :K, :Q, :J})
+      "Pair of Aces"
+  """
+  def to_display_name({:straight_flush, :A}), do: "Royal Flush"
+
+  def to_display_name({:straight_flush, high_card}) do
+    "Straight Flush, #{rank_name(high_card)} High"
+  end
+
+  def to_display_name({:four_of_a_kind, rank, _kicker}) do
+    "Four #{rank_name_plural(rank)}"
+  end
+
+  def to_display_name({:full_house, trips, pair}) do
+    "Full House, #{rank_name_plural(trips)} over #{rank_name_plural(pair)}"
+  end
+
+  def to_display_name({:flush, _suit, high, _, _, _, _}) do
+    "Flush, #{rank_name(high)} High"
+  end
+
+  def to_display_name({:straight, high_card}) do
+    "Straight, #{rank_name(high_card)} High"
+  end
+
+  def to_display_name({:three_of_a_kind, rank, _, _}) do
+    "Three #{rank_name_plural(rank)}"
+  end
+
+  def to_display_name({:two_pair, high_pair, low_pair, _kicker}) do
+    "Two Pair, #{rank_name_plural(high_pair)} and #{rank_name_plural(low_pair)}"
+  end
+
+  def to_display_name({:one_pair, rank, _, _, _}) do
+    "Pair of #{rank_name_plural(rank)}"
+  end
+
+  def to_display_name({:high_card, high, _, _, _, _}) do
+    "High Card, #{rank_name(high)}"
+  end
+
+  # Rank name helpers
+  defp rank_name(:A), do: "Ace"
+  defp rank_name(:K), do: "King"
+  defp rank_name(:Q), do: "Queen"
+  defp rank_name(:J), do: "Jack"
+  defp rank_name(:T), do: "Ten"
+  defp rank_name(10), do: "Ten"
+  defp rank_name(9), do: "Nine"
+  defp rank_name(8), do: "Eight"
+  defp rank_name(7), do: "Seven"
+  defp rank_name(6), do: "Six"
+  defp rank_name(5), do: "Five"
+  defp rank_name(4), do: "Four"
+  defp rank_name(3), do: "Three"
+  defp rank_name(2), do: "Two"
+
+  defp rank_name_plural(:A), do: "Aces"
+  defp rank_name_plural(:K), do: "Kings"
+  defp rank_name_plural(:Q), do: "Queens"
+  defp rank_name_plural(:J), do: "Jacks"
+  defp rank_name_plural(:T), do: "Tens"
+  defp rank_name_plural(10), do: "Tens"
+  defp rank_name_plural(9), do: "Nines"
+  defp rank_name_plural(8), do: "Eights"
+  defp rank_name_plural(7), do: "Sevens"
+  defp rank_name_plural(6), do: "Sixes"
+  defp rank_name_plural(5), do: "Fives"
+  defp rank_name_plural(4), do: "Fours"
+  defp rank_name_plural(3), do: "Threes"
+  defp rank_name_plural(2), do: "Twos"
 
   @doc """
   Convert to structured map for projections or display.

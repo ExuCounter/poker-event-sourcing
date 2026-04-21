@@ -44,17 +44,92 @@ defmodule Poker.Services.Comparison do
     community_cards = Tuple.to_list(community_cards)
 
     cards = hole_cards ++ community_cards
+    total_cards = length(cards)
 
-    hand =
-      comb(5, cards)
-      |> Enum.sort_by(fn cards ->
-        cards |> List.to_tuple() |> hand_value
-      end)
-      |> Enum.reverse()
-      |> hd
-      |> List.to_tuple()
+    cond do
+      # Not enough cards for any evaluation
+      total_cards < 2 ->
+        {nil, nil}
 
-    {hand_rank(hand), sort_hand(hand)}
+      # Full hand evaluation (5+ cards)
+      total_cards >= 5 ->
+        hand =
+          comb(5, cards)
+          |> Enum.sort_by(fn cards ->
+            cards |> List.to_tuple() |> hand_value
+          end)
+          |> Enum.reverse()
+          |> hd
+          |> List.to_tuple()
+
+        {hand_rank(hand), sort_hand(hand)}
+
+      # Pre-flop or early streets: evaluate available cards
+      true ->
+        evaluate_partial_hand(cards)
+    end
+  end
+
+  # Evaluate hands with fewer than 5 cards (pre-flop, flop with 4 cards, etc.)
+  defp evaluate_partial_hand(cards) do
+    sorted_cards = Enum.sort_by(cards, fn {rank, _} -> card_value(rank) end, :desc)
+    rank_counts = Enum.frequencies_by(cards, fn {rank, _} -> rank end)
+
+    # Find pairs, trips, etc.
+    groups =
+      rank_counts
+      |> Enum.sort_by(fn {rank, count} -> {count, card_value(rank)} end, :desc)
+      |> Enum.map(fn {rank, count} -> {count, rank} end)
+
+    hand_tuple = List.to_tuple(sorted_cards)
+
+    case groups do
+      # Four of a kind (rare with < 5 cards but possible with 4)
+      [{4, rank} | _] ->
+        kicker = sorted_cards |> Enum.find(fn {r, _} -> r != rank end)
+        kicker_rank = if kicker, do: elem(kicker, 0), else: rank
+        {{:four_of_a_kind, rank, kicker_rank}, hand_tuple}
+
+      # Three of a kind
+      [{3, rank} | rest] ->
+        kickers = Enum.filter(sorted_cards, fn {r, _} -> r != rank end)
+        {k1, k2} = case kickers do
+          [{r1, _}, {r2, _} | _] -> {r1, r2}
+          [{r1, _}] -> {r1, r1}
+          [] -> {rank, rank}
+        end
+        {{:three_of_a_kind, rank, k1, k2}, hand_tuple}
+
+      # Two pair
+      [{2, rank1}, {2, rank2} | _] ->
+        [high, low] = Enum.sort([rank1, rank2], &(card_value(&1) >= card_value(&2)))
+        kicker = sorted_cards |> Enum.find(fn {r, _} -> r != rank1 and r != rank2 end)
+        kicker_rank = if kicker, do: elem(kicker, 0), else: high
+        {{:two_pair, high, low, kicker_rank}, hand_tuple}
+
+      # One pair
+      [{2, rank} | _] ->
+        kickers = Enum.filter(sorted_cards, fn {r, _} -> r != rank end)
+        {k1, k2, k3} = case kickers do
+          [{r1, _}, {r2, _}, {r3, _} | _] -> {r1, r2, r3}
+          [{r1, _}, {r2, _}] -> {r1, r2, r2}
+          [{r1, _}] -> {r1, r1, r1}
+          [] -> {rank, rank, rank}
+        end
+        {{:one_pair, rank, k1, k2, k3}, hand_tuple}
+
+      # High card
+      _ ->
+        ranks = Enum.map(sorted_cards, fn {rank, _} -> rank end)
+        {r1, r2, r3, r4, r5} = case ranks do
+          [a, b, c, d, e | _] -> {a, b, c, d, e}
+          [a, b, c, d] -> {a, b, c, d, d}
+          [a, b, c] -> {a, b, c, c, c}
+          [a, b] -> {a, b, b, b, b}
+          [a] -> {a, a, a, a, a}
+        end
+        {{:high_card, r1, r2, r3, r4, r5}, hand_tuple}
+    end
   end
 
   defp comb(0, _), do: [[]]
@@ -267,9 +342,17 @@ defmodule Poker.Services.Comparison do
   defp parse_rank(str), do: String.to_integer(str)
 
   defp sort_hand(hand) do
-    hand
-    |> Tuple.to_list()
-    |> Enum.sort_by(fn {rank, _} -> card_value(rank) end)
+    cards = Tuple.to_list(hand)
+
+    # Count occurrences of each rank
+    rank_counts =
+      cards
+      |> Enum.frequencies_by(fn {rank, _} -> rank end)
+
+    # Sort by: 1) frequency descending, 2) card value descending
+    # This ensures pairs/trips/quads are grouped at the front
+    cards
+    |> Enum.sort_by(fn {rank, _} -> {rank_counts[rank], card_value(rank)} end)
     |> Enum.reverse()
     |> List.to_tuple()
   end
