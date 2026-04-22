@@ -39,7 +39,7 @@ export const PokerCanvas = {
       resizeTo: window,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
-      antialias: false,
+      antialias: true,
     });
 
     this.renderers = {
@@ -102,6 +102,7 @@ export const PokerCanvas = {
         this.rerenderParticipant(event.participantId);
         break;
       case "RoundStarted":
+        await this.wait(timing.duration);
         await this.animateCommunityCardsAppear(event, timing);
 
         this.state.participants.forEach((p) => {
@@ -149,6 +150,10 @@ export const PokerCanvas = {
         break;
       case "ParticipantShowdownCardsRevealed":
         await this.showdownParticipantCards(event, timing);
+        // Re-render all participants to show equity badges
+        this.state.participants.forEach((p) => {
+          this.rerenderParticipant(p.id);
+        });
         break;
       case "HandFinished":
         this.stopTimeoutAnimation();

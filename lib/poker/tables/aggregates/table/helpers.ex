@@ -224,7 +224,13 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   # =============================================================================
 
   alias Poker.Tables.Aggregates.Table.Pot
-  alias Poker.Tables.Events.{PotsRecalculated, RoundCompleted, ParticipantToActSelected}
+
+  alias Poker.Tables.Events.{
+    PotsRecalculated,
+    RoundCompleted,
+    ParticipantToActSelected,
+    ParticipantShowdownCardsRevealed
+  }
 
   @doc """
   Determines what should happen after an action: complete round or select next participant.
@@ -247,7 +253,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   end
 
   defp complete_round(table, reason) do
-    [
+    base_events = [
       %PotsRecalculated{
         table_id: table.id,
         hand_id: table.hand.id,
@@ -261,6 +267,13 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
         reason: reason
       }
     ]
+
+    # If it's a runout, reveal cards immediately (before community cards are dealt)
+    if reason == :all_acted and runout?(table) do
+      maybe_reveal_cards(table) ++ base_events
+    else
+      base_events
+    end
   end
 
   defp select_next_participant(table) do
@@ -277,5 +290,30 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     else
       nil
     end
+  end
+
+  # =============================================================================
+  # CARD REVEAL
+  # =============================================================================
+
+  @doc """
+  Returns events to reveal cards for non-folded participants.
+  Skips participants whose cards have already been revealed (to avoid duplicates).
+  Used during runout and showdown.
+  """
+  def maybe_reveal_cards(table) do
+    revealed_cards = Map.get(table, :revealed_cards, %{})
+
+    table.participant_hands
+    |> Enum.filter(&(&1.status != :folded))
+    |> Enum.reject(&Map.has_key?(revealed_cards, &1.participant_id))
+    |> Enum.map(fn participant_hand ->
+      %ParticipantShowdownCardsRevealed{
+        table_id: table.id,
+        hand_id: table.hand.id,
+        participant_id: participant_hand.participant_id,
+        hole_cards: participant_hand.hole_cards
+      }
+    end)
   end
 end

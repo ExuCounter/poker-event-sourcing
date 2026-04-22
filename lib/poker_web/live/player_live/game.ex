@@ -148,9 +148,8 @@ defmodule PokerWeb.PlayerLive.Game do
   # Speed multipliers based on queue size thresholds
   # Format: {min_queue_size, multiplier} - :skip means instant jump
   @speed_multipliers [
-    {25, :skip},
-    {20, 0.30},
-    {15, 0.70}
+    {45, :skip},
+    {30, 0.50}
   ]
 
   defp process_next_event(socket) do

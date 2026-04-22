@@ -17,8 +17,8 @@ defmodule Poker.Application do
       # {Poker.Worker, arg},
       # Start to serve requests, typically the last entry
       PokerWeb.Endpoint,
-      Poker.Tables.Supervisor
-      # Poker.Subscription
+      Poker.Tables.Supervisor,
+      Poker.Wallet.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

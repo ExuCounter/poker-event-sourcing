@@ -19,6 +19,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
   """
 
   alias Poker.Tables.Commands.StartRound
+
   alias Poker.Tables.Events.{RoundStarted, RoundCompleted, DeckUpdated, ParticipantToActSelected}
   alias Poker.Tables.Aggregates.Table.Helpers
 
@@ -50,6 +51,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
     if Helpers.runout?(table) do
       table
       |> Commanded.Aggregate.Multi.new()
+      |> Commanded.Aggregate.Multi.execute(&Helpers.maybe_reveal_cards/1)
       |> Commanded.Aggregate.Multi.execute(&start_round(&1, command))
       |> Commanded.Aggregate.Multi.execute(fn table ->
         %RoundCompleted{

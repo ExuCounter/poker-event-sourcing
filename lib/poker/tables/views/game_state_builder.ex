@@ -9,6 +9,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
   alias Poker.Card
   alias Poker.Services.Comparison
+  alias Poker.Services.EquityCalculator
   alias Poker.Services.HandRank
   alias Poker.Tables.Aggregates.Table
   alias Poker.Tables.Queries.HandEvents
@@ -188,6 +189,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     participant_hands = Map.get(aggregate, :participant_hands, [])
     revealed_cards = Map.get(aggregate, :revealed_cards, %{})
 
+    # Calculate equities if applicable (all-in or showdown)
+    equities = calculate_equities(aggregate)
+
     participants
     |> Enum.map(fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
@@ -246,7 +250,8 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         bet_this_round: get_bet_this_round(participant_hand),
         hand_status: hand_status,
         hole_cards: hole_cards,
-        is_sitting_out: participant.is_sitting_out
+        is_sitting_out: participant.is_sitting_out,
+        equity: Map.get(equities, participant.id)
       }
     end)
   end
@@ -439,5 +444,30 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     |> Enum.filter(fn %{value: amount} ->
       amount + call_amount <= max_chips && amount > current_bet
     end)
+  end
+
+  # EQUITY CALCULATION
+
+  defp calculate_equities(%{participant_hands: nil}), do: %{}
+  defp calculate_equities(%{participant_hands: []}), do: %{}
+
+  defp calculate_equities(aggregate) do
+    revealed_cards = Map.get(aggregate, :revealed_cards, %{})
+    community_cards = aggregate.community_cards || []
+
+    # Only show equity when cards have been revealed (during actual runout)
+    # Cards are revealed when all players are all-in, not just when one goes all-in
+    if map_size(revealed_cards) >= 2 do
+      # Build player hands from revealed cards
+      player_hands =
+        Enum.map(revealed_cards, fn {participant_id, hole_cards} ->
+          {participant_id, hole_cards}
+        end)
+
+      # Calculate equity (use fewer simulations for performance)
+      EquityCalculator.calculate(player_hands, community_cards, simulations: 500)
+    else
+      %{}
+    end
   end
 end

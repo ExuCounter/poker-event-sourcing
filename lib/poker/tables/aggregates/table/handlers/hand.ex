@@ -35,7 +35,6 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     TableFinished,
     TablePaused,
     ParticipantBusted,
-    ParticipantShowdownCardsRevealed,
     PayoutDistributed
   }
 
@@ -256,22 +255,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   defp finish_hand(table, :showdown = reason) do
     table
     |> Commanded.Aggregate.Multi.new()
-    |> Commanded.Aggregate.Multi.execute(fn %{
-                                              hand: %{id: hand_id},
-                                              participant_hands: participant_hands
-                                            } ->
-      # Emit showdown cards revealed events for all active participants
-      participant_hands
-      |> Enum.filter(&(&1.status != :folded))
-      |> Enum.map(fn participant_hand ->
-        %ParticipantShowdownCardsRevealed{
-          table_id: table.id,
-          hand_id: hand_id,
-          participant_id: participant_hand.participant_id,
-          hole_cards: participant_hand.hole_cards
-        }
-      end)
-    end)
+    # Reveal cards for participants not yet revealed (skips if already revealed during runout)
+    |> Commanded.Aggregate.Multi.execute(&Helpers.maybe_reveal_cards/1)
     |> Commanded.Aggregate.Multi.execute(fn %{
                                               hand: %{id: hand_id},
                                               pots: pots,

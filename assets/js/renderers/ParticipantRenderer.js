@@ -438,7 +438,68 @@ export class ParticipantRenderer {
     chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 6);
 
     this.hoodContainer.addChild(chipsText);
+
+    // Render equity badge if available
+    this.#renderEquityBadge(participant);
+
     this.container.addChild(this.hoodContainer);
+  }
+
+  #renderEquityBadge(participant) {
+    // Only show if equity data exists and has valid values
+    if (!participant.equity || participant.equity.win === undefined) return;
+
+    const winPercent = participant.equity.win || 0;
+    const tiePercent = participant.equity.tie || 0;
+
+    // Show combined equity (win + tie share)
+    const totalEquity = winPercent + tiePercent;
+    const displayText = `${totalEquity.toFixed(0)}%`;
+
+    // Create badge container
+    const badgeContainer = new PIXI.Container();
+
+    // Badge dimensions
+    const paddingX = 7;
+    const paddingY = 5;
+    const fontSize = 16;
+    const borderRadius = 6;
+
+    // Create text first to measure
+    const equityText = new PIXI.Text({
+      text: displayText,
+      style: {
+        fontFamily: "Arial, sans-serif",
+        fontSize: fontSize,
+        fontWeight: "bold",
+        fill: 0xffffff,
+      },
+    });
+
+    const badgeWidth = equityText.width + paddingX * 2;
+    const badgeHeight = equityText.height + paddingY * 2;
+
+    // Red-cherry background
+    const badge = new PIXI.Graphics();
+    badge.roundRect(0, 0, badgeWidth, badgeHeight, borderRadius);
+    badge.fill(0xdc2626); // Red-cherry color
+
+    badgeContainer.addChild(badge);
+
+    // Center text in badge
+    equityText.anchor.set(0.5, 0.5);
+    equityText.position.set(badgeWidth / 2, badgeHeight / 2);
+    badgeContainer.addChild(equityText);
+
+    // Position: top-right of hood, close to where right card would be
+    // Hood is at y = CARD_OVERLAP, cards are above it
+    // Position badge above the hood, to the right side
+    badgeContainer.position.set(
+      HOOD_WIDTH - 15, // Right side with small margin
+      -70, // Above the hood (negative Y since hood is at CARD_OVERLAP)
+    );
+
+    this.hoodContainer.addChild(badgeContainer);
   }
 
   #getAvatarColor(nickname, isFolded) {
