@@ -18,7 +18,8 @@ defmodule Poker.Application do
       # Start to serve requests, typically the last entry
       PokerWeb.Endpoint,
       Poker.Tables.Supervisor,
-      Poker.Wallet.Supervisor
+      Poker.Wallet.Supervisor,
+      Poker.CashGames.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -28,8 +28,14 @@ defmodule Poker.Router do
     ReleaseFunds
   }
 
+  alias Poker.CashGames.Commands.{
+    CreateCashGame,
+    CloseCashGame
+  }
+
   alias Poker.Tables.Aggregates.Table
   alias Poker.Wallet.Aggregates.Wallet
+  alias Poker.CashGames.Aggregates.CashGame
 
   # Table aggregate - identified by table_id
   identify(Table, by: :table_id, prefix: "table-")
@@ -68,5 +74,16 @@ defmodule Poker.Router do
       ReleaseFunds
     ],
     to: Wallet
+  )
+
+  # CashGame aggregate - identified by cash_game_id
+  identify(CashGame, by: :cash_game_id, prefix: "cash-game-")
+
+  dispatch(
+    [
+      CreateCashGame,
+      CloseCashGame
+    ],
+    to: CashGame
   )
 end
