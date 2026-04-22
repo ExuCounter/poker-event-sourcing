@@ -26,10 +26,12 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
 
   @doc "Creates a new table with the specified settings."
   def handle(_table, %CreateTable{} = command) do
+    # All tables start as waiting until they have enough players
     %TableCreated{
       id: command.table_id,
       creator_id: command.creator_id,
       status: :waiting,
+      game_mode: command.game_mode,
       big_blind: command.settings.big_blind,
       small_blind: command.settings.small_blind,
       starting_stack: command.settings.starting_stack,

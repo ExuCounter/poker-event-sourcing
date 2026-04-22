@@ -47,6 +47,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
   @doc "Starts a new hand or pauses/finishes table if not enough players."
   def handle(table, %StartHand{} = command) do
+    dbg(table)
     playing_participants = Helpers.filter_playing_participants(table.participants)
 
     cond do
@@ -94,6 +95,14 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     # Only deal cards to participants who are active and not sitting out
     playing_participants = Helpers.filter_playing_participants(table.participants)
 
+    # For cash games, positions are calculated among playing participants only
+    # For tournaments, positions are calculated among all participants
+    position_participants =
+      case table.game_mode do
+        :cash_game -> playing_participants
+        :tournament -> table.participants
+      end
+
     table
     |> Commanded.Aggregate.Multi.new()
     |> Commanded.Aggregate.Multi.execute(fn table ->
@@ -132,7 +141,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     |> Commanded.Aggregate.Multi.reduce(playing_participants, fn table, participant ->
       {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(table.remaining_deck, 2)
 
-      position = Position.calculate_position(table, participant)
+      position = Position.calculate_position(table, participant, position_participants)
 
       [
         %ParticipantHandGiven{

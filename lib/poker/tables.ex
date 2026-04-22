@@ -37,7 +37,8 @@ defmodule Poker.Tables do
     ParticipantAllIn,
     SitOutParticipant,
     SitInParticipant,
-    TimeoutParticipant
+    TimeoutParticipant,
+    LeaveTable
   }
 
   import Ecto.Query
@@ -69,12 +70,14 @@ defmodule Poker.Tables do
   def join_participant(table_id, player_id, attrs \\ %{}) do
     participant_id = UUIDv7.generate()
     starting_stack = Map.get(attrs, :starting_stack)
+    nickname = Map.get(attrs, :nickname)
 
     command_attrs = %{
       participant_id: participant_id,
       player_id: player_id,
       table_id: table_id,
-      starting_stack: starting_stack
+      starting_stack: starting_stack,
+      nickname: nickname
     }
 
     with {:ok, command} <-
@@ -198,6 +201,19 @@ defmodule Poker.Tables do
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &SitInParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command) do
+      :ok
+    end
+  end
+
+  def leave_table(table_id, player_id) do
+    command_attrs = %{
+      player_id: player_id,
+      table_id: table_id
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &LeaveTable.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end
   end

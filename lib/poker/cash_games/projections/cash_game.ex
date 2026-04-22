@@ -6,12 +6,14 @@ defmodule Poker.CashGames.Projections.CashGame do
   schema "cash_games" do
     field :table_id, :binary_id
     field :creator_id, :binary_id
-    field :status, Ecto.Enum, values: [:active, :closed]
     field :small_blind, :integer
     field :big_blind, :integer
     field :min_buyin, :integer
     field :max_buyin, :integer
     field :table_type, Ecto.Enum, values: [:six_max]
+
+    # Virtual field populated by join with tables
+    field :table_status, Ecto.Enum, values: [:waiting, :live, :paused, :finished], virtual: true
 
     timestamps()
   end

@@ -30,6 +30,7 @@ defmodule Poker.CashGames.ProcessManager do
       creator_id: event.creator_id,
       creator_participant_id: UUIDv7.generate(),
       settings_id: UUIDv7.generate(),
+      game_mode: :cash_game,
       settings: %CreateTableSettings{
         small_blind: event.small_blind,
         big_blind: event.big_blind,

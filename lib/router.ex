@@ -18,7 +18,8 @@ defmodule Poker.Router do
     FinishHand,
     TimeoutParticipant,
     ResumeTable,
-    PauseTable
+    PauseTable,
+    LeaveTable
   }
 
   alias Poker.Wallet.Commands.{
@@ -58,7 +59,8 @@ defmodule Poker.Router do
       FinishHand,
       TimeoutParticipant,
       ResumeTable,
-      PauseTable
+      PauseTable,
+      LeaveTable
     ],
     to: Table
   )

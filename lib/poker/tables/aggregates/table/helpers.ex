@@ -63,7 +63,7 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   @doc "Finds the current participant to act based on round state."
   def find_participant_to_act(%{round: %{type: :pre_flop, acted_participant_ids: []}} = table) do
     big_blind_index = find_participant_index_by_position(table, :big_blind)
-    find_next_active_participant(table.participants, big_blind_index)
+    find_next_active_participant(table, big_blind_index)
   end
 
   def find_participant_to_act(%{
@@ -78,20 +78,27 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     participant_to_act = find_participant_to_act(table)
     participant_index = find_participant_index(table.participants, participant_to_act.id)
 
-    find_next_active_participant(table.participants, participant_index)
+    find_next_active_participant(table, participant_index)
   end
 
-  defp find_next_active_participant(participants, start_index) do
+  defp find_next_active_participant(table, start_index) do
+    participants = table.participants
     total = length(participants)
 
     indices = for offset <- 1..total, do: rem(start_index + offset, total)
 
     Enum.find_value(indices, fn index ->
       participant = Enum.at(participants, index)
+      participant_hand = Enum.find(table.participant_hands, &(&1.participant_id == participant.id))
 
-      if participant.status == :active and participant.chips > 0 do
-        participant
-      end
+      # Must be active, have chips, and not folded in current hand
+      can_act? =
+        participant.status == :active and
+          participant.chips > 0 and
+          participant_hand != nil and
+          participant_hand.status != :folded
+
+      if can_act?, do: participant
     end)
   end
 
@@ -155,11 +162,21 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
   # STATE CHECKS
   # =============================================================================
 
-  @doc "Returns true if all participants have acted this round."
+  @doc "Returns true if all participants who can act have acted this round."
   def all_acted?(table) do
     acted_participant_ids = table.round.acted_participant_ids
 
-    table.participants |> Enum.all?(fn participant -> participant.id in acted_participant_ids end)
+    # Only check participants who are in the hand, haven't folded, and aren't all-in
+    participants_who_can_act =
+      table.participant_hands
+      |> Enum.reject(&(&1.status == :folded))
+      |> Enum.filter(fn hand ->
+        participant = find_participant_by_id(table.participants, hand.participant_id)
+        participant != nil and participant.chips > 0
+      end)
+      |> Enum.map(& &1.participant_id)
+
+    Enum.all?(participants_who_can_act, fn id -> id in acted_participant_ids end)
   end
 
   @doc "Returns true if all but one participant has folded."

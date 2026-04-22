@@ -6,22 +6,27 @@ defmodule Poker.CashGames.Queries do
   import Ecto.Query
 
   alias Poker.CashGames.Projections.CashGame
+  alias Poker.Tables.Projections.TableList
 
   def base, do: CashGame
 
   def by_id(query \\ base(), id) do
-    where(query, [c], c.id == ^id)
+    where(query, [cash_game], cash_game.id == ^id)
   end
 
   def by_table_id(query \\ base(), table_id) do
-    where(query, [c], c.table_id == ^table_id)
+    where(query, [cash_game], cash_game.table_id == ^table_id)
   end
 
-  def by_status(query \\ base(), status) do
-    where(query, [c], c.status == ^status)
+  def with_table_status(query \\ base()) do
+    from(cash_game in query,
+      join: table_list in TableList,
+      on: table_list.id == cash_game.table_id,
+      select_merge: %{table_status: table_list.status}
+    )
   end
 
   def order_by_newest(query \\ base()) do
-    order_by(query, [c], desc: c.inserted_at)
+    order_by(query, [cash_game], desc: cash_game.inserted_at)
   end
 end

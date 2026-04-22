@@ -27,6 +27,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
       id: created.id,
       creator_id: created.creator_id,
       status: created.status,
+      game_mode: created.game_mode,
       settings: settings,
       participants: [],
       hand: nil,

@@ -24,7 +24,8 @@ defmodule Poker.Tables.Aggregates.Table do
     FinishTable,
     TimeoutParticipant,
     PauseTable,
-    ResumeTable
+    ResumeTable,
+    LeaveTable
   }
 
   alias Poker.Tables.Events.{
@@ -52,6 +53,7 @@ defmodule Poker.Tables.Aggregates.Table do
     HandFinished,
     TableFinished,
     ParticipantBusted,
+    ParticipantLeft,
     ParticipantShowdownCardsRevealed,
     PayoutDistributed,
     ParticipantTimedOut,
@@ -63,6 +65,7 @@ defmodule Poker.Tables.Aggregates.Table do
     :id,
     :creator_id,
     :status,
+    :game_mode,
     :settings,
     :participants,
     :hand,
@@ -93,7 +96,8 @@ defmodule Poker.Tables.Aggregates.Table do
              ParticipantAllIn,
              TimeoutParticipant,
              SitOutParticipant,
-             SitInParticipant
+             SitInParticipant,
+             LeaveTable
            ] do
     Handlers.Participants.handle(table, command)
   end
@@ -119,6 +123,7 @@ defmodule Poker.Tables.Aggregates.Table do
              ParticipantSatOut,
              ParticipantSatIn,
              ParticipantBusted,
+             ParticipantLeft,
              ParticipantFolded,
              ParticipantChecked,
              ParticipantCalled,

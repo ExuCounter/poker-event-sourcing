@@ -18,10 +18,9 @@ import {
 } from "../constants.js";
 
 export class ParticipantRenderer {
-  constructor(participantId, tableContainer, getState, getLobbyState) {
+  constructor(participantId, tableContainer, getState) {
     this.participantId = participantId;
     this.getState = getState;
-    this.getLobbyState = getLobbyState;
     this.tableContainer = tableContainer;
 
     this.container = new PIXI.Container();
@@ -368,12 +367,7 @@ export class ParticipantRenderer {
 
     this.hoodContainer.addChild(divider);
 
-    const lobbyState = this.getLobbyState();
-    const lobbyUser = lobbyState.participants.find(
-      (p) => p.playerId === participant.playerId,
-    );
-
-    const nickname = lobbyUser?.nickname || "??";
+    const nickname = participant.nickname;
 
     // Render avatar circle
     const avatarRadius = 16;
@@ -695,7 +689,7 @@ export class ParticipantRenderer {
     } else if (pos.x > halfW * 0.3) {
       // Right players: bet to their left
       betX = pos.x - betInsetX;
-      betY = pos.y + (p3s.y > 0 ? -40 : 40); // Slight vertical offset away from center
+      betY = pos.y + (pos.y > 0 ? -40 : 40); // Slight vertical offset away from center
     } else if (pos.x < -halfW * 0.3) {
       // Left players: bet to their right
       betX = pos.x + betInsetX;

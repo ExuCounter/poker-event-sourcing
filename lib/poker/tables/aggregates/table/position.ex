@@ -6,11 +6,23 @@ defmodule Poker.Tables.Aggregates.Table.Position do
 
   @doc """
   Calculates the poker position for a participant based on dealer button and player count.
+
+  For cash games, pass only playing participants (not sitting out).
+  For tournaments, pass all participants.
   """
-  def calculate_position(table, participant) do
-    total_players = length(table.participants)
-    dealer_index = Enum.find_index(table.participants, &(&1.id == table.dealer_button_id))
-    participant_index = Enum.find_index(table.participants, &(&1.id == participant.id))
+  def calculate_position(table, participant, playing_participants) do
+    total_players = length(playing_participants)
+    dealer_index = Enum.find_index(playing_participants, &(&1.id == table.dealer_button_id))
+
+    # If dealer is not in playing_participants (sitting out in cash game), find next dealer
+    dealer_index =
+      if is_nil(dealer_index) do
+        find_effective_dealer_index(table, playing_participants)
+      else
+        dealer_index
+      end
+
+    participant_index = Enum.find_index(playing_participants, &(&1.id == participant.id))
 
     # Find relative position from dealer (0 = dealer, 1 = next, etc.)
     relative_position =
@@ -31,6 +43,20 @@ defmodule Poker.Tables.Aggregates.Table.Position do
 
   defp calculate_relative_position(dealer_index, participant_index, total_participants) do
     rem(participant_index - dealer_index + total_participants, total_participants)
+  end
+
+  defp find_effective_dealer_index(table, playing_participants) do
+    dealer_index = Enum.find_index(table.participants, &(&1.id == table.dealer_button_id))
+    total_participants = length(table.participants)
+    playing_participant_ids = MapSet.new(playing_participants, & &1.id)
+
+    effective_dealer_id =
+      Enum.find_value(0..(total_participants - 1), fn offset ->
+        participant = Enum.at(table.participants, rem(dealer_index + offset, total_participants))
+        if MapSet.member?(playing_participant_ids, participant.id), do: participant.id
+      end)
+
+    Enum.find_index(playing_participants, &(&1.id == effective_dealer_id))
   end
 
   # Heads up (2 players): Dealer is also SB, other is BB

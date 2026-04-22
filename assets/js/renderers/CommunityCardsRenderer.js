@@ -17,6 +17,11 @@ export class CommunityCardsRenderer {
   render(communityCards) {
     this.container.removeChildren();
 
+    // No cards to render if no active hand
+    if (!communityCards || communityCards.length === 0) {
+      return this.container;
+    }
+
     const cardRenderer = new CardRenderer();
 
     communityCards.forEach((card, index) => {
@@ -36,6 +41,10 @@ export class CommunityCardsRenderer {
   async animateNewCards(newCards, timing) {
     const timeline = gsap.timeline();
     const state = this.getState();
+
+    // Ensure container is properly positioned (centered on table)
+    const maxWidth = 5 * COMMUNITY_CARD_SPACING;
+    this.container.position.set(-(maxWidth / 2), -(BASE_HEIGHT / 10));
 
     const cardRenderer = new CardRenderer();
 

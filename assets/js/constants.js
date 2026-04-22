@@ -9,7 +9,7 @@ export const TABLE_RADIUS_X = 450;
 export const TABLE_RADIUS_Y = 300;
 
 // Rectangular table dimensions
-export const TABLE_WIDTH = 1200;
+export const TABLE_WIDTH = 1000;
 export const TABLE_HEIGHT = 565;
 export const TABLE_BORDER_RADIUS = 450;
 

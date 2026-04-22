@@ -34,8 +34,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
       {:ok, _participant_id} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Successfully joined the table")
-         |> assign(lobby: Tables.get_lobby(socket.assigns.table_id))}
+         |> push_navigate(to: ~p"/tables/#{socket.assigns.table_id}/game")}
 
       {:error, %{message: message}} ->
         {:noreply, put_flash(socket, :error, message)}
@@ -249,7 +248,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
     <!-- Action Buttons -->
               <div class="flex flex-wrap gap-3">
                 <%= cond do %>
-                  <% user_has_joined?(@lobby.participants, @user_id) && Enum.any?([:paused, :live], & &1 == @lobby.status) -> %>
+                  <% user_has_joined?(@lobby.participants, @user_id) -> %>
                     <.button
                       navigate={~p"/tables/#{@lobby.id}/game"}
                       class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"

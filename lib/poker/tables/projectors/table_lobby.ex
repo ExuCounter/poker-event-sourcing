@@ -10,6 +10,7 @@ defmodule Poker.Tables.Projectors.TableLobby do
     TableFinished,
     ParticipantJoined,
     ParticipantBusted,
+    ParticipantLeft,
     TableStarted,
     TablePaused,
     TableResumed
@@ -106,6 +107,28 @@ defmodule Poker.Tables.Projectors.TableLobby do
     end)
   end)
 
+  project(%ParticipantLeft{table_id: id, player_id: player_id}, _metadata, fn multi ->
+    multi
+    |> Ecto.Multi.run(:get_table, fn _repo, _changes ->
+      case Poker.Repo.get(TableLobby, id) do
+        nil -> {:error, :table_not_found}
+        table -> {:ok, table}
+      end
+    end)
+    |> Ecto.Multi.update(:table, fn %{get_table: table} ->
+      updated_participants =
+        Enum.reject(table.participants, fn participant ->
+          participant.player_id == player_id
+        end)
+
+      table
+      |> Ecto.Changeset.change(%{
+        participants: updated_participants,
+        seated_count: max(table.seated_count - 1, 0)
+      })
+    end)
+  end)
+
   project(%TableFinished{table_id: id}, fn multi ->
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :finished])
   end)
@@ -140,6 +163,16 @@ defmodule Poker.Tables.Projectors.TableLobby do
         _changes
       ) do
     Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_busted, %{
+      participant_id: participant_id
+    })
+  end
+
+  def after_update(
+        %ParticipantLeft{table_id: table_id, participant_id: participant_id},
+        _metadata,
+        _changes
+      ) do
+    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_left, %{
       participant_id: participant_id
     })
   end

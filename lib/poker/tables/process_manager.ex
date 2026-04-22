@@ -32,15 +32,16 @@ defmodule Poker.Tables.ProcessManager do
     ParticipantSatIn,
     ParticipantJoined,
     ParticipantSatOut,
+    ParticipantLeft,
     RoundStarted
   }
 
-  alias Poker.Tables.Commands.{StartHand, StartRound, FinishHand, ResumeTable, ParticipantFold}
+  alias Poker.Tables.Commands.{StartHand, StartRound, FinishHand, ResumeTable, ParticipantFold, StartTable}
   alias Poker.Tables.Jobs.TimeoutJob
   alias Poker.Tables.AtomDecoder
 
   @derive Jason.Encoder
-  defstruct [:id, :timeout_seconds, :current_timeout_job_id, :table_status, :participants]
+  defstruct [:id, :timeout_seconds, :current_timeout_job_id, :table_status, :game_mode, :participants]
 
   def interested?(%TableCreated{id: table_id} = _event, _metadata) do
     {:start, table_id}
@@ -108,6 +109,10 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def interested?(%ParticipantSatOut{table_id: table_id} = _event, _metadata) do
+    {:continue, table_id}
+  end
+
+  def interested?(%ParticipantLeft{table_id: table_id} = _event, _metadata) do
     {:continue, table_id}
   end
 
@@ -216,15 +221,59 @@ defmodule Poker.Tables.ProcessManager do
     end
   end
 
+  # When a participant joins a waiting table, check if we should start
+  # Note: handle runs BEFORE apply, so the joining participant isn't in the list yet
+  def handle(
+        %Poker.Tables.ProcessManager{table_status: :waiting, participants: participants} = _state,
+        %ParticipantJoined{table_id: table_id, is_sitting_out: is_sitting_out} = _event
+      ) do
+    # Count existing non-sitting-out participants
+    existing_playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
+
+    # Add 1 for the joining participant if they're not sitting out
+    playing_count = if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
+
+    if playing_count >= 2 do
+      struct(StartTable, %{table_id: table_id})
+    else
+      []
+    end
+  end
+
+  # When a participant joins a paused table, check if we should resume
+  # Note: handle runs BEFORE apply, so the joining participant isn't in the list yet
+  def handle(
+        %Poker.Tables.ProcessManager{table_status: :paused, participants: participants} = _state,
+        %ParticipantJoined{table_id: table_id, is_sitting_out: is_sitting_out} = _event
+      ) do
+    # Count existing non-sitting-out participants
+    existing_playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
+
+    # Add 1 for the joining participant if they're not sitting out
+    playing_count = if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
+
+    if playing_count >= 2 do
+      struct(ResumeTable, %{table_id: table_id})
+    else
+      []
+    end
+  end
+
+  # Catch-all for events that only update state (no commands to dispatch)
+  def handle(%Poker.Tables.ProcessManager{}, _event) do
+    []
+  end
+
   def apply(
         %__MODULE__{} = state,
-        %TableCreated{id: id, timeout_seconds: timeout_seconds, status: status} = _event
+        %TableCreated{id: id, timeout_seconds: timeout_seconds, status: status, game_mode: game_mode} = _event
       ) do
     %__MODULE__{
       state
       | id: id,
         timeout_seconds: timeout_seconds,
         table_status: status,
+        game_mode: game_mode,
         participants: []
     }
   end
@@ -316,6 +365,11 @@ defmodule Poker.Tables.ProcessManager do
         end
       end)
 
+    %__MODULE__{state | participants: updated_participants}
+  end
+
+  def apply(%__MODULE__{participants: participants} = state, %ParticipantLeft{} = event) do
+    updated_participants = Enum.reject(participants, &(&1.id == event.participant_id))
     %__MODULE__{state | participants: updated_participants}
   end
 

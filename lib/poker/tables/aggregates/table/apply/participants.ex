@@ -30,6 +30,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     ParticipantSatOut,
     ParticipantSatIn,
     ParticipantBusted,
+    ParticipantLeft,
     ParticipantFolded,
     ParticipantChecked,
     ParticipantCalled,
@@ -48,6 +49,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     new_participant = %{
       id: event.id,
       player_id: event.player_id,
+      nickname: event.nickname || "Player",
       chips: event.chips,
       status: event.status,
       is_sitting_out: event.is_sitting_out,
@@ -70,6 +72,17 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
   # Marks participant as busted (out of chips).
   def apply(%Table{} = table, %ParticipantBusted{participant_id: participant_id}) do
     Helpers.update_participant(table, participant_id, &%{&1 | status: :busted})
+  end
+
+  # Removes participant from table (cash game leave).
+  # Also clears dealer_button_id if the leaving participant was the dealer.
+  def apply(%Table{participants: participants, dealer_button_id: dealer_button_id} = table, %ParticipantLeft{participant_id: participant_id}) do
+    updated_participants = Enum.reject(participants, &(&1.id == participant_id))
+
+    updated_dealer_button_id =
+      if dealer_button_id == participant_id, do: nil, else: dealer_button_id
+
+    %Table{table | participants: updated_participants, dealer_button_id: updated_dealer_button_id}
   end
 
   # Handles timeout event (informational only, no state change).

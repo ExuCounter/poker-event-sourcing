@@ -7,7 +7,8 @@ defmodule Poker.Tables.Events.ParticipantJoined do
              :chips,
              :initial_chips,
              :status,
-             :is_sitting_out
+             :is_sitting_out,
+             :nickname
            ]}
   defstruct [
     :id,
@@ -16,7 +17,8 @@ defmodule Poker.Tables.Events.ParticipantJoined do
     :chips,
     :initial_chips,
     :status,
-    :is_sitting_out
+    :is_sitting_out,
+    :nickname
   ]
 end
 

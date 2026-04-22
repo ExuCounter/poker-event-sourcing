@@ -26,13 +26,32 @@ import { hooks as colocatedHooks } from "phoenix-colocated/poker";
 import topbar from "../vendor/topbar";
 import { PokerCanvas } from "./poker_canvas.js";
 
+const AutoClearFlash = {
+  mounted() {
+    let ignoredIDs = ["client-error", "server-error"];
+    if (ignoredIDs.includes(this.el.id)) return;
+
+    let hideAfter = 2000;
+    let clearAfter = hideAfter + 300;
+
+    setTimeout(() => {
+      this.el.style.opacity = 0;
+      this.el.style.transition = "opacity 0.3s ease-out";
+    }, hideAfter);
+
+    setTimeout(() => {
+      this.pushEvent("lv:clear-flash");
+    }, clearAfter);
+  },
+};
+
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PokerCanvas },
+  hooks: { ...colocatedHooks, PokerCanvas, AutoClearFlash },
 });
 
 // Show progress bar on live navigation and form submits

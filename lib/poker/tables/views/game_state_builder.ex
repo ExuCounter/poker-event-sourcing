@@ -109,6 +109,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
     %{
       table_status: aggregate.status,
+      table_type: get_table_type(aggregate),
       hand_id: get_hand_id(aggregate),
       total_pot: calculate_total_pot(aggregate),
       community_cards:
@@ -152,6 +153,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
   defp get_hand_id(%{hand: %{id: id}}), do: id
   defp get_hand_id(_), do: nil
+
+  defp get_table_type(%{settings: %{table_type: table_type}}), do: table_type
+  defp get_table_type(_), do: nil
 
   defp calculate_total_pot(%{pots: pots}) when is_list(pots) do
     Enum.reduce(pots, 0, fn pot, acc -> acc + pot.amount end)
@@ -244,6 +248,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       %{
         id: participant.id,
         player_id: participant.player_id,
+        nickname: participant.nickname,
         chips: participant.chips,
         position: get_participant_position(participant_hand),
         status: participant.status,

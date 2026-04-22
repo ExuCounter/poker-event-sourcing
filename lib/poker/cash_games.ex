@@ -80,7 +80,10 @@ defmodule Poker.CashGames do
   end
 
   def list_cash_games do
-    Queries.order_by_newest() |> Poker.Repo.all()
+    Queries.base()
+    |> Queries.with_table_status()
+    |> Queries.order_by_newest()
+    |> Poker.Repo.all()
   end
 
   defp validate_buyin(cash_game, amount) do

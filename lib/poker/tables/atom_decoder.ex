@@ -45,6 +45,12 @@ defmodule Poker.Tables.AtomDecoder do
       :heads_up
     ],
 
+    # Game mode
+    game_mode: [
+      :cash_game,
+      :tournament
+    ],
+
     # Round types
     round_type: [
       :pre_flop,

@@ -31,10 +31,10 @@ defmodule PokerWeb.PlayerLive.Game do
       {:ok,
        assign(socket,
          table_id: table_id,
-         lobby: lobby,
          game_view: game_view,
          current_user_id: socket.assigns.current_scope.user.id,
          current_participant: current_participant,
+         is_participant: not is_nil(current_participant),
          raise_amount: nil,
          current_animated_event_id: nil,
          queue: []
@@ -145,6 +145,19 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
+  def handle_event("leave_table", _params, socket) do
+    case Tables.leave_table(socket.assigns.current_scope, socket.assigns.table_id) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "You have left the table")
+         |> push_navigate(to: ~p"/tables/#{socket.assigns.table_id}/lobby")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, format_error(reason))}
+    end
+  end
+
   # Speed multipliers based on queue size thresholds
   # Format: {min_queue_size, multiplier} - :skip means instant jump
   @speed_multipliers [
@@ -225,10 +238,12 @@ defmodule PokerWeb.PlayerLive.Game do
       :already_sat_out -> "You are already sitting out"
       :table_not_started -> "The table has not started yet"
       :table_finished -> "The table has finished"
+      :table_already_finished -> "The table has already finished"
       :stale_timeout -> "Action already processed"
       :not_table_owner -> "Only the table owner can perform this action"
       :not_enough_participants -> "Not enough participants to start"
       :table_already_started -> "The table has already started"
+      :cannot_leave_tournament -> "Cannot leave a tournament"
       _ -> "Action failed: #{reason}"
     end
   end
@@ -259,13 +274,13 @@ defmodule PokerWeb.PlayerLive.Game do
         id="poker-canvas"
         phx-hook="PokerCanvas"
         phx-update="ignore"
-        data-lobby={JsonEncoder.transform_keys(@lobby) |> Jason.encode!()}
         data-state={JsonEncoder.transform_keys(@game_view) |> Jason.encode!()}
         data-current-user-id={@current_user_id}
       />
 
+
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
-        
+
     <!-- Sit Out/In Button - bottom-left corner -->
         <%= if @current_participant do %>
           <div

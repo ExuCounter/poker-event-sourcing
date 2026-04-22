@@ -34,7 +34,6 @@ defmodule PokerWeb.PlayerLive.Replay do
       {:ok,
        assign(socket,
          table_id: table_id,
-         lobby: lobby,
          replay: replay,
          current_user_id: socket.assigns.current_scope.user.id,
          playing: false
@@ -202,7 +201,6 @@ defmodule PokerWeb.PlayerLive.Replay do
         id="poker-canvas"
         phx-hook="PokerCanvas"
         phx-update="ignore"
-        data-lobby={JsonEncoder.transform_keys(@lobby) |> Jason.encode!()}
         data-state={JsonEncoder.transform_keys(@replay.current_state) |> Jason.encode!()}
         data-current-user-id={@current_user_id}
         data-mode="replay"

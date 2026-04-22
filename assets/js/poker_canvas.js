@@ -20,7 +20,6 @@ import {
 export const PokerCanvas = {
   async mounted() {
     const serverState = JSON.parse(this.el.dataset.state);
-    const lobbyState = JSON.parse(this.el.dataset.lobby);
     const currentUserId = this.el.dataset.currentUserId;
     const mode = this.el.dataset.mode || "live";
 
@@ -28,7 +27,6 @@ export const PokerCanvas = {
 
     this.containers = {};
     this.state = serverState;
-    this.lobbyState = lobbyState;
     this.currentUserId = currentUserId;
     this.isReplayMode = mode === "replay";
     this.timeoutAnimationFrame = null;
@@ -39,8 +37,10 @@ export const PokerCanvas = {
       resizeTo: window,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
-      antialias: true,
+      antialias: false,
     });
+
+    console.log(this.state);
 
     this.renderers = {
       communityCards: null,
@@ -53,6 +53,9 @@ export const PokerCanvas = {
       "table_event",
       async ({ event: event, new_state: serverState }) => {
         this.state = serverState;
+
+        console.log(event);
+        console.log(serverState);
 
         await this.runAnimation(event);
 
@@ -76,6 +79,11 @@ export const PokerCanvas = {
     window.addEventListener("resize", () => this.resize());
 
     this.resize();
+
+    // Start timeout animation if there's an active turn on page load
+    if (this.state.currentTurn && this.state.timeoutInfo) {
+      this.startTimeoutAnimation();
+    }
   },
 
   loadSounds() {
@@ -94,6 +102,17 @@ export const PokerCanvas = {
     const timing = event.timing;
 
     switch (event.type) {
+      case "ParticipantJoined": {
+        // Create renderer for new participant (event.id is the participant ID)
+        const participantRenderer = new ParticipantRenderer(
+          event.id,
+          this.containers.tableContainer,
+          () => ({ ...this.state, currentUserId: this.currentUserId }),
+        );
+        this.renderers.participants.set(event.id, participantRenderer);
+        participantRenderer.render();
+        break;
+      }
       case "ParticipantRaised":
         this.stopTimeoutAnimation();
         this.sounds.raise.play();
@@ -107,7 +126,7 @@ export const PokerCanvas = {
 
         this.state.participants.forEach((p) => {
           const renderer = this.renderers.participants.get(p.id);
-          renderer.render();
+          renderer?.render();
         });
 
         break;
@@ -172,6 +191,22 @@ export const PokerCanvas = {
         this.stopTimeoutAnimation();
         this.showActionIndicator(event.participantId, "CHECK");
         break;
+      case "ParticipantSatOut":
+      case "ParticipantSatIn":
+        this.rerenderParticipant(event.participantId);
+        break;
+      case "ParticipantLeft": {
+        const renderer = this.renderers.participants.get(event.participantId);
+        if (renderer) {
+          this.containers.tableContainer.removeChild(renderer.getContainer());
+          this.renderers.participants.delete(event.participantId);
+        }
+        // Re-render remaining participants as positions may have shifted
+        this.state.participants.forEach((p) => {
+          this.rerenderParticipant(p.id);
+        });
+        break;
+      }
       case "TableStarted":
       case "TablePaused":
       case "TableResumed":
@@ -424,10 +459,7 @@ export const PokerCanvas = {
     this.containers.tableContainer.addChild(tableGraphics);
 
     // Initialize TableInfoRenderer
-    this.renderers.tableInfo = new TableInfoRenderer(
-      () => this.state,
-      () => this.lobbyState,
-    );
+    this.renderers.tableInfo = new TableInfoRenderer(() => this.state);
 
     this.containers.tableContainer.addChild(
       this.renderers.tableInfo.getContainer(),
@@ -463,7 +495,6 @@ export const PokerCanvas = {
         participant.id,
         this.containers.tableContainer,
         () => ({ ...this.state, currentUserId: this.currentUserId }),
-        () => this.lobbyState,
       );
 
       this.renderers.participants.set(participant.id, participantRenderer);
@@ -551,7 +582,8 @@ export const PokerCanvas = {
 
     // Boost scale by 1.3x but cap it so table never overflows viewport
     // Also cap at 1.3 to prevent table from growing at low browser zoom (25%, 50%, 70%)
-    const maxScale = Math.min(width / TABLE_WIDTH, height / TABLE_HEIGHT) * 0.9;
+    const maxScale =
+      Math.min(width / TABLE_WIDTH, height / TABLE_HEIGHT) * 0.75;
     const scale = Math.min(fitScale * 1.3, maxScale);
 
     this.containers.container.scale.set(scale);

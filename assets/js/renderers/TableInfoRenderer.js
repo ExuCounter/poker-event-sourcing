@@ -2,9 +2,8 @@ import * as PIXI from "pixi.js";
 import { TABLE_HEIGHT } from "../constants.js";
 
 export class TableInfoRenderer {
-  constructor(getState, getLobbyState) {
+  constructor(getState) {
     this.getState = getState;
-    this.getLobbyState = getLobbyState;
     this.container = new PIXI.Container();
   }
 
@@ -12,8 +11,7 @@ export class TableInfoRenderer {
     this.container.removeChildren();
 
     const state = this.getState();
-    const lobbyState = this.getLobbyState();
-    const tableType = lobbyState.tableType;
+    const tableType = state.tableType;
     const tableStatus = state.tableStatus;
 
     if (!tableType) {
@@ -58,6 +56,26 @@ export class TableInfoRenderer {
     tableTypeText.position.set(0, 45);
 
     this.container.addChild(tableTypeText);
+
+    // Show "Waiting for players" message when table is waiting
+    if (tableStatus === "waiting") {
+      const waitingText = new PIXI.Text({
+        text: "Waiting for players...",
+        style: {
+          fontFamily: "Arial, sans-serif",
+          fontSize: 28,
+          fontWeight: "600",
+          fill: "white",
+          letterSpacing: 1,
+        },
+      });
+
+      waitingText.alpha = 0.2;
+      waitingText.anchor.set(0.5);
+      waitingText.position.set(0, -30);
+
+      this.container.addChild(waitingText);
+    }
 
     return this.container;
   }

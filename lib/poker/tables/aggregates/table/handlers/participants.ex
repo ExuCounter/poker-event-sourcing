@@ -23,7 +23,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantCall,
     ParticipantRaise,
     ParticipantAllIn,
-    TimeoutParticipant
+    TimeoutParticipant,
+    LeaveTable
   }
 
   alias Poker.Tables.Events.{
@@ -35,7 +36,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantCalled,
     ParticipantRaised,
     ParticipantWentAllIn,
-    ParticipantTimedOut
+    ParticipantTimedOut,
+    ParticipantLeft
   }
 
   alias Poker.Tables.Aggregates.Table.Helpers
@@ -48,9 +50,15 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   # JOIN TABLE
   # =============================================================================
 
-  def handle(%{status: status}, %JoinTableParticipant{}) when status in [:live, :finished],
-    do: {:error, :cannot_join_started_or_finished_table}
+  # Cannot join finished tables
+  def handle(%{status: :finished}, %JoinTableParticipant{}),
+    do: {:error, :cannot_join_finished_table}
 
+  # Tournaments cannot be joined after they start
+  def handle(%{status: :live, game_mode: :tournament}, %JoinTableParticipant{}),
+    do: {:error, :cannot_join_started_tournament}
+
+  # Cash games can be joined anytime (waiting or live)
   def handle(table, %JoinTableParticipant{} = command) do
     max_players = Map.fetch!(@max_players, table.settings.table_type)
 
@@ -70,7 +78,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         chips: initial_chips,
         initial_chips: initial_chips,
         is_sitting_out: false,
-        status: :active
+        status: :active,
+        nickname: command.nickname
       }
     end
   end
@@ -114,6 +123,38 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         %ParticipantSatIn{
           participant_id: participant.id,
           table_id: command.table_id
+        }
+    end
+  end
+
+  # =============================================================================
+  # LEAVE TABLE (Cash Games Only)
+  # =============================================================================
+
+  # Cannot leave tournaments
+  def handle(%{game_mode: :tournament}, %LeaveTable{}),
+    do: {:error, :cannot_leave_tournament}
+
+  # Cannot leave finished tables
+  def handle(%{status: :finished}, %LeaveTable{}),
+    do: {:error, :table_already_finished}
+
+  def handle(table, %LeaveTable{player_id: player_id} = command) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
+
+      in_active_hand?(table, participant) ->
+        leave_during_hand(table, command, participant)
+
+      true ->
+        %ParticipantLeft{
+          participant_id: participant.id,
+          player_id: participant.player_id,
+          table_id: command.table_id,
+          chips: participant.chips
         }
     end
   end
@@ -373,5 +414,29 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     if length(participants) < max_players,
       do: :ok,
       else: {:error, :table_full}
+  end
+
+  defp leave_during_hand(table, command, participant) do
+    table
+    |> Commanded.Aggregate.Multi.new()
+    |> Commanded.Aggregate.Multi.execute(fn _table ->
+      [
+        %ParticipantFolded{
+          participant_id: participant.id,
+          hand_id: table.hand.id,
+          table_id: command.table_id,
+          status: :folded,
+          round: table.round.type,
+          folded_at: DateTime.utc_now()
+        },
+        %ParticipantLeft{
+          participant_id: participant.id,
+          player_id: participant.player_id,
+          table_id: command.table_id,
+          chips: participant.chips
+        }
+      ]
+    end)
+    |> Commanded.Aggregate.Multi.execute(&Helpers.handle_post_action/1)
   end
 end

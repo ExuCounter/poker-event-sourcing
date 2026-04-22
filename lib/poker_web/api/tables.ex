@@ -16,7 +16,7 @@ defmodule PokerWeb.Api.Tables do
   end
 
   def join_participant(%{user: user} = _scope, %{table_id: table_id}) do
-    Poker.Tables.join_participant(table_id, user.id)
+    Poker.Tables.join_participant(table_id, user.id, %{nickname: user.nickname})
   end
 
   def start_table(scope, table_id) do
@@ -53,5 +53,9 @@ defmodule PokerWeb.Api.Tables do
 
   def sit_in_participant(%{user: user} = _scope, table_id) do
     Poker.Tables.sit_in_participant(table_id, user.id)
+  end
+
+  def leave_table(%{user: user} = _scope, table_id) do
+    Poker.Tables.leave_table(table_id, user.id)
   end
 end
