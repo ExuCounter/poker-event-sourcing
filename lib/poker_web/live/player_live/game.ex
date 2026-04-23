@@ -15,8 +15,12 @@ defmodule PokerWeb.PlayerLive.Game do
        |> put_flash(:error, "Table not found")
        |> push_navigate(to: ~p"/")}
     else
+      {game_context, cash_game} = build_game_context(table_id)
+
       game_view =
-        Tables.get_player_game_view(socket.assigns.current_scope, table_id)
+        Tables.get_player_game_view(socket.assigns.current_scope, table_id,
+          game_context: game_context
+        )
 
       socket =
         if connected?(socket) do
@@ -26,27 +30,21 @@ defmodule PokerWeb.PlayerLive.Game do
           socket
         end
 
-      current_participant =
-        find_current_participant(game_view.participants, socket.assigns.current_scope.user.id)
-
-      cash_game =
-        if game_view.game_mode == :cash_game do
-          case Poker.CashGames.get_cash_game_by_table(table_id) do
-            {:ok, cg} -> cg
-            _ -> nil
-          end
+      buy_in_amount =
+        case game_view.player_actions.can_buy_in do
+          %{max: max} -> max
+          false -> 0
         end
 
       {:ok,
        assign(socket,
          table_id: table_id,
          game_view: game_view,
-         current_user_id: socket.assigns.current_scope.user.id,
-         current_participant: current_participant,
-         is_participant: not is_nil(current_participant),
+         game_context: game_context,
          cash_game: cash_game,
+         current_user_id: socket.assigns.current_scope.user.id,
          show_buy_in: false,
-         buy_in_amount: buy_in_max(cash_game, current_participant),
+         buy_in_amount: buy_in_amount,
          raise_amount: nil,
          current_animated_event_id: nil,
          queue: []
@@ -72,24 +70,26 @@ defmodule PokerWeb.PlayerLive.Game do
         event.stream_version == processed_stream_version
       end)
 
+    game_context = socket.assigns.game_context
+
     game_view =
       Tables.get_player_game_view(
         socket.assigns.current_scope,
         socket.assigns.table_id,
-        processed_stream_version
+        since_version: processed_stream_version,
+        game_context: game_context
       )
 
-    # Always use the latest state for current_participant (not the animated version)
+    # Always use the latest player_actions (not the animated version)
     latest_game_view =
-      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
+      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
+        game_context: game_context
+      )
 
-    current_participant =
-      find_current_participant(latest_game_view.participants, socket.assigns.current_user_id)
-
-    socket = assign(socket, queue: remaining_queue, current_participant: current_participant)
+    socket = assign(socket, queue: remaining_queue, game_view: %{game_view | player_actions: latest_game_view.player_actions})
     socket = process_next_event(socket)
 
-    {:noreply, assign(socket, :game_view, game_view)}
+    {:noreply, socket}
   end
 
   # Action event handlers
@@ -147,22 +147,28 @@ defmodule PokerWeb.PlayerLive.Game do
 
   def handle_event("sit_out", _params, socket) do
     case Tables.sit_out_participant(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, refresh_current_participant(socket)}
-      {:ok, _} -> {:noreply, refresh_current_participant(socket)}
+      :ok -> {:noreply, refresh_player_actions(socket)}
+      {:ok, _} -> {:noreply, refresh_player_actions(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
 
   def handle_event("sit_in", _params, socket) do
     case Tables.sit_in_participant(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, refresh_current_participant(socket)}
-      {:ok, _} -> {:noreply, refresh_current_participant(socket)}
+      :ok -> {:noreply, refresh_player_actions(socket)}
+      {:ok, _} -> {:noreply, refresh_player_actions(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
 
   def handle_event("show_buy_in", _params, socket) do
-    {:noreply, assign(socket, show_buy_in: true)}
+    buy_in_amount =
+      case socket.assigns.game_view.player_actions.can_buy_in do
+        %{max: max} -> max
+        false -> 0
+      end
+
+    {:noreply, assign(socket, show_buy_in: true, buy_in_amount: buy_in_amount)}
   end
 
   def handle_event("close_buy_in", _params, socket) do
@@ -185,7 +191,8 @@ defmodule PokerWeb.PlayerLive.Game do
            socket.assigns.buy_in_amount
          ) do
       :ok ->
-        {:noreply, assign(socket, show_buy_in: false)}
+        socket = socket |> assign(show_buy_in: false) |> refresh_player_actions()
+        {:noreply, socket}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, format_error(reason))}
@@ -213,18 +220,13 @@ defmodule PokerWeb.PlayerLive.Game do
       {:ok, _participant_id} ->
         # Refresh game view after joining
         game_view =
-          Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
-
-        current_participant =
-          find_current_participant(game_view.participants, socket.assigns.current_user_id)
+          Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
+            game_context: socket.assigns.game_context
+          )
 
         socket =
           socket
-          |> assign(
-            game_view: game_view,
-            current_participant: current_participant,
-            is_participant: true
-          )
+          |> assign(game_view: game_view)
           |> push_event("rebuild_state", %{state: JsonEncoder.transform_keys(game_view)})
 
         {:noreply, socket}
@@ -251,7 +253,8 @@ defmodule PokerWeb.PlayerLive.Game do
           Tables.get_player_game_view(
             socket.assigns.current_scope,
             socket.assigns.table_id,
-            next_event.stream_version
+            since_version: next_event.stream_version,
+            game_context: socket.assigns.game_context
           )
 
         # Apply dynamic timing based on queue size
@@ -328,28 +331,25 @@ defmodule PokerWeb.PlayerLive.Game do
 
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
 
-  defp refresh_current_participant(socket) do
+  defp refresh_player_actions(socket) do
     game_view =
-      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
+      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
+        game_context: socket.assigns.game_context
+      )
 
-    current_participant =
-      find_current_participant(game_view.participants, socket.assigns.current_user_id)
-
-    assign(socket, current_participant: current_participant)
+    assign(socket, game_view: %{socket.assigns.game_view | player_actions: game_view.player_actions})
   end
 
-  defp buy_in_max(nil, _participant), do: 0
-  defp buy_in_max(_cash_game, nil), do: 0
+  defp build_game_context(table_id) do
+    case Poker.CashGames.get_cash_game_by_table(table_id) do
+      {:ok, cash_game} ->
+        context = %{type: :cash_game, min_buyin: cash_game.min_buyin, max_buyin: cash_game.max_buyin}
+        {context, cash_game}
 
-  defp buy_in_max(cash_game, participant) do
-    max(cash_game.max_buyin - participant.chips, 0)
+      _ ->
+        {nil, nil}
+    end
   end
-
-  defp find_current_participant(participants, player_id) when is_list(participants) do
-    Enum.find(participants, fn p -> p.player_id == player_id end)
-  end
-
-  defp find_current_participant(_, _), do: nil
 
   @impl true
   def render(assigns) do
@@ -376,13 +376,14 @@ defmodule PokerWeb.PlayerLive.Game do
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
         
     <!-- Sit Out/In/Buy In Button - bottom-left corner -->
-        <%= if @current_participant do %>
+        <%= if @game_view.player_actions.is_participant do %>
           <div
             class="absolute left-5 bottom-5 z-10 flex"
             style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;"
           >
-            <%= if @cash_game do %>
-              <% can_buy_in = buy_in_max(@cash_game, @current_participant) >= @cash_game.min_buyin %>
+            <!-- Buy In button (cash games) -->
+            <%= if @game_view.player_actions.can_buy_in != false or @game_view.game_mode == :cash_game do %>
+              <% can_buy_in = @game_view.player_actions.can_buy_in != false %>
               <div class="relative group">
                 <button
                   phx-click={if can_buy_in, do: "show_buy_in"}
@@ -414,47 +415,36 @@ defmodule PokerWeb.PlayerLive.Game do
                 <% end %>
               </div>
             <% end %>
-            <button
-              phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
-              class={[
-                "px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border",
-                if(@current_participant.is_sitting_out,
-                  do:
-                    "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20",
-                  else: "bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
-                )
-              ]}
-            >
-              <span class="flex items-center gap-1.5">
-                <%= if @current_participant.is_sitting_out do %>
+
+            <!-- Sit Out / Sit In button -->
+            <%= if @game_view.player_actions.can_sit_out do %>
+              <button
+                phx-click="sit_out"
+                class="px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
+              >
+                <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Sit In
-                <% else %>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Sit Out
-                <% end %>
-              </span>
-            </button>
+                </span>
+              </button>
+            <% end %>
+            <%= if @game_view.player_actions.can_sit_in do %>
+              <button
+                phx-click="sit_in"
+                class="px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20"
+              >
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sit In
+                </span>
+              </button>
+            <% end %>
+
             <%= if @game_view.my_hand_rank do %>
               <div>
                 <div class="px-3 py-1.5 rounded-lg">
@@ -568,7 +558,8 @@ defmodule PokerWeb.PlayerLive.Game do
       </div>
 
       <!-- Buy In Modal (outside scaled container) -->
-      <%= if @show_buy_in && @cash_game do %>
+      <%= if @show_buy_in && @game_view.player_actions.can_buy_in do %>
+        <% buy_in = @game_view.player_actions.can_buy_in %>
         <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div class="bg-gray-900 rounded-xl p-6 shadow-2xl border-2 border-gray-700 w-80">
             <h3 class="text-white text-lg font-bold mb-4">Buy In</h3>
@@ -581,15 +572,15 @@ defmodule PokerWeb.PlayerLive.Game do
                 <input
                   type="range"
                   name="amount"
-                  min={@cash_game.min_buyin}
-                  max={buy_in_max(@cash_game, @current_participant)}
+                  min={buy_in.min}
+                  max={buy_in.max}
                   value={@buy_in_amount}
                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 />
               </form>
               <div class="flex justify-between text-sm text-gray-500 font-bold mt-1">
-                <span>${@cash_game.min_buyin}</span>
-                <span>${buy_in_max(@cash_game, @current_participant)}</span>
+                <span>${buy_in.min}</span>
+                <span>${buy_in.max}</span>
               </div>
             </div>
 

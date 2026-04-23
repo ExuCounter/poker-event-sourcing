@@ -270,7 +270,7 @@ defmodule Poker.Tables do
     - player_id: The player UUID
     - since_version: Optional stream version of last processed event (nil for full replay)
   """
-  def get_player_game_view(table_id, player_id, since_version \\ nil) do
-    Poker.Tables.Views.PlayerGameView.build(table_id, player_id, since_version)
+  def get_player_game_view(table_id, player_id, opts \\ []) do
+    Poker.Tables.Views.PlayerGameView.build(table_id, player_id, opts)
   end
 end

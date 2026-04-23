@@ -30,6 +30,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     visibility_mode = Keyword.get(opts, :visibility_mode, :live)
     calculate_actions = Keyword.get(opts, :calculate_actions, true)
     since_version = Keyword.get(opts, :since_version)
+    game_context = Keyword.get(opts, :game_context)
 
     # Replay events to build aggregate state
     %{latest_version: latest_version, aggregate: aggregate} =
@@ -37,7 +38,8 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
     build_view(aggregate, player_id, latest_version,
       visibility_mode: visibility_mode,
-      calculate_actions: calculate_actions
+      calculate_actions: calculate_actions,
+      game_context: game_context
     )
   end
 
@@ -104,6 +106,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   def build_view(aggregate, player_id, latest_version, opts \\ []) do
     visibility_mode = Keyword.get(opts, :visibility_mode, :live)
     calculate_actions = Keyword.get(opts, :calculate_actions, true)
+    game_context = Keyword.get(opts, :game_context)
 
     current_participant = find_participant_by_player_id(aggregate, player_id)
 
@@ -126,6 +129,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         else
           default_actions()
         end,
+      player_actions: calculate_player_actions(aggregate, current_participant, game_context),
       latest_version: latest_version,
       hand_status: get_hand_status(aggregate),
       timeout_seconds: get_timeout_seconds(aggregate),
@@ -379,6 +383,42 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       raise: false
     }
   end
+
+  # =============================================================================
+  # PLAYER ACTIONS (meta-actions: buy-in, sit out, sit in, leave)
+  # =============================================================================
+
+  defp calculate_player_actions(_aggregate, nil, _game_context) do
+    %{
+      is_participant: false,
+      can_buy_in: false,
+      can_sit_out: false,
+      can_sit_in: false,
+      can_leave: false
+    }
+  end
+
+  defp calculate_player_actions(aggregate, participant, game_context) do
+    %{
+      is_participant: true,
+      can_buy_in: calculate_can_buy_in(aggregate, participant, game_context),
+      can_sit_out: not participant.is_sitting_out,
+      can_sit_in: participant.is_sitting_out and participant.chips > 0,
+      can_leave: aggregate.game_mode == :cash_game
+    }
+  end
+
+  defp calculate_can_buy_in(%{game_mode: :cash_game} = _aggregate, participant, %{type: :cash_game} = ctx) do
+    available = ctx.max_buyin - participant.chips - Map.get(participant, :pending_buyin, 0)
+
+    if available >= ctx.min_buyin do
+      %{min: ctx.min_buyin, max: available}
+    else
+      false
+    end
+  end
+
+  defp calculate_can_buy_in(_aggregate, _participant, _game_context), do: false
 
   defp is_my_turn?(%{round: %{participant_to_act_id: to_act_id}}, %{id: participant_id}) do
     to_act_id == participant_id

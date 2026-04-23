@@ -20,7 +20,9 @@ defmodule Poker.Tables.Views.PlayerGameView do
   ## Parameters
     * `table_id` - The table identifier
     * `player_id` - The player for whom to build the view
-    * `since_version` - Optional stream version of last processed event for incremental updates
+    * `opts` - Optional keyword list:
+      * `:since_version` - Stream version for incremental updates
+      * `:game_context` - Map with game type info (e.g. `%{type: :cash_game, min_buyin: 200, max_buyin: 2000}`)
 
   ## Returns
 
@@ -29,18 +31,18 @@ defmodule Poker.Tables.Views.PlayerGameView do
     * `:hand_id` - Current hand identifier
     * `:total_pot` - Total chips in all pots
     * `:community_cards` - Cards on the board
-    * `:hole_cards` - Current player's hole cards (opponent cards are hidden)
     * `:participants` - List of all participants with their state
     * `:valid_actions` - Actions available to the current player
+    * `:player_actions` - Meta-actions available (buy_in, sit_out, sit_in, leave)
     * `:latest_version` - Stream version of the latest processed event
-    * `:new_events` - New events since `since_version` (for animation)
     * `:hand_status` - Current hand status (:pre_flop, :flop, etc.)
   """
-  def build(table_id, player_id, since_version \\ nil) do
+  def build(table_id, player_id, opts \\ []) do
     GameStateBuilder.build(table_id, player_id,
-      since_version: since_version,
+      since_version: Keyword.get(opts, :since_version),
       visibility_mode: :live,
-      calculate_actions: true
+      calculate_actions: true,
+      game_context: Keyword.get(opts, :game_context)
     )
   end
 end
