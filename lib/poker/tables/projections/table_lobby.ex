@@ -10,6 +10,7 @@ defmodule Poker.Tables.Projections.TableLobby do
       field :email, :string
       field :nickname, :string
       field :status, Ecto.Enum, values: [:active, :busted], default: :active
+      field :seat_number, :integer
     end
   end
 

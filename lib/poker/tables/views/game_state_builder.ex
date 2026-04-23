@@ -110,6 +110,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     %{
       table_status: aggregate.status,
       table_type: get_table_type(aggregate),
+      game_mode: aggregate.game_mode,
       hand_id: get_hand_id(aggregate),
       total_pot: calculate_total_pot(aggregate),
       community_cards:
@@ -251,6 +252,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         nickname: participant.nickname,
         chips: participant.chips,
         position: get_participant_position(participant_hand),
+        seat_number: participant.seat_number,
         status: participant.status,
         bet_this_round: get_bet_this_round(participant_hand),
         hand_status: hand_status,

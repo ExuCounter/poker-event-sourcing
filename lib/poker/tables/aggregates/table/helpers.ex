@@ -73,6 +73,12 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
     find_participant_by_id(participants, participant_to_act_id)
   end
 
+  @doc "Finds the first participant to act in a post-flop round (first active player left of dealer)."
+  def find_first_postflop_actor(table) do
+    dealer_index = find_participant_index(table.participants, table.dealer_button_id)
+    find_next_active_participant(table, dealer_index)
+  end
+
   @doc "Finds the next participant who should act after the current one."
   def find_next_participant_to_act(table) do
     participant_to_act = find_participant_to_act(table)

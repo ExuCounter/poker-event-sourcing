@@ -27,6 +27,27 @@ defmodule PokerWeb.PlayerLive.Lobby do
   end
 
   @impl true
+  def handle_event("join_table", %{"seat_number" => seat_number}, socket) do
+    seat_number = String.to_integer(seat_number)
+
+    case Tables.join_participant(socket.assigns.current_scope, %{
+           table_id: socket.assigns.table_id,
+           seat_number: seat_number
+         }) do
+      {:ok, _participant_id} ->
+        {:noreply,
+         socket
+         |> push_navigate(to: ~p"/tables/#{socket.assigns.table_id}/game")}
+
+      {:error, %{message: message}} ->
+        {:noreply, put_flash(socket, :error, message)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to join table: #{inspect(reason)}")}
+    end
+  end
+
+  # Auto-assign seat for tournaments (no seat_number provided)
   def handle_event("join_table", _params, socket) do
     case Tables.join_participant(socket.assigns.current_scope, %{
            table_id: socket.assigns.table_id
@@ -282,6 +303,28 @@ defmodule PokerWeb.PlayerLive.Lobby do
                         Join Table
                       </span>
                     </.button>
+                    <.button
+                      navigate={~p"/tables/#{@lobby.id}/game"}
+                      class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      <span class="flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                        Spectate
+                      </span>
+                    </.button>
                   <% true -> %>
                     <div class="flex-1 flex items-center justify-center px-6 py-3 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
                       <svg
@@ -301,6 +344,28 @@ defmodule PokerWeb.PlayerLive.Lobby do
                         Table Full ({@lobby.seats_count} max)
                       </span>
                     </div>
+                    <.button
+                      navigate={~p"/tables/#{@lobby.id}/game"}
+                      class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      <span class="flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                        Spectate
+                      </span>
+                    </.button>
                 <% end %>
 
                 <%= if @lobby.status in [:waiting, :live] && @lobby.seated_count >= 2 && @lobby.creator_id == @user_id do %>

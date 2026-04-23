@@ -68,7 +68,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Round do
   end
 
   defp start_round(table, command) do
-    participant_to_act = Helpers.find_participant_to_act(table)
+    participant_to_act = Helpers.find_first_postflop_actor(table)
 
     community_cards_count =
       case command.round do

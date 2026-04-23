@@ -37,6 +37,8 @@ export class ParticipantRenderer {
 
     this.betAreaContainer = new PIXI.Container();
 
+    this.equityBadgeContainer = new PIXI.Graphics();
+
     this.tableContainer.addChild(this.container);
     this.container.addChild(this.actionIndicatorOverlay);
 
@@ -494,6 +496,8 @@ export class ParticipantRenderer {
     );
 
     this.hoodContainer.addChild(badgeContainer);
+
+    this.equityBadge = badgeContainer;
   }
 
   #getAvatarColor(nickname, isFolded) {
@@ -545,96 +549,53 @@ export class ParticipantRenderer {
     return parseInt(toHex(r) + toHex(g) + toHex(b), 16);
   }
 
-  // Predefined seat positions for rectangular table (relative to table center)
-  // Positions are arranged: bottom center, then clockwise
-  #getSeatPositions(playerCount) {
+  // Fixed seat positions for 6-max table (indexed 0-5 for visual positions)
+  // Position 0 is always at bottom center, then clockwise
+  #getFixedSeatPositions() {
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
-    // Different padding for different sides to keep players on screen
-    const sidePadding = 30; // Distance from table edge for left/right
-    const topPadding = 20; // Distance for top players (closer to table)
-    const bottomPadding = -10; // Distance for bottom players (even closer)
+    const sidePadding = 30;
+    const topPadding = 20;
+    const bottomPadding = -10;
 
-    const positions = {
-      2: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: 0, y: -halfH - topPadding }, // Top center
-      ],
-      3: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: 0 }, // Right
-        { x: -halfW - sidePadding, y: 0 }, // Left
-      ],
-      4: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: 0 }, // Right
-        { x: 0, y: -halfH - topPadding }, // Top center
-        { x: -halfW - sidePadding, y: 0 }, // Left
-      ],
-      5: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: halfH * 0.4 }, // Bottom right
-        { x: halfW + sidePadding, y: -halfH * 0.4 }, // Top right
-        { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Top left
-        { x: -halfW - sidePadding, y: halfH * 0.4 }, // Bottom left
-      ],
-      6: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: halfH * 0.4 }, // Bottom right
-        { x: halfW + sidePadding, y: -halfH * 0.4 }, // Top right
-        { x: 0, y: -halfH - topPadding }, // Top center
-        { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Top left
-        { x: -halfW - sidePadding, y: halfH * 0.4 }, // Bottom left
-      ],
-      7: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: halfH * 0.5 }, // Bottom right
-        { x: halfW + sidePadding, y: -halfH * 0.2 }, // Right
-        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
-        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
-        { x: -halfW - sidePadding, y: -halfH * 0.2 }, // Left
-        { x: -halfW - sidePadding, y: halfH * 0.5 }, // Bottom left
-      ],
-      8: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW + sidePadding, y: halfH * 0.5 }, // Bottom right
-        { x: halfW + sidePadding, y: -halfH * 0.2 }, // Right
-        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
-        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
-        { x: -halfW - sidePadding, y: -halfH * 0.2 }, // Left
-        { x: -halfW - sidePadding, y: halfH * 0.5 }, // Bottom left
-        { x: halfW * 0.5, y: halfH + bottomPadding }, // Bottom right corner
-      ],
-      9: [
-        { x: 0, y: halfH + bottomPadding }, // Bottom center
-        { x: halfW * 0.6, y: halfH + bottomPadding }, // Bottom right
-        { x: halfW + sidePadding, y: halfH * 0.3 }, // Right bottom
-        { x: halfW + sidePadding, y: -halfH * 0.3 }, // Right top
-        { x: halfW * 0.4, y: -halfH - topPadding }, // Top right
-        { x: -halfW * 0.4, y: -halfH - topPadding }, // Top left
-        { x: -halfW - sidePadding, y: -halfH * 0.3 }, // Left top
-        { x: -halfW - sidePadding, y: halfH * 0.3 }, // Left bottom
-        { x: -halfW * 0.6, y: halfH + bottomPadding }, // Bottom left
-      ],
-    };
+    return [
+      { x: 0, y: halfH + bottomPadding }, // Visual 0: Bottom center
+      { x: halfW + sidePadding, y: halfH * 0.4 }, // Visual 1: Bottom right
+      { x: halfW + sidePadding, y: -halfH * 0.4 }, // Visual 2: Top right
+      { x: 0, y: -halfH - topPadding }, // Visual 3: Top center
+      { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Visual 4: Top left
+      { x: -halfW - sidePadding, y: halfH * 0.4 }, // Visual 5: Bottom left
+    ];
+  }
 
-    return positions[playerCount] || positions[6];
+  // Calculate visual position with rotation so current user is at bottom
+  #getVisualPosition() {
+    const state = this.getState();
+    const participant = state.participants.find(
+      (p) => p.id === this.participantId,
+    );
+    const currentUser = state.participants.find(
+      (p) => p.playerId === state.currentUserId,
+    );
+
+    // Get physical seat numbers (1-6)
+    const mySeatNumber = participant?.seatNumber || 1;
+    const viewerSeatNumber = currentUser?.seatNumber || 1;
+
+    // Calculate rotation offset so viewer's seat appears at visual position 0 (bottom)
+    const rotationOffset = viewerSeatNumber - 1;
+
+    // Apply rotation: shift seat numbers so current user is at visual position 0
+    // Seat numbers are 1-6, visual positions are 0-5
+    const visualPosition = (mySeatNumber - 1 - rotationOffset + 6) % 6;
+
+    return visualPosition;
   }
 
   #getPlayerPosition() {
-    const state = this.getState();
-    const participantIndex = state.participants.findIndex(
-      (p) => p.id === this.participantId,
-    );
-    const currentUserIndex = state.participants.findIndex(
-      (p) => p.playerId === state.currentUserId,
-    );
-    const playerCount = state.participants.length;
-    const relativePosition =
-      (participantIndex - currentUserIndex + playerCount) % playerCount;
-
-    const seatPositions = this.#getSeatPositions(playerCount);
-    const pos = seatPositions[relativePosition] || { x: 0, y: 0 };
+    const visualPosition = this.#getVisualPosition();
+    const seatPositions = this.#getFixedSeatPositions();
+    const pos = seatPositions[visualPosition] || { x: 0, y: 0 };
 
     return {
       x: pos.x - HOOD_WIDTH / 2,
@@ -643,19 +604,9 @@ export class ParticipantRenderer {
   }
 
   #getBetPosition() {
-    const state = this.getState();
-    const participantIndex = state.participants.findIndex(
-      (p) => p.id === this.participantId,
-    );
-    const currentUserIndex = state.participants.findIndex(
-      (p) => p.playerId === state.currentUserId,
-    );
-    const playerCount = state.participants.length;
-    const relativePosition =
-      (participantIndex - currentUserIndex + playerCount) % playerCount;
-
-    const seatPositions = this.#getSeatPositions(playerCount);
-    const pos = seatPositions[relativePosition] || { x: 0, y: 0 };
+    const visualPosition = this.#getVisualPosition();
+    const seatPositions = this.#getFixedSeatPositions();
+    const pos = seatPositions[visualPosition] || { x: 0, y: 0 };
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
 
@@ -1010,6 +961,10 @@ export class ParticipantRenderer {
 
   clearHoleCards() {
     this.holeCardsContainer.removeChildren();
+  }
+
+  clearEquityBadge() {
+    this.equityBadgeContainer.clear();
   }
 
   hideBetAreaChipsText() {

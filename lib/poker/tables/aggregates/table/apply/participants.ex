@@ -29,6 +29,8 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
     ParticipantJoined,
     ParticipantSatOut,
     ParticipantSatIn,
+    ParticipantBoughtIn,
+    ParticipantBuyInApplied,
     ParticipantBusted,
     ParticipantLeft,
     ParticipantFolded,
@@ -53,7 +55,9 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
       chips: event.chips,
       status: event.status,
       is_sitting_out: event.is_sitting_out,
-      initial_chips: event.initial_chips
+      initial_chips: event.initial_chips,
+      seat_number: event.seat_number,
+      pending_buyin: 0
     }
 
     %Table{table | participants: participants ++ [new_participant]}
@@ -67,6 +71,20 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
   # Marks participant as active (not sitting out).
   def apply(%Table{} = table, %ParticipantSatIn{} = event) do
     Helpers.update_participant(table, event.participant_id, &%{&1 | is_sitting_out: false})
+  end
+
+  # Records pending buy-in (chips applied at next hand start).
+  def apply(%Table{} = table, %ParticipantBoughtIn{} = event) do
+    Helpers.update_participant(table, event.participant_id, fn p ->
+      %{p | pending_buyin: p.pending_buyin + event.amount}
+    end)
+  end
+
+  # Applies pending buy-in at hand start: adds chips, sits in, clears pending.
+  def apply(%Table{} = table, %ParticipantBuyInApplied{} = event) do
+    Helpers.update_participant(table, event.participant_id, fn p ->
+      %{p | chips: p.chips + event.amount, pending_buyin: 0, is_sitting_out: false}
+    end)
   end
 
   # Marks participant as busted (out of chips).

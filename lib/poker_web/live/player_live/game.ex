@@ -2,6 +2,7 @@ defmodule PokerWeb.PlayerLive.Game do
   use PokerWeb, :live_view
 
   alias PokerWeb.Api.Tables
+  alias PokerWeb.Api.CashGames
   alias PokerWeb.JsonEncoder
 
   @impl true
@@ -28,6 +29,14 @@ defmodule PokerWeb.PlayerLive.Game do
       current_participant =
         find_current_participant(game_view.participants, socket.assigns.current_scope.user.id)
 
+      cash_game =
+        if game_view.game_mode == :cash_game do
+          case Poker.CashGames.get_cash_game_by_table(table_id) do
+            {:ok, cg} -> cg
+            _ -> nil
+          end
+        end
+
       {:ok,
        assign(socket,
          table_id: table_id,
@@ -35,6 +44,9 @@ defmodule PokerWeb.PlayerLive.Game do
          current_user_id: socket.assigns.current_scope.user.id,
          current_participant: current_participant,
          is_participant: not is_nil(current_participant),
+         cash_game: cash_game,
+         show_buy_in: false,
+         buy_in_amount: buy_in_max(cash_game, current_participant),
          raise_amount: nil,
          current_animated_event_id: nil,
          queue: []
@@ -67,8 +79,12 @@ defmodule PokerWeb.PlayerLive.Game do
         processed_stream_version
       )
 
+    # Always use the latest state for current_participant (not the animated version)
+    latest_game_view =
+      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
+
     current_participant =
-      find_current_participant(game_view.participants, socket.assigns.current_user_id)
+      find_current_participant(latest_game_view.participants, socket.assigns.current_user_id)
 
     socket = assign(socket, queue: remaining_queue, current_participant: current_participant)
     socket = process_next_event(socket)
@@ -131,17 +147,48 @@ defmodule PokerWeb.PlayerLive.Game do
 
   def handle_event("sit_out", _params, socket) do
     case Tables.sit_out_participant(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:ok, _} -> {:noreply, socket}
+      :ok -> {:noreply, refresh_current_participant(socket)}
+      {:ok, _} -> {:noreply, refresh_current_participant(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
 
   def handle_event("sit_in", _params, socket) do
     case Tables.sit_in_participant(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:ok, _} -> {:noreply, socket}
+      :ok -> {:noreply, refresh_current_participant(socket)}
+      {:ok, _} -> {:noreply, refresh_current_participant(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
+    end
+  end
+
+  def handle_event("show_buy_in", _params, socket) do
+    {:noreply, assign(socket, show_buy_in: true)}
+  end
+
+  def handle_event("close_buy_in", _params, socket) do
+    {:noreply, assign(socket, show_buy_in: false)}
+  end
+
+  def handle_event("update_buy_in_amount", %{"amount" => amount}, socket) do
+    case Integer.parse(amount) do
+      {amount_int, _} -> {:noreply, assign(socket, buy_in_amount: amount_int)}
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("confirm_buy_in", _params, socket) do
+    cash_game = socket.assigns.cash_game
+
+    case CashGames.buy_in(
+           socket.assigns.current_scope,
+           cash_game.id,
+           socket.assigns.buy_in_amount
+         ) do
+      :ok ->
+        {:noreply, assign(socket, show_buy_in: false)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
 
@@ -152,6 +199,35 @@ defmodule PokerWeb.PlayerLive.Game do
          socket
          |> put_flash(:info, "You have left the table")
          |> push_navigate(to: ~p"/tables/#{socket.assigns.table_id}/lobby")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, format_error(reason))}
+    end
+  end
+
+  def handle_event("join_at_seat", %{"seat_number" => seat_number}, socket) do
+    case Tables.join_participant(socket.assigns.current_scope, %{
+           table_id: socket.assigns.table_id,
+           seat_number: seat_number
+         }) do
+      {:ok, _participant_id} ->
+        # Refresh game view after joining
+        game_view =
+          Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
+
+        current_participant =
+          find_current_participant(game_view.participants, socket.assigns.current_user_id)
+
+        socket =
+          socket
+          |> assign(
+            game_view: game_view,
+            current_participant: current_participant,
+            is_participant: true
+          )
+          |> push_event("rebuild_state", %{state: JsonEncoder.transform_keys(game_view)})
+
+        {:noreply, socket}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, format_error(reason))}
@@ -244,11 +320,30 @@ defmodule PokerWeb.PlayerLive.Game do
       :not_enough_participants -> "Not enough participants to start"
       :table_already_started -> "The table has already started"
       :cannot_leave_tournament -> "Cannot leave a tournament"
+      :seat_occupied -> "This seat is already taken"
+      :already_joined -> "You have already joined this table"
       _ -> "Action failed: #{reason}"
     end
   end
 
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
+
+  defp refresh_current_participant(socket) do
+    game_view =
+      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id)
+
+    current_participant =
+      find_current_participant(game_view.participants, socket.assigns.current_user_id)
+
+    assign(socket, current_participant: current_participant)
+  end
+
+  defp buy_in_max(nil, _participant), do: 0
+  defp buy_in_max(_cash_game, nil), do: 0
+
+  defp buy_in_max(cash_game, participant) do
+    max(cash_game.max_buyin - participant.chips, 0)
+  end
 
   defp find_current_participant(participants, player_id) when is_list(participants) do
     Enum.find(participants, fn p -> p.player_id == player_id end)
@@ -278,15 +373,47 @@ defmodule PokerWeb.PlayerLive.Game do
         data-current-user-id={@current_user_id}
       />
 
-
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
-
-    <!-- Sit Out/In Button - bottom-left corner -->
+        
+    <!-- Sit Out/In/Buy In Button - bottom-left corner -->
         <%= if @current_participant do %>
           <div
             class="absolute left-5 bottom-5 z-10 flex"
             style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;"
           >
+            <%= if @cash_game do %>
+              <% can_buy_in = buy_in_max(@cash_game, @current_participant) >= @cash_game.min_buyin %>
+              <div class="relative group">
+                <button
+                  phx-click={if can_buy_in, do: "show_buy_in"}
+                  disabled={!can_buy_in}
+                  class={[
+                    "px-4 mr-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md backdrop-blur-sm border",
+                    if(can_buy_in,
+                      do: "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-white/20 hover:shadow-lg cursor-pointer",
+                      else: "bg-gray-600/50 text-gray-400 border-gray-500/20 cursor-not-allowed"
+                    )
+                  ]}
+                >
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Buy In
+                  </span>
+                </button>
+                <%= unless can_buy_in do %>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-gray-300 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-600">
+                    Max chips reached
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
             <button
               phx-click={if @current_participant.is_sitting_out, do: "sit_in", else: "sit_out"}
               class={[
@@ -336,10 +463,10 @@ defmodule PokerWeb.PlayerLive.Game do
                   </span>
                 </div>
               </div>
-              <!-- Hand Rank Display - bottom-left corner, above sit out button -->
             <% end %>
           </div>
         <% end %>
+        
         
     <!-- Action Controls - positioned and scaled -->
         <div
@@ -439,6 +566,50 @@ defmodule PokerWeb.PlayerLive.Game do
           </div>
         </div>
       </div>
+
+      <!-- Buy In Modal (outside scaled container) -->
+      <%= if @show_buy_in && @cash_game do %>
+        <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div class="bg-gray-900 rounded-xl p-6 shadow-2xl border-2 border-gray-700 w-80">
+            <h3 class="text-white text-lg font-bold mb-4">Buy In</h3>
+
+            <div class="mb-4">
+              <div class="text-center text-3xl font-bold text-amber-400 mb-3">
+                ${@buy_in_amount}
+              </div>
+              <form phx-change="update_buy_in_amount">
+                <input
+                  type="range"
+                  name="amount"
+                  min={@cash_game.min_buyin}
+                  max={buy_in_max(@cash_game, @current_participant)}
+                  value={@buy_in_amount}
+                  class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </form>
+              <div class="flex justify-between text-sm text-gray-500 font-bold mt-1">
+                <span>${@cash_game.min_buyin}</span>
+                <span>${buy_in_max(@cash_game, @current_participant)}</span>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <button
+                phx-click="close_buy_in"
+                class="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                phx-click="confirm_buy_in"
+                class="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      <% end %>
     </div>
     """
   end

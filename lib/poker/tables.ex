@@ -37,6 +37,7 @@ defmodule Poker.Tables do
     ParticipantAllIn,
     SitOutParticipant,
     SitInParticipant,
+    BuyInParticipant,
     TimeoutParticipant,
     LeaveTable
   }
@@ -71,13 +72,15 @@ defmodule Poker.Tables do
     participant_id = UUIDv7.generate()
     starting_stack = Map.get(attrs, :starting_stack)
     nickname = Map.get(attrs, :nickname)
+    seat_number = Map.get(attrs, :seat_number)
 
     command_attrs = %{
       participant_id: participant_id,
       player_id: player_id,
       table_id: table_id,
       starting_stack: starting_stack,
-      nickname: nickname
+      nickname: nickname,
+      seat_number: seat_number
     }
 
     with {:ok, command} <-
@@ -201,6 +204,20 @@ defmodule Poker.Tables do
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &SitInParticipant.changeset/1),
          :ok <- Poker.App.dispatch(command) do
+      :ok
+    end
+  end
+
+  def buy_in_participant(table_id, player_id, amount) do
+    command_attrs = %{
+      player_id: player_id,
+      table_id: table_id,
+      amount: amount
+    }
+
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &BuyInParticipant.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end
   end

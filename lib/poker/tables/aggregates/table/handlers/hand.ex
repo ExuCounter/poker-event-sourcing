@@ -35,6 +35,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     TableFinished,
     TablePaused,
     ParticipantBusted,
+    ParticipantSatOut,
+    ParticipantBuyInApplied,
     PayoutDistributed
   }
 
@@ -92,19 +94,20 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   # =============================================================================
 
   defp start_hand(table, hand_id) do
-    # Only deal cards to participants who are active and not sitting out
-    playing_participants = Helpers.filter_playing_participants(table.participants)
-
-    # For cash games, positions are calculated among playing participants only
-    # For tournaments, positions are calculated among all participants
-    position_participants =
-      case table.game_mode do
-        :cash_game -> playing_participants
-        :tournament -> table.participants
-      end
-
     table
     |> Commanded.Aggregate.Multi.new()
+    # Apply pending buy-ins before dealing
+    |> Commanded.Aggregate.Multi.execute(fn table ->
+      table.participants
+      |> Enum.filter(fn p -> p.pending_buyin > 0 end)
+      |> Enum.map(fn p ->
+        %ParticipantBuyInApplied{
+          participant_id: p.id,
+          table_id: table.id,
+          amount: p.pending_buyin
+        }
+      end)
+    end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       %HandStarted{
         id: hand_id,
@@ -138,30 +141,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         community_cards: []
       }
     end)
-    |> Commanded.Aggregate.Multi.reduce(playing_participants, fn table, participant ->
-      {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(table.remaining_deck, 2)
-
-      position = Position.calculate_position(table, participant, position_participants)
-
-      [
-        %ParticipantHandGiven{
-          id: UUIDv7.generate(),
-          table_id: table.id,
-          participant_id: participant.id,
-          hand_id: hand_id,
-          hole_cards: hole_cards,
-          position: position,
-          status: :playing,
-          bet_this_round: 0,
-          total_bet_this_hand: 0
-        },
-        %DeckUpdated{
-          hand_id: hand_id,
-          table_id: table.id,
-          cards: remaining_deck
-        }
-      ]
-    end)
+    |> Commanded.Aggregate.Multi.execute(&deal_hole_cards(&1, hand_id))
     |> Commanded.Aggregate.Multi.execute(fn table ->
       sb_participant =
         if Helpers.heads_up?(table) do
@@ -202,6 +182,45 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
   end
 
+  defp deal_hole_cards(table, hand_id) do
+    playing_participants = Helpers.filter_playing_participants(table.participants)
+
+    position_participants =
+      case table.game_mode do
+        :cash_game -> playing_participants
+        :tournament -> table.participants
+      end
+
+    {events, _remaining_deck} =
+      Enum.reduce(playing_participants, {[], table.remaining_deck}, fn participant, {events, deck} ->
+        {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(deck, 2)
+        position = Position.calculate_position(table, participant, position_participants)
+
+        new_events = [
+          %ParticipantHandGiven{
+            id: UUIDv7.generate(),
+            table_id: table.id,
+            participant_id: participant.id,
+            hand_id: hand_id,
+            hole_cards: hole_cards,
+            position: position,
+            status: :playing,
+            bet_this_round: 0,
+            total_bet_this_hand: 0
+          },
+          %DeckUpdated{
+            hand_id: hand_id,
+            table_id: table.id,
+            cards: remaining_deck
+          }
+        ]
+
+        {events ++ new_events, remaining_deck}
+      end)
+
+    events
+  end
+
   # =============================================================================
   # PRIVATE - HAND FINISH
   # =============================================================================
@@ -239,19 +258,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         hand_rank: nil
       }
     end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      busted_participants =
-        Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
-
-      Enum.map(busted_participants, fn participant ->
-        %ParticipantBusted{
-          participant_id: participant.id,
-          player_id: participant.player_id,
-          hand_id: table.hand.id,
-          table_id: table.id
-        }
-      end)
-    end)
+    |> Commanded.Aggregate.Multi.execute(&handle_zero_chip_participants/1)
     |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
       %HandFinished{
         table_id: table.id,
@@ -306,19 +313,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         end)
       end)
     end)
-    |> Commanded.Aggregate.Multi.execute(fn table ->
-      busted_participants =
-        Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
-
-      Enum.map(busted_participants, fn participant ->
-        %ParticipantBusted{
-          participant_id: participant.id,
-          player_id: participant.player_id,
-          hand_id: table.hand.id,
-          table_id: table.id
-        }
-      end)
-    end)
+    |> Commanded.Aggregate.Multi.execute(&handle_zero_chip_participants/1)
     |> Commanded.Aggregate.Multi.execute(fn %{hand: %{id: hand_id}} ->
       %HandFinished{
         table_id: table.id,
@@ -326,5 +321,32 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         finish_reason: reason
       }
     end)
+  end
+
+  # In cash games, players with 0 chips are sat out (can rebuy).
+  # In tournaments, players with 0 chips are busted (eliminated).
+  defp handle_zero_chip_participants(table) do
+    zero_chip_participants =
+      Enum.filter(table.participants, fn participant -> participant.chips == 0 end)
+
+    case table.game_mode do
+      :cash_game ->
+        Enum.map(zero_chip_participants, fn participant ->
+          %ParticipantSatOut{
+            participant_id: participant.id,
+            table_id: table.id
+          }
+        end)
+
+      :tournament ->
+        Enum.map(zero_chip_participants, fn participant ->
+          %ParticipantBusted{
+            participant_id: participant.id,
+            player_id: participant.player_id,
+            hand_id: table.hand.id,
+            table_id: table.id
+          }
+        end)
+    end
   end
 end

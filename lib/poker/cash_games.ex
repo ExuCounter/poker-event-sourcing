@@ -46,6 +46,19 @@ defmodule Poker.CashGames do
   end
 
   @doc """
+  Buys back into a cash game after being sat out with 0 chips.
+  Reserves additional funds from wallet and adds chips.
+  """
+  def buy_in(cash_game_id, player_id, amount) do
+    with {:ok, cash_game} <- get_cash_game(cash_game_id),
+         :ok <- validate_buyin(cash_game, amount),
+         :ok <- Poker.Wallet.reserve_funds(player_id, cash_game_id, amount),
+         :ok <- Poker.Tables.buy_in_participant(cash_game.table_id, player_id, amount) do
+      :ok
+    end
+  end
+
+  @doc """
   Leaves a cash game and releases funds to wallet.
   The final_chips is the amount of chips the player is leaving with.
   """

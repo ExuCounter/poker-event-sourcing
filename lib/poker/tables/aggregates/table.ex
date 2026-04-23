@@ -19,6 +19,7 @@ defmodule Poker.Tables.Aggregates.Table do
     ParticipantAllIn,
     SitOutParticipant,
     SitInParticipant,
+    BuyInParticipant,
     StartRound,
     FinishHand,
     FinishTable,
@@ -41,6 +42,8 @@ defmodule Poker.Tables.Aggregates.Table do
     ParticipantWentAllIn,
     ParticipantSatOut,
     ParticipantSatIn,
+    ParticipantBoughtIn,
+    ParticipantBuyInApplied,
     SmallBlindPosted,
     BigBlindPosted,
     RoundStarted,
@@ -97,6 +100,7 @@ defmodule Poker.Tables.Aggregates.Table do
              TimeoutParticipant,
              SitOutParticipant,
              SitInParticipant,
+             BuyInParticipant,
              LeaveTable
            ] do
     Handlers.Participants.handle(table, command)
@@ -122,6 +126,8 @@ defmodule Poker.Tables.Aggregates.Table do
              ParticipantJoined,
              ParticipantSatOut,
              ParticipantSatIn,
+             ParticipantBoughtIn,
+             ParticipantBuyInApplied,
              ParticipantBusted,
              ParticipantLeft,
              ParticipantFolded,

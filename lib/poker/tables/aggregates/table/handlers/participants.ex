@@ -18,6 +18,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     JoinTableParticipant,
     SitOutParticipant,
     SitInParticipant,
+    BuyInParticipant,
     ParticipantFold,
     ParticipantCheck,
     ParticipantCall,
@@ -31,6 +32,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     ParticipantJoined,
     ParticipantSatOut,
     ParticipantSatIn,
+    ParticipantBoughtIn,
     ParticipantFolded,
     ParticipantChecked,
     ParticipantCalled,
@@ -63,7 +65,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     max_players = Map.fetch!(@max_players, table.settings.table_type)
 
     with :ok <- validate_not_already_joined(table.participants, command.player_id),
-         :ok <- validate_seat_available(table.participants, max_players) do
+         :ok <- validate_seat_available(table.participants, max_players),
+         :ok <- validate_seat_not_occupied(table.participants, command.seat_number) do
       initial_chips =
         if is_nil(command.starting_stack) do
           table.settings.starting_stack
@@ -79,7 +82,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         initial_chips: initial_chips,
         is_sitting_out: false,
         status: :active,
-        nickname: command.nickname
+        nickname: command.nickname,
+        seat_number: command.seat_number
       }
     end
   end
@@ -123,6 +127,34 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
         %ParticipantSatIn{
           participant_id: participant.id,
           table_id: command.table_id
+        }
+    end
+  end
+
+  # =============================================================================
+  # BUY IN (Cash Games Only)
+  # =============================================================================
+
+  def handle(%{game_mode: :tournament}, %BuyInParticipant{}),
+    do: {:error, :cannot_buy_in_tournament}
+
+  def handle(table, %BuyInParticipant{player_id: player_id} = command) do
+    participant = Enum.find(table.participants, fn p -> p.player_id == player_id end)
+    max_chips = table.settings.starting_stack
+
+    cond do
+      is_nil(participant) ->
+        {:error, :participant_not_found}
+
+      participant.chips + participant.pending_buyin + command.amount > max_chips ->
+        {:error, :buy_in_exceeds_max}
+
+      true ->
+        %ParticipantBoughtIn{
+          participant_id: participant.id,
+          player_id: participant.player_id,
+          table_id: command.table_id,
+          amount: command.amount
         }
     end
   end
@@ -414,6 +446,12 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     if length(participants) < max_players,
       do: :ok,
       else: {:error, :table_full}
+  end
+
+  defp validate_seat_not_occupied(participants, seat_number) do
+    if Enum.any?(participants, &(&1.seat_number == seat_number)),
+      do: {:error, %{status: :unprocessable_entity, message: "Seat #{seat_number} is already occupied"}},
+      else: :ok
   end
 
   defp leave_during_hand(table, command, participant) do

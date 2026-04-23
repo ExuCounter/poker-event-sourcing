@@ -7,6 +7,7 @@ import { TotalPotRenderer } from "./renderers/TotalPotRenderer.js";
 import { ChipsRenderer } from "./renderers/ChipsRenderer.js";
 import { TableInfoRenderer } from "./renderers/TableInfoRenderer.js";
 import { DealerButtonRenderer } from "./renderers/DealerButtonRenderer.js";
+import { EmptySeatRenderer } from "./renderers/EmptySeatRenderer.js";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -47,6 +48,7 @@ export const PokerCanvas = {
       totalPot: null,
       tableInfo: null,
       participants: new Map(),
+      emptySeats: new Map(), // Seat number (1-6) -> EmptySeatRenderer
     };
 
     this.handleEvent(
@@ -111,6 +113,8 @@ export const PokerCanvas = {
         );
         this.renderers.participants.set(event.id, participantRenderer);
         participantRenderer.render();
+        // Re-render empty seats (the joined seat is now occupied)
+        this.renderEmptySeats();
         break;
       }
       case "ParticipantRaised":
@@ -205,6 +209,8 @@ export const PokerCanvas = {
         this.state.participants.forEach((p) => {
           this.rerenderParticipant(p.id);
         });
+        // Re-render empty seats (the left seat is now available)
+        this.renderEmptySeats();
         break;
       }
       case "TableStarted":
@@ -357,6 +363,7 @@ export const PokerCanvas = {
     this.state.participants.forEach((p) => {
       const renderer = this.renderers.participants.get(p.id);
       renderer.clearHoleCards();
+      renderer.clearEquityBadge();
     });
   },
 
@@ -522,9 +529,44 @@ export const PokerCanvas = {
     );
     this.renderers.dealerButton.getContainer().zIndex = 100; // Always on top
     this.renderers.dealerButton.render();
+
+    // Create empty seat renderers for all 6 seats
+    this.createEmptySeats();
+  },
+
+  createEmptySeats() {
+    // Clear existing empty seat renderers
+    this.renderers.emptySeats.forEach((renderer) => renderer.destroy());
+    this.renderers.emptySeats.clear();
+
+    // Create empty seat renderer for each seat (1-6)
+    for (let seatNumber = 1; seatNumber <= 6; seatNumber++) {
+      const emptySeatRenderer = new EmptySeatRenderer(
+        seatNumber,
+        this.containers.tableContainer,
+        () => ({ ...this.state, currentUserId: this.currentUserId }),
+        (clickedSeatNumber) => this.handleSeatClick(clickedSeatNumber),
+      );
+
+      this.renderers.emptySeats.set(seatNumber, emptySeatRenderer);
+      emptySeatRenderer.render();
+    }
+  },
+
+  handleSeatClick(seatNumber) {
+    // Push event to LiveView to join at this seat
+    this.pushEvent("join_at_seat", { seat_number: seatNumber });
+  },
+
+  renderEmptySeats() {
+    this.renderers.emptySeats.forEach((renderer) => renderer.render());
   },
 
   async rebuildCanvas() {
+    // Clear empty seat renderers before rebuilding
+    this.renderers.emptySeats.forEach((renderer) => renderer.destroy());
+    this.renderers.emptySeats.clear();
+
     this.clear();
     await this.createTable();
     this.renderCommunityCards();

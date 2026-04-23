@@ -30,18 +30,36 @@ defmodule Poker.Tables.ProcessManager do
     TablePaused,
     TableResumed,
     ParticipantSatIn,
+    ParticipantBoughtIn,
     ParticipantJoined,
     ParticipantSatOut,
     ParticipantLeft,
     RoundStarted
   }
 
-  alias Poker.Tables.Commands.{StartHand, StartRound, FinishHand, ResumeTable, ParticipantFold, StartTable}
+  alias Poker.Tables.Commands.{
+    StartHand,
+    StartRound,
+    FinishHand,
+    ResumeTable,
+    ParticipantFold,
+    StartTable
+  }
+
   alias Poker.Tables.Jobs.TimeoutJob
   alias Poker.Tables.AtomDecoder
 
+  require Logger
+
   @derive Jason.Encoder
-  defstruct [:id, :timeout_seconds, :current_timeout_job_id, :table_status, :game_mode, :participants]
+  defstruct [
+    :id,
+    :timeout_seconds,
+    :current_timeout_job_id,
+    :table_status,
+    :game_mode,
+    participants: []
+  ]
 
   def interested?(%TableCreated{id: table_id} = _event, _metadata) do
     {:start, table_id}
@@ -109,6 +127,10 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def interested?(%ParticipantSatOut{table_id: table_id} = _event, _metadata) do
+    {:continue, table_id}
+  end
+
+  def interested?(%ParticipantBoughtIn{table_id: table_id} = _event, _metadata) do
     {:continue, table_id}
   end
 
@@ -205,6 +227,13 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def handle(
+        %Poker.Tables.ProcessManager{} = _state,
+        %ParticipantBoughtIn{} = _event
+      ) do
+    []
+  end
+
+  def handle(
         %Poker.Tables.ProcessManager{participants: participants} = _state,
         %ParticipantToActSelected{} = event
       ) do
@@ -231,7 +260,8 @@ defmodule Poker.Tables.ProcessManager do
     existing_playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
 
     # Add 1 for the joining participant if they're not sitting out
-    playing_count = if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
+    playing_count =
+      if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
 
     if playing_count >= 2 do
       struct(StartTable, %{table_id: table_id})
@@ -250,7 +280,8 @@ defmodule Poker.Tables.ProcessManager do
     existing_playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
 
     # Add 1 for the joining participant if they're not sitting out
-    playing_count = if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
+    playing_count =
+      if is_sitting_out, do: existing_playing_count, else: existing_playing_count + 1
 
     if playing_count >= 2 do
       struct(ResumeTable, %{table_id: table_id})
@@ -266,7 +297,12 @@ defmodule Poker.Tables.ProcessManager do
 
   def apply(
         %__MODULE__{} = state,
-        %TableCreated{id: id, timeout_seconds: timeout_seconds, status: status, game_mode: game_mode} = _event
+        %TableCreated{
+          id: id,
+          timeout_seconds: timeout_seconds,
+          status: status,
+          game_mode: game_mode
+        } = _event
       ) do
     %__MODULE__{
       state
@@ -303,17 +339,6 @@ defmodule Poker.Tables.ProcessManager do
       |> Oban.insert()
 
     %__MODULE__{state | current_timeout_job_id: job.id}
-  end
-
-  # When participant acts (fold/check/call/raise/all_in), cancel timeout
-  def apply(%__MODULE__{current_timeout_job_id: job_id} = state, event)
-      when event.__struct__ in [ParticipantToActSelected] do
-    # Cancel the scheduled timeout job
-    if job_id do
-      Oban.cancel_job(job_id)
-    end
-
-    %__MODULE__{state | current_timeout_job_id: nil}
   end
 
   def apply(%__MODULE__{} = state, %TablePaused{} = _event) do
@@ -355,6 +380,11 @@ defmodule Poker.Tables.ProcessManager do
     %__MODULE__{state | participants: updated_participants}
   end
 
+  def apply(%__MODULE__{} = state, %ParticipantBoughtIn{} = _event) do
+    # Pending buy-in only — no state change until hand start
+    state
+  end
+
   def apply(%__MODULE__{participants: participants} = state, %ParticipantSatIn{} = event) do
     updated_participants =
       Enum.map(participants, fn p ->
@@ -377,6 +407,12 @@ defmodule Poker.Tables.ProcessManager do
     state
   end
 
+  # Skip events that fail due to corrupted state rather than stopping the PM
+  def error({:error, error}, _event_or_command, _failure_context) do
+    Logger.error("#{__MODULE__} error: #{inspect(error)}")
+    :skip
+  end
+
   def next_round(round) do
     case round do
       :pre_flop -> :flop
@@ -384,4 +420,21 @@ defmodule Poker.Tables.ProcessManager do
       :turn -> :river
     end
   end
+end
+
+defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.ProcessManager do
+  alias Poker.Tables.AtomDecoder
+
+  def decode(%Poker.Tables.ProcessManager{} = pm) do
+    %Poker.Tables.ProcessManager{
+      pm
+      | table_status: decode_atom(:table_status, pm.table_status),
+        game_mode: decode_atom(:game_mode, pm.game_mode),
+        participants: pm.participants || []
+    }
+  end
+
+  defp decode_atom(_field, nil), do: nil
+  defp decode_atom(_field, value) when is_atom(value), do: value
+  defp decode_atom(field, value) when is_binary(value), do: AtomDecoder.decode(field, value)
 end

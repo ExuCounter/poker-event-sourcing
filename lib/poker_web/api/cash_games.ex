@@ -15,6 +15,10 @@ defmodule PokerWeb.Api.CashGames do
     Poker.CashGames.join_cash_game(cash_game_id, user.id, buyin_amount)
   end
 
+  def buy_in(%{user: user} = _scope, cash_game_id, amount) do
+    Poker.CashGames.buy_in(cash_game_id, user.id, amount)
+  end
+
   def leave_cash_game(%{user: user} = _scope, cash_game_id, final_chips) do
     Poker.CashGames.leave_cash_game(cash_game_id, user.id, final_chips)
   end
