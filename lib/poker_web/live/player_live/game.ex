@@ -41,9 +41,12 @@ defmodule PokerWeb.PlayerLive.Game do
           false -> 0
         end
 
+      lobby_path = lobby_path(game_context, table_id)
+
       {:ok,
        assign(socket,
          table_id: table_id,
+         lobby_path: lobby_path,
          game_view: game_view,
          game_context: game_context,
          current_user_id: socket.assigns.current_scope.user.id,
@@ -64,6 +67,7 @@ defmodule PokerWeb.PlayerLive.Game do
 
   @impl true
   def handle_info({:table, _event, data}, socket) do
+    data = Map.put(data, :received_at, System.monotonic_time(:millisecond))
     socket = assign(socket, queue: socket.assigns.queue ++ [data])
 
     if is_nil(socket.assigns.current_animated_event_id) do
@@ -220,7 +224,7 @@ defmodule PokerWeb.PlayerLive.Game do
         {:noreply,
          socket
          |> put_flash(:info, "You have left the table")
-         |> push_navigate(to: ~p"/tables/#{socket.assigns.table_id}/lobby")}
+         |> push_navigate(to: socket.assigns.lobby_path)}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, format_error(reason))}
@@ -251,11 +255,12 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  # Speed multipliers based on queue size thresholds
-  # Format: {min_queue_size, multiplier} - :skip means instant jump
-  @speed_multipliers [
-    {45, :skip},
-    {30, 0.50}
+  # Dynamic timing based on event age
+  # {min_age_ms, multiplier} - :skip means instant jump
+  @speed_thresholds [
+    {12_500, 0},
+    {10_000, 0.5},
+    {7_500, 0.8}
   ]
 
   defp process_next_event(socket) do
@@ -272,9 +277,7 @@ defmodule PokerWeb.PlayerLive.Game do
             game_context: socket.assigns.game_context
           )
 
-        # Apply dynamic timing based on queue size
-        queue_size = length(socket.assigns.queue)
-        adjusted_event = apply_dynamic_timing(next_event, queue_size)
+        adjusted_event = apply_dynamic_timing(next_event)
 
         socket =
           push_event(socket, "table_event", %{
@@ -289,8 +292,10 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  defp apply_dynamic_timing(event, queue_size) do
-    case get_speed_multiplier(queue_size) do
+  defp apply_dynamic_timing(event) do
+    age_ms = System.monotonic_time(:millisecond) - event.received_at
+
+    case get_speed_multiplier(age_ms) do
       :skip ->
         event
         |> Map.put(:skip_animation, true)
@@ -312,9 +317,9 @@ defmodule PokerWeb.PlayerLive.Game do
     if get_in(map, path), do: put_in(map, path, value), else: map
   end
 
-  defp get_speed_multiplier(queue_size) do
-    Enum.find_value(@speed_multipliers, 1.0, fn {threshold, multiplier} ->
-      if queue_size >= threshold, do: multiplier
+  defp get_speed_multiplier(age_ms) do
+    Enum.find_value(@speed_thresholds, 1.0, fn {threshold, multiplier} ->
+      if age_ms >= threshold, do: multiplier
     end)
   end
 
@@ -374,6 +379,9 @@ defmodule PokerWeb.PlayerLive.Game do
       game_view: %{socket.assigns.game_view | player_actions: game_view.player_actions}
     )
   end
+
+  defp lobby_path(%{type: :tournament, tournament_id: tid}, _table_id), do: ~p"/tournaments/#{tid}/lobby"
+  defp lobby_path(_game_context, table_id), do: ~p"/cash/#{table_id}/lobby"
 
   defp build_game_context(table_id) do
     case Poker.Repo.get(Poker.Tables.Projections.TableList, table_id) do

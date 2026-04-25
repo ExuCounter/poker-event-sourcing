@@ -31,9 +31,18 @@ defmodule PokerWeb.PlayerLive.Replay do
           socket
         end
 
+      table = Poker.Repo.get(Poker.Tables.Projections.TableList, table_id)
+
+      lobby_path =
+        case table do
+          %{game_mode: :tournament, source_id: tid} when is_binary(tid) -> ~p"/tournaments/#{tid}/lobby"
+          _ -> ~p"/cash/#{table_id}/lobby"
+        end
+
       {:ok,
        assign(socket,
          table_id: table_id,
+         lobby_path: lobby_path,
          replay: replay,
          current_user_id: socket.assigns.current_scope.user.id,
          playing: false

@@ -57,6 +57,11 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     :ok
   end
 
+  def after_update(%TournamentStarted{tournament_id: tournament_id}, _metadata, _changes) do
+    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :tournament_started)
+    :ok
+  end
+
   def after_update(%BlindLevelAdvanced{tournament_id: tournament_id, level: level}, _metadata, _changes) do
     Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :blind_level_advanced, %{level: level})
     :ok

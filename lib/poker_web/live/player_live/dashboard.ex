@@ -59,7 +59,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
 
       case CashGames.create_cash_game(socket.assigns.current_scope, settings) do
         {:ok, %{table_id: table_id}} ->
-          {:noreply, push_navigate(socket, to: ~p"/tables/#{table_id}/lobby")}
+          {:noreply, push_navigate(socket, to: ~p"/cash/#{table_id}/lobby")}
 
         {:error, reason} ->
           {:noreply, put_flash(socket, :error, "Failed to create cash game: #{inspect(reason)}")}
@@ -254,7 +254,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
         <% else %>
           <%= for cash_game <- @cash_games do %>
             <.link
-              navigate={~p"/tables/#{cash_game.table_id}/lobby"}
+              navigate={~p"/cash/#{cash_game.table_id}/lobby"}
               class="block px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors duration-150 group"
             >
               <div class="flex items-center justify-between">

@@ -34,7 +34,7 @@ export const PokerCanvas = {
 
     await this.app.init({
       canvas: this.el,
-      backgroundColor: 0x1a3d2e, // Darker green for contrast
+      backgroundColor: 0x1a3d2e,
       resizeTo: window,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
@@ -399,6 +399,47 @@ export const PokerCanvas = {
     this.renderers.communityCards.render(this.state.communityCards);
   },
 
+  drawDiamondPattern(graphics, x, y, width, height, size, color, alpha) {
+    const spacingX = size * 2.4;
+    const spacingY = size * 2.4;
+
+    for (let row = 0; row * spacingY < height; row++) {
+      const offsetX = row % 2 === 0 ? 0 : spacingX / 2;
+      for (let col = 0; col * spacingX < width; col++) {
+        const cx = x + col * spacingX + offsetX;
+        const cy = y + row * spacingY;
+        if (cx > x + width || cy > y + height) continue;
+
+        graphics
+          .moveTo(cx, cy - size)
+          .lineTo(cx + size * 0.6, cy)
+          .lineTo(cx, cy + size)
+          .lineTo(cx - size * 0.6, cy)
+          .closePath();
+        graphics.fill({ color, alpha });
+      }
+    }
+  },
+
+  createRoomBackground() {
+    const bg = new PIXI.Graphics();
+    const margin = 800;
+    const x = -BASE_WIDTH / 2 - margin;
+    const y = -BASE_HEIGHT / 2 - margin;
+    const w = BASE_WIDTH + margin * 2;
+    const h = BASE_HEIGHT + margin * 2;
+
+    bg.rect(x, y, w, h);
+    bg.fill(0x1a3d2e);
+
+    // Shadow layer (offset slightly down-right)
+    this.drawDiamondPattern(bg, x + 1.5, y + 2, w, h, 18, 0x0e2a1a, 0.5);
+    // Main diamonds (darker, more subtle)
+    this.drawDiamondPattern(bg, x, y, w, h, 18, 0x173d2b, 0.8);
+
+    return bg;
+  },
+
   async createTable() {
     // Main container - this gets scaled and centered
     this.containers.container = new PIXI.Container();
@@ -407,6 +448,11 @@ export const PokerCanvas = {
     this.containers.tableContainer = new PIXI.Container();
     this.containers.tableContainer.position.set(0, 0);
     this.containers.tableContainer.sortableChildren = true;
+
+    // Room background with diamond pattern
+    const roomBg = this.createRoomBackground();
+    roomBg.zIndex = -10;
+    this.containers.tableContainer.addChild(roomBg);
 
     // Create table with fixed dimensions (rounded rectangle like poker room)
     const tableGraphics = new PIXI.Graphics();
@@ -443,27 +489,30 @@ export const PokerCanvas = {
     );
     tableGraphics.fill(0x3d7359);
 
+    this.containers.tableContainer.addChild(tableGraphics);
+
     // Table rail (border)
-    tableGraphics.roundRect(
+    const railGraphics = new PIXI.Graphics();
+    railGraphics.roundRect(
       -halfW,
       -halfH,
       TABLE_WIDTH,
       TABLE_HEIGHT,
       TABLE_BORDER_RADIUS,
     );
-    tableGraphics.stroke({ width: 12, color: 0x5c3d2e }); // Wood color
+    railGraphics.stroke({ width: 12, color: 0x5c3d2e }); // Wood color
 
     // Inner rail edge
-    tableGraphics.roundRect(
+    railGraphics.roundRect(
       -halfW + 6,
       -halfH + 4,
       TABLE_WIDTH - 12,
       TABLE_HEIGHT - 8,
       TABLE_BORDER_RADIUS - 6,
     );
-    tableGraphics.stroke({ width: 2, color: 0x8b6914 }); // Gold trim
+    railGraphics.stroke({ width: 2, color: 0x8b6914 }); // Gold trim
 
-    this.containers.tableContainer.addChild(tableGraphics);
+    this.containers.tableContainer.addChild(railGraphics);
 
     // Initialize TableInfoRenderer
     this.renderers.tableInfo = new TableInfoRenderer(() => this.state);

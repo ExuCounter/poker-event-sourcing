@@ -2,10 +2,9 @@ import * as PIXI from "pixi.js";
 import {
   TABLE_WIDTH,
   TABLE_HEIGHT,
-  HOOD_WIDTH,
-  HOOD_HEIGHT,
-  HOOD_BORDER_RADIUS,
 } from "../constants.js";
+
+const EMPTY_SEAT_SIZE = 110; // Diameter for circular empty seats
 
 export class EmptySeatRenderer {
   constructor(seatNumber, tableContainer, getState, onSeatClick) {
@@ -74,8 +73,8 @@ export class EmptySeatRenderer {
     const pos = seatPositions[visualPosition] || { x: 0, y: 0 };
 
     return {
-      x: pos.x - HOOD_WIDTH / 2,
-      y: pos.y - 70,
+      x: pos.x - EMPTY_SEAT_SIZE / 2,
+      y: pos.y - EMPTY_SEAT_SIZE / 2 + 20,
     };
   }
 
@@ -122,13 +121,14 @@ export class EmptySeatRenderer {
 
   #renderEmptySeat(isCurrentUserSeated) {
     const seatContainer = new PIXI.Container();
-    seatContainer.position.set(0, 79); // Same as CARD_OVERLAP
+    const size = EMPTY_SEAT_SIZE;
+    const halfSize = size / 2;
 
-    // Semi-transparent background
+    // Circular semi-transparent background
     const bg = new PIXI.Graphics();
-    bg.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    bg.fill({ color: 0x1a1a1a, alpha: 0.5 });
-    bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.6 });
+    bg.circle(halfSize, halfSize, halfSize);
+    bg.fill({ color: 0x1a1a1a, alpha: 0.6 });
+    bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.5 });
     seatContainer.addChild(bg);
 
     // "Seat N" label
@@ -138,41 +138,41 @@ export class EmptySeatRenderer {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontWeight: "bold",
-        fill: 0x888888,
+        fill: 0xaaaaaa,
       },
     });
     seatLabel.anchor.set(0.5, 0.5);
-    seatLabel.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 3);
+    seatLabel.position.set(halfSize, halfSize - 12);
     seatContainer.addChild(seatLabel);
 
     // "Click to join" or empty placeholder based on user status
     if (!isCurrentUserSeated) {
       const joinText = new PIXI.Text({
-        text: "Click to join",
+        text: "Open",
         style: {
           fontFamily: "Arial, sans-serif",
           fontSize: 16,
           fontWeight: "bold",
-          fill: 0x4ade80, // Green color for action
+          fill: 0x4ade80,
         },
       });
       joinText.anchor.set(0.5, 0.5);
-      joinText.position.set(HOOD_WIDTH / 2, (HOOD_HEIGHT * 2) / 3);
+      joinText.position.set(halfSize, halfSize + 14);
       seatContainer.addChild(joinText);
 
       // Add hover effect
       this.container.on("pointerover", () => {
         bg.clear();
-        bg.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-        bg.fill({ color: 0x2a2a2a, alpha: 0.7 });
-        bg.stroke({ color: 0x4ade80, width: 2, alpha: 0.8 });
+        bg.circle(halfSize, halfSize, halfSize);
+        bg.fill({ color: 0x2a2a2a, alpha: 0.8 });
+        bg.stroke({ color: 0x4ade80, width: 2, alpha: 0.9 });
       });
 
       this.container.on("pointerout", () => {
         bg.clear();
-        bg.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-        bg.fill({ color: 0x1a1a1a, alpha: 0.5 });
-        bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.6 });
+        bg.circle(halfSize, halfSize, halfSize);
+        bg.fill({ color: 0x1a1a1a, alpha: 0.6 });
+        bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.5 });
       });
     } else {
       // Show "Empty" for seated users
@@ -181,11 +181,11 @@ export class EmptySeatRenderer {
         style: {
           fontFamily: "Arial, sans-serif",
           fontSize: 16,
-          fill: 0x666666,
+          fill: 0x999999,
         },
       });
       emptyText.anchor.set(0.5, 0.5);
-      emptyText.position.set(HOOD_WIDTH / 2, (HOOD_HEIGHT * 2) / 3);
+      emptyText.position.set(halfSize, halfSize + 14);
       seatContainer.addChild(emptyText);
     }
 

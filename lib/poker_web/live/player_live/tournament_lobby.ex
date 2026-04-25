@@ -65,6 +65,22 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
     end
   end
 
+  def handle_info({:tournament, :tournament_started, %{tournament_id: tournament_id}}, socket) do
+    table = Poker.Tournaments.Queries.table_by_source(tournament_id)
+
+    if table do
+      {:noreply, push_navigate(socket, to: ~p"/tables/#{table.id}/game")}
+    else
+      {:ok, tournament} = Tournaments.get_tournament(tournament_id)
+
+      {:noreply,
+       assign(socket,
+         tournament: tournament,
+         registered_players: find_registered_players(tournament.player_ids)
+       )}
+    end
+  end
+
   def handle_info({:tournament, _event, _data}, socket) do
     {:ok, tournament} = Tournaments.get_tournament(socket.assigns.tournament_id)
 
@@ -284,7 +300,11 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Watch Game
+                  <%= if @user_id in (@tournament.player_ids || []) do %>
+                    Enter Table
+                  <% else %>
+                    Watch Game
+                  <% end %>
                 </span>
               </.link>
             <% end %>

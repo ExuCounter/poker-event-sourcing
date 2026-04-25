@@ -12,30 +12,36 @@ export class DealerButtonRenderer {
   }
 
   #createButton() {
-    const buttonRadius = 16;
+    const buttonRadius = 14;
 
     // Shadow
     const shadow = new PIXI.Graphics();
-    shadow.circle(2, 2, buttonRadius);
-    shadow.fill({ color: 0x000000, alpha: 0.3 });
+    shadow.circle(1.5, 2, buttonRadius + 1);
+    shadow.fill({ color: 0x000000, alpha: 0.4 });
     this.container.addChild(shadow);
 
-    // White circle
+    // Red outer ring
     const button = new PIXI.Graphics();
     button.circle(0, 0, buttonRadius);
-    button.fill(0xffffff);
+    button.fill(0xcc2222);
     button.circle(0, 0, buttonRadius);
-    button.stroke({ color: 0xcccccc, width: 1 });
+    button.stroke({ color: 0x991111, width: 1.5 });
     this.container.addChild(button);
+
+    // Inner circle (darker red)
+    const inner = new PIXI.Graphics();
+    inner.circle(0, 0, buttonRadius - 3);
+    inner.fill(0xb81c1c);
+    this.container.addChild(inner);
 
     // "D" text
     const dealerText = new PIXI.Text({
       text: "D",
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: "bold",
-        fill: 0x1a1a1a,
+        fill: 0xffffff,
       },
     });
     dealerText.anchor.set(0.5, 0.5);

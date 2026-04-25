@@ -371,40 +371,13 @@ export class ParticipantRenderer {
 
     const nickname = participant.nickname;
 
-    // Render avatar circle
-    const avatarRadius = 16;
-    const avatarX = HOOD_PADDING + avatarRadius;
-    const avatarY = HOOD_HEIGHT / 4 + 2;
-    const avatarColor = this.#getAvatarColor(nickname, isFolded);
-
-    const avatar = new PIXI.Graphics();
-    avatar.circle(avatarX, avatarY, avatarRadius);
-    avatar.fill(avatarColor);
-
-    this.hoodContainer.addChild(avatar);
-
-    // Avatar initials (first 2 letters)
-    const initials = nickname.substring(0, 2).toUpperCase();
-    const initialsText = new PIXI.Text({
-      text: initials,
-      style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 13,
-        fontWeight: "bold",
-        fill: 0xffffff,
-      },
-    });
-    initialsText.anchor.set(0.5, 0.5);
-    initialsText.position.set(avatarX, avatarY);
-    this.hoodContainer.addChild(initialsText);
-
-    // Name text (positioned after avatar)
-    const displayName = this.truncateText(nickname, 10);
+    // Name text (centered)
+    const displayName = this.truncateText(nickname, 12);
     const nameText = new PIXI.Text({
       text: displayName,
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 22,
         fontWeight: "bold",
         fill: isFolded
           ? PARTICIPANT_COLORS.textFolded
@@ -412,8 +385,8 @@ export class ParticipantRenderer {
       },
     });
 
-    nameText.anchor.set(0, 0.5);
-    nameText.position.set(avatarX + avatarRadius + 8, avatarY);
+    nameText.anchor.set(0.5, 0.5);
+    nameText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 4 + 2);
 
     this.hoodContainer.addChild(nameText);
 
@@ -422,7 +395,7 @@ export class ParticipantRenderer {
       text: this.formatChips(participant.chips),
       style: {
         fontFamily: "Arial, sans-serif",
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: "bold",
         fill: isFolded
           ? PARTICIPANT_COLORS.chipsFolded
@@ -431,7 +404,7 @@ export class ParticipantRenderer {
     });
 
     chipsText.anchor.set(0.5, 0.5);
-    chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 6);
+    chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 4);
 
     this.hoodContainer.addChild(chipsText);
 

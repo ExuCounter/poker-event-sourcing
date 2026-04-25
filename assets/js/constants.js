@@ -103,7 +103,7 @@ export const CHIP_COLORS = {
 // ============================================================================
 export const HOOD_WIDTH = 180;
 export const HOOD_HEIGHT = 95;
-export const HOOD_BORDER_RADIUS = 22;
+export const HOOD_BORDER_RADIUS = 48;
 export const HOOD_PADDING = 16;
 export const CARD_OVERLAP = 79;
 export const CARD_OFFSET_X = 0;

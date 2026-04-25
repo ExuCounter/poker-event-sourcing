@@ -51,7 +51,7 @@ defmodule PokerWeb.Router do
       live "/", PlayerLive.Dashboard, :render
       live "/cash", PlayerLive.Dashboard, :cash_games
       live "/tournaments", PlayerLive.Dashboard, :tournaments
-      live "/tables/:id/lobby", PlayerLive.Lobby, :show
+      live "/cash/:id/lobby", PlayerLive.Lobby, :show
       live "/tournaments/:id/lobby", PlayerLive.TournamentLobby, :show
     end
 
