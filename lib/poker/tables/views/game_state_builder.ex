@@ -114,6 +114,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       table_status: aggregate.status,
       table_type: get_table_type(aggregate),
       game_mode: aggregate.game_mode,
+      source_id: aggregate.source_id,
       hand_id: get_hand_id(aggregate),
       total_pot: calculate_total_pot(aggregate),
       community_cards:
@@ -388,13 +389,14 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   # PLAYER ACTIONS (meta-actions: buy-in, sit out, sit in, leave)
   # =============================================================================
 
-  defp calculate_player_actions(_aggregate, nil, _game_context) do
+  defp calculate_player_actions(aggregate, nil, _game_context) do
     %{
       is_participant: false,
       can_buy_in: false,
       can_sit_out: false,
       can_sit_in: false,
-      can_leave: false
+      can_leave: false,
+      can_join_seat: aggregate.game_mode == :cash_game
     }
   end
 
@@ -404,7 +406,8 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       can_buy_in: calculate_can_buy_in(aggregate, participant, game_context),
       can_sit_out: not participant.is_sitting_out,
       can_sit_in: participant.is_sitting_out and participant.chips > 0,
-      can_leave: aggregate.game_mode == :cash_game
+      can_leave: aggregate.game_mode == :cash_game,
+      can_join_seat: aggregate.game_mode == :cash_game
     }
   end
 

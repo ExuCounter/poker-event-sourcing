@@ -40,7 +40,7 @@ defmodule Poker.Wallet.Aggregates.Wallet do
   def execute(%__MODULE__{player_id: nil}, %CreateWallet{} = cmd) do
     %WalletCreated{
       player_id: cmd.player_id,
-      balance: 0
+      balance: cmd.initial_balance
     }
   end
 

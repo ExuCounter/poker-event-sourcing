@@ -36,9 +36,15 @@ defmodule PokerWeb.ConnCase do
   end
 
   setup tags do
+    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+
     Poker.DataCase.setup_sandbox(tags)
 
-    Mox.stub_with(Poker.Services.DeckMock, Poker.Services.DeckStub)
+    on_exit(fn ->
+      :ok = Application.stop(:poker)
+      Poker.Storage.reset!()
+      {:ok, _} = Application.ensure_all_started(:poker)
+    end)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

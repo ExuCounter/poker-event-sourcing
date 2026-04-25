@@ -10,7 +10,7 @@ defmodule Poker.CashGames.Projections.CashGame do
     field :big_blind, :integer
     field :min_buyin, :integer
     field :max_buyin, :integer
-    field :table_type, Ecto.Enum, values: [:six_max]
+    field :table_type, Ecto.Enum, values: [:two_max, :three_max, :four_max, :six_max]
 
     # Virtual field populated by join with tables
     field :table_status, Ecto.Enum, values: [:waiting, :live, :paused, :finished], virtual: true

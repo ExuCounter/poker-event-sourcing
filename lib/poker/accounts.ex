@@ -76,6 +76,18 @@ defmodule Poker.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Confirms an unconfirmed user: creates a wallet (for players) and sets confirmed_at.
+  Returns {:ok, user} or {:error, reason}.
+  """
+  def confirm_user(%User{confirmed_at: nil} = user) do
+    with :ok <- create_wallet_for_player(user) do
+      user
+      |> User.confirm_changeset()
+      |> Repo.update()
+    end
+  end
+
   ## Settings
 
   @doc """
@@ -229,9 +241,11 @@ defmodule Poker.Accounts do
         """
 
       {%User{confirmed_at: nil} = user, _token} ->
-        user
-        |> User.confirm_changeset()
-        |> update_user_and_delete_all_tokens()
+        with {:ok, user} <- confirm_user(user) do
+          tokens_to_expire = Repo.all_by(UserToken, user_id: user.id)
+          Repo.delete_all(from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id)))
+          {:ok, {user, tokens_to_expire}}
+        end
 
       {user, token} ->
         Repo.delete!(token)
@@ -297,6 +311,20 @@ defmodule Poker.Accounts do
     Bcrypt.no_user_verify()
     false
   end
+
+  ## Wallet
+
+  @initial_balance 10_000
+
+  defp create_wallet_for_player(%User{role: :player, id: player_id}) do
+    case Poker.Wallet.create_wallet(player_id, initial_balance: @initial_balance) do
+      :ok -> :ok
+      {:error, :wallet_already_exists} -> :ok
+      error -> error
+    end
+  end
+
+  defp create_wallet_for_player(_user), do: :ok
 
   ## Token helper
 

@@ -49,7 +49,10 @@ defmodule PokerWeb.Router do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
       live "/", PlayerLive.Dashboard, :render
+      live "/cash", PlayerLive.Dashboard, :cash_games
+      live "/tournaments", PlayerLive.Dashboard, :tournaments
       live "/tables/:id/lobby", PlayerLive.Lobby, :show
+      live "/tournaments/:id/lobby", PlayerLive.TournamentLobby, :show
     end
 
     live_session :table,

@@ -1,5 +1,5 @@
 defmodule PokerWeb.UserAuthTest do
-  use PokerWeb.ConnCase, async: true
+  use PokerWeb.ConnCase
 
   alias Phoenix.LiveView
   alias Poker.Accounts

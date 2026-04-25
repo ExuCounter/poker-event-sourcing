@@ -19,7 +19,8 @@ defmodule Poker.Router do
     TimeoutParticipant,
     ResumeTable,
     PauseTable,
-    LeaveTable
+    LeaveTable,
+    UpdateTableBlinds
   }
 
   alias Poker.Wallet.Commands.{
@@ -34,9 +35,18 @@ defmodule Poker.Router do
     CloseCashGame
   }
 
+  alias Poker.Tournaments.Commands.{
+    CreateTournament,
+    RegisterPlayer,
+    AdvanceBlindLevel,
+    RecordPlayerBust,
+    FinishTournament
+  }
+
   alias Poker.Tables.Aggregates.Table
   alias Poker.Wallet.Aggregates.Wallet
   alias Poker.CashGames.Aggregates.CashGame
+  alias Poker.Tournaments.Aggregates.Tournament
 
   # Table aggregate - identified by table_id
   identify(Table, by: :table_id, prefix: "table-")
@@ -60,7 +70,8 @@ defmodule Poker.Router do
       TimeoutParticipant,
       ResumeTable,
       PauseTable,
-      LeaveTable
+      LeaveTable,
+      UpdateTableBlinds
     ],
     to: Table
   )
@@ -87,5 +98,19 @@ defmodule Poker.Router do
       CloseCashGame
     ],
     to: CashGame
+  )
+
+  # Tournament aggregate - identified by tournament_id
+  identify(Tournament, by: :tournament_id, prefix: "tournament-")
+
+  dispatch(
+    [
+      CreateTournament,
+      RegisterPlayer,
+      AdvanceBlindLevel,
+      RecordPlayerBust,
+      FinishTournament
+    ],
+    to: Tournament
   )
 end

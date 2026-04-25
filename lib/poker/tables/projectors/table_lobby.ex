@@ -18,6 +18,9 @@ defmodule Poker.Tables.Projectors.TableLobby do
 
   alias Poker.Tables.Projections.TableLobby
 
+  def max_seats(:two_max), do: 2
+  def max_seats(:three_max), do: 3
+  def max_seats(:four_max), do: 4
   def max_seats(:six_max), do: 6
 
   def table_query(id), do: from(t in TableLobby, where: t.id == ^id)

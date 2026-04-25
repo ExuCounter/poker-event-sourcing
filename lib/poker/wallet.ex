@@ -19,8 +19,9 @@ defmodule Poker.Wallet do
   Creates a wallet for a player.
   Called when a player first needs a wallet (e.g., on registration or first deposit).
   """
-  def create_wallet(player_id) do
-    command_attrs = %{player_id: player_id}
+  def create_wallet(player_id, opts \\ []) do
+    initial_balance = Keyword.get(opts, :initial_balance, 0)
+    command_attrs = %{player_id: player_id, initial_balance: initial_balance}
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateWallet.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do

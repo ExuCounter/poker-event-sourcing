@@ -15,7 +15,7 @@ defmodule PokerWeb.PlayerLive.Game do
        |> put_flash(:error, "Table not found")
        |> push_navigate(to: ~p"/")}
     else
-      {game_context, cash_game} = build_game_context(table_id)
+      {:ok, game_context} = build_game_context(table_id)
 
       game_view =
         Tables.get_player_game_view(socket.assigns.current_scope, table_id,
@@ -25,6 +25,11 @@ defmodule PokerWeb.PlayerLive.Game do
       socket =
         if connected?(socket) do
           Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}")
+
+          if game_context && game_context.type == :tournament do
+            Poker.Tournaments.PubSub.subscribe_to_tournament(game_context.tournament_id)
+          end
+
           socket
         else
           socket
@@ -41,7 +46,6 @@ defmodule PokerWeb.PlayerLive.Game do
          table_id: table_id,
          game_view: game_view,
          game_context: game_context,
-         cash_game: cash_game,
          current_user_id: socket.assigns.current_scope.user.id,
          show_buy_in: false,
          buy_in_amount: buy_in_amount,
@@ -50,6 +54,12 @@ defmodule PokerWeb.PlayerLive.Game do
          queue: []
        )}
     end
+  end
+
+  @impl true
+  def handle_info({:tournament, _event, _data}, socket) do
+    {:ok, game_context} = build_game_context(socket.assigns.table_id)
+    {:noreply, assign(socket, game_context: game_context)}
   end
 
   @impl true
@@ -86,7 +96,12 @@ defmodule PokerWeb.PlayerLive.Game do
         game_context: game_context
       )
 
-    socket = assign(socket, queue: remaining_queue, game_view: %{game_view | player_actions: latest_game_view.player_actions})
+    socket =
+      assign(socket,
+        queue: remaining_queue,
+        game_view: %{game_view | player_actions: latest_game_view.player_actions}
+      )
+
     socket = process_next_event(socket)
 
     {:noreply, socket}
@@ -183,7 +198,7 @@ defmodule PokerWeb.PlayerLive.Game do
   end
 
   def handle_event("confirm_buy_in", _params, socket) do
-    cash_game = socket.assigns.cash_game
+    cash_game = socket.assigns.game_context.cash_game
 
     case CashGames.buy_in(
            socket.assigns.current_scope,
@@ -331,23 +346,80 @@ defmodule PokerWeb.PlayerLive.Game do
 
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
 
+  defp tournament_position(participants, current_user_id) do
+    sorted =
+      participants
+      |> Enum.sort_by(& &1.chips, :desc)
+
+    case Enum.find_index(sorted, &(&1.player_id == current_user_id)) do
+      nil -> nil
+      idx -> idx + 1
+    end
+  end
+
+  defp payout_for_position(payouts, position) do
+    case Enum.find(payouts, &(&1.position == position)) do
+      %{payout_amount: amount} -> amount
+      _ -> nil
+    end
+  end
+
   defp refresh_player_actions(socket) do
     game_view =
       Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
         game_context: socket.assigns.game_context
       )
 
-    assign(socket, game_view: %{socket.assigns.game_view | player_actions: game_view.player_actions})
+    assign(socket,
+      game_view: %{socket.assigns.game_view | player_actions: game_view.player_actions}
+    )
   end
 
   defp build_game_context(table_id) do
-    case Poker.CashGames.get_cash_game_by_table(table_id) do
-      {:ok, cash_game} ->
-        context = %{type: :cash_game, min_buyin: cash_game.min_buyin, max_buyin: cash_game.max_buyin}
-        {context, cash_game}
+    case Poker.Repo.get(Poker.Tables.Projections.TableList, table_id) do
+      %{game_mode: :cash_game} ->
+        with {:ok, cash_game} <- Poker.CashGames.get_cash_game_by_table(table_id) do
+          {:ok,
+           %{
+             type: :cash_game,
+             cash_game: cash_game,
+             min_buyin: cash_game.min_buyin,
+             max_buyin: cash_game.max_buyin
+           }}
+        end
+
+      %{game_mode: :tournament, source_id: tournament_id} when is_binary(tournament_id) ->
+        with {:ok, tournament} <- Poker.Tournaments.get_tournament(tournament_id) do
+          blind = Poker.Tournaments.BlindStructure.get_level(tournament.current_level)
+          level_duration = Poker.Tournaments.BlindStructure.duration_seconds(tournament.speed)
+          prize_pool = tournament.buy_in * tournament.max_players
+
+          payouts =
+            Poker.Tournaments.BlindStructure.calculate_payouts(
+              tournament.max_players,
+              tournament.buy_in
+            )
+
+          {:ok,
+           %{
+             type: :tournament,
+             tournament_id: tournament_id,
+             speed: tournament.speed,
+             buy_in: tournament.buy_in,
+             players_remaining: tournament.players_remaining,
+             total_players: tournament.max_players,
+             current_level: tournament.current_level,
+             small_blind: blind.small_blind,
+             big_blind: blind.big_blind,
+             level_duration: level_duration,
+             level_started_at: tournament.level_started_at,
+             prize_pool: prize_pool,
+             payouts: payouts
+           }}
+        end
 
       _ ->
-        {nil, nil}
+        {:ok, nil}
     end
   end
 
@@ -372,10 +444,49 @@ defmodule PokerWeb.PlayerLive.Game do
         data-state={JsonEncoder.transform_keys(@game_view) |> Jason.encode!()}
         data-current-user-id={@current_user_id}
       />
+      
+    <!-- Tournament HUD (outside scaled container) -->
+      <%= if @game_context && @game_context.type == :tournament do %>
+        <% position = tournament_position(@game_view.participants, @current_user_id) %>
+        <% current_payout = if position, do: payout_for_position(@game_context.payouts, position) %>
+        <div class="absolute top-14 right-5 z-10 text-right leading-snug">
+          <div class="text-xs text-gray-400">
+            Blinds level: {@game_context.current_level}
+            <span class="text-white font-medium">
+              {@game_context.small_blind}/{@game_context.big_blind}
+            </span>
+            <%= if @game_context.level_started_at do %>
+              <span class="text-gray-500">·</span>
+              <span
+                id="blind-countdown"
+                phx-hook="BlindCountdown"
+                data-level-started-at={DateTime.to_iso8601(@game_context.level_started_at)}
+                data-level-duration={@game_context.level_duration}
+                class="text-amber-400 font-mono font-medium"
+              />
+            <% end %>
+          </div>
+          <%= if position do %>
+            <div class="text-xs text-gray-400">
+              Sit & Go <span class="text-gray-500">·</span>
+              {@game_context.players_remaining}/{@game_context.total_players} players
+              <span class="text-gray-500">·</span>
+              <span class="text-white font-medium">{position}/{@game_context.players_remaining}</span>
+              <%= if current_payout do %>
+                <span class="text-emerald-400 font-medium">(+{current_payout})</span>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="text-xs text-gray-400">
+              Sit & Go <span class="text-gray-500">·</span>
+              {@game_context.players_remaining}/{@game_context.total_players} players
+            </div>
+          <% end %>
+        </div>
+      <% end %>
 
       <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
-        
-    <!-- Sit Out/In/Buy In Button - bottom-left corner -->
+        <!-- Sit Out/In/Buy In Button - bottom-left corner -->
         <%= if @game_view.player_actions.is_participant do %>
           <div
             class="absolute left-5 bottom-5 z-10 flex"
@@ -391,7 +502,8 @@ defmodule PokerWeb.PlayerLive.Game do
                   class={[
                     "px-4 mr-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md backdrop-blur-sm border",
                     if(can_buy_in,
-                      do: "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-white/20 hover:shadow-lg cursor-pointer",
+                      do:
+                        "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-white/20 hover:shadow-lg cursor-pointer",
                       else: "bg-gray-600/50 text-gray-400 border-gray-500/20 cursor-not-allowed"
                     )
                   ]}
@@ -415,8 +527,8 @@ defmodule PokerWeb.PlayerLive.Game do
                 <% end %>
               </div>
             <% end %>
-
-            <!-- Sit Out / Sit In button -->
+            
+    <!-- Sit Out / Sit In button -->
             <%= if @game_view.player_actions.can_sit_out do %>
               <button
                 phx-click="sit_out"
@@ -424,7 +536,12 @@ defmodule PokerWeb.PlayerLive.Game do
               >
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   Sit Out
                 </span>
@@ -437,8 +554,18 @@ defmodule PokerWeb.PlayerLive.Game do
               >
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   Sit In
                 </span>
@@ -456,7 +583,6 @@ defmodule PokerWeb.PlayerLive.Game do
             <% end %>
           </div>
         <% end %>
-        
         
     <!-- Action Controls - positioned and scaled -->
         <div
@@ -556,8 +682,8 @@ defmodule PokerWeb.PlayerLive.Game do
           </div>
         </div>
       </div>
-
-      <!-- Buy In Modal (outside scaled container) -->
+      
+    <!-- Buy In Modal (outside scaled container) -->
       <%= if @show_buy_in && @game_view.player_actions.can_buy_in do %>
         <% buy_in = @game_view.player_actions.can_buy_in %>
         <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">

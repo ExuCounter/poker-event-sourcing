@@ -87,7 +87,7 @@ config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Implementati
 # Configure Oban
 config :poker, Oban,
   repo: Poker.Repo,
-  queues: [tables: 10]
+  queues: [tables: 10, tournaments: 10]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

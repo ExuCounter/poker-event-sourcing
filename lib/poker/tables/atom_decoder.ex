@@ -40,6 +40,9 @@ defmodule Poker.Tables.AtomDecoder do
 
     # Table type
     table_type: [
+      :two_max,
+      :three_max,
+      :four_max,
       :six_max,
       :nine_max,
       :heads_up

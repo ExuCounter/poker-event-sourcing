@@ -17,18 +17,23 @@ defmodule Poker.Tables.Projectors.TableList do
 
   alias Poker.Tables.Projections.TableList
 
+  def max_seats(:two_max), do: 2
+  def max_seats(:three_max), do: 3
+  def max_seats(:four_max), do: 4
   def max_seats(:six_max), do: 6
 
   def table_query(id), do: from(t in TableList, where: t.id == ^id)
 
-  project(%TableCreated{id: id, status: status, table_type: table_type}, fn multi ->
+  project(%TableCreated{id: id, status: status, table_type: table_type, source_id: source_id, game_mode: game_mode}, fn multi ->
     seats_count = max_seats(table_type)
 
     Ecto.Multi.insert(multi, :table, %TableList{
       id: id,
       seated_count: 0,
       seats_count: seats_count,
-      status: status
+      status: status,
+      game_mode: game_mode,
+      source_id: source_id
     })
   end)
 

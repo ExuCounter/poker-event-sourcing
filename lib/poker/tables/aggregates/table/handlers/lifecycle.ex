@@ -16,8 +16,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
   - Resuming requires a paused table with available participants
   """
 
-  alias Poker.Tables.Commands.{CreateTable, StartTable, FinishTable, PauseTable, ResumeTable}
-  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed}
+  alias Poker.Tables.Commands.{CreateTable, StartTable, FinishTable, PauseTable, ResumeTable, UpdateTableBlinds}
+  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated}
   alias Poker.Tables.Aggregates.Table.Helpers
 
   # =============================================================================
@@ -36,7 +36,8 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
       small_blind: command.settings.small_blind,
       starting_stack: command.settings.starting_stack,
       timeout_seconds: command.settings.timeout_seconds,
-      table_type: command.settings.table_type
+      table_type: command.settings.table_type,
+      source_id: command.source_id
     }
   end
 
@@ -107,4 +108,23 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
       {:error, :no_participants_available}
     end
   end
+
+  # =============================================================================
+  # UPDATE TABLE BLINDS (tournament blind level advancement)
+  # =============================================================================
+
+  def handle(%{game_mode: :tournament, status: status}, %UpdateTableBlinds{} = cmd)
+      when status in [:live, :paused] do
+    %TableBlindsUpdated{
+      table_id: cmd.table_id,
+      small_blind: cmd.small_blind,
+      big_blind: cmd.big_blind
+    }
+  end
+
+  def handle(%{game_mode: mode}, %UpdateTableBlinds{}) when mode != :tournament,
+    do: {:error, :not_a_tournament}
+
+  def handle(_table, %UpdateTableBlinds{}),
+    do: {:error, :table_not_live}
 end

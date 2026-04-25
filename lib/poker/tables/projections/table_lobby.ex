@@ -18,7 +18,7 @@ defmodule Poker.Tables.Projections.TableLobby do
     field :small_blind, :integer
     field :big_blind, :integer
     field :starting_stack, :integer
-    field :table_type, Ecto.Enum, values: [:six_max]
+    field :table_type, Ecto.Enum, values: [:two_max, :three_max, :four_max, :six_max]
     field :seated_count, :integer
     field :seats_count, :integer
     field :status, Ecto.Enum, values: [:waiting, :live, :paused, :finished]

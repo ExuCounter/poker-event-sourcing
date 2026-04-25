@@ -1,5 +1,5 @@
 defmodule PokerWeb.UserLive.SettingsTest do
-  use PokerWeb.ConnCase, async: true
+  use PokerWeb.ConnCase
 
   alias Poker.Accounts
   import Phoenix.LiveViewTest

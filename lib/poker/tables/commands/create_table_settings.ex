@@ -7,7 +7,7 @@ defmodule Poker.Tables.Commands.CreateTableSettings do
     field :big_blind, :integer
     field :starting_stack, :integer
     field :timeout_seconds, :integer
-    field :table_type, Ecto.Enum, values: [:six_max]
+    field :table_type, Ecto.Enum, values: [:two_max, :three_max, :four_max, :six_max]
   end
 
   def changeset(_settings, attrs) do

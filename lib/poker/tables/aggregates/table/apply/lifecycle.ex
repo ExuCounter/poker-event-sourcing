@@ -11,7 +11,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   """
 
   alias Poker.Tables.Aggregates.Table
-  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed}
+  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated}
 
   @doc "Initializes table state from creation event."
   def apply(%Table{} = _table, %TableCreated{} = created) do
@@ -28,6 +28,7 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
       creator_id: created.creator_id,
       status: created.status,
       game_mode: created.game_mode,
+      source_id: created.source_id,
       settings: settings,
       participants: [],
       hand: nil,
@@ -54,5 +55,10 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   # Resumes a paused table.
   def apply(%Table{} = table, %TableResumed{}) do
     %Table{table | status: :live}
+  end
+
+  # Updates blind levels (tournament blind advancement).
+  def apply(%Table{settings: settings} = table, %TableBlindsUpdated{} = event) do
+    %Table{table | settings: %{settings | small_blind: event.small_blind, big_blind: event.big_blind}}
   end
 end

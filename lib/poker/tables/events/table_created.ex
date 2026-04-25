@@ -9,7 +9,8 @@ defmodule Poker.Tables.Events.TableCreated do
              :starting_stack,
              :timeout_seconds,
              :table_type,
-             :game_mode
+             :game_mode,
+             :source_id
            ]}
   defstruct [
     :id,
@@ -20,7 +21,8 @@ defmodule Poker.Tables.Events.TableCreated do
     :starting_stack,
     :timeout_seconds,
     :table_type,
-    :game_mode
+    :game_mode,
+    :source_id
   ]
 end
 

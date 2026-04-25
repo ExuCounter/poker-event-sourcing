@@ -19,7 +19,8 @@ defmodule Poker.Application do
       PokerWeb.Endpoint,
       Poker.Tables.Supervisor,
       Poker.Wallet.Supervisor,
-      Poker.CashGames.Supervisor
+      Poker.CashGames.Supervisor,
+      Poker.Tournaments.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

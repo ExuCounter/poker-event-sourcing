@@ -43,6 +43,29 @@ defmodule Poker.SeedFactorySchema do
     produce(:player)
   end
 
+  command :activate_player do
+    param(:player, entity: :player, with_traits: [:pending])
+
+    resolve(fn args ->
+      {:ok, user} = Poker.Accounts.confirm_user(args.player)
+      {:ok, wallet} = Poker.Wallet.get_wallet(user.id)
+
+      {:ok, %{player: user, wallet: wallet}}
+    end)
+
+    update(:player)
+    produce(:wallet)
+  end
+
+  trait :pending, :player do
+    exec(:create_player)
+  end
+
+  trait :active, :player do
+    from(:pending)
+    exec(:activate_player)
+  end
+
   command :create_table do
     param(:player, entity: :player)
     param(:type, value: :six_max)

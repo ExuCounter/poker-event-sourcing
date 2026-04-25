@@ -26,7 +26,8 @@ defmodule Poker.Tables.Aggregates.Table do
     TimeoutParticipant,
     PauseTable,
     ResumeTable,
-    LeaveTable
+    LeaveTable,
+    UpdateTableBlinds
   }
 
   alias Poker.Tables.Events.{
@@ -61,7 +62,8 @@ defmodule Poker.Tables.Aggregates.Table do
     PayoutDistributed,
     ParticipantTimedOut,
     TablePaused,
-    TableResumed
+    TableResumed,
+    TableBlindsUpdated
   }
 
   defstruct [
@@ -69,10 +71,10 @@ defmodule Poker.Tables.Aggregates.Table do
     :creator_id,
     :status,
     :game_mode,
+    :source_id,
     :settings,
     :participants,
     :hand,
-    :prev_hand_id,
     :round,
     :community_cards,
     :pots,
@@ -85,7 +87,7 @@ defmodule Poker.Tables.Aggregates.Table do
   # COMMAND HANDLERS
 
   def execute(table, %cmd{} = command)
-      when cmd in [CreateTable, StartTable, FinishTable, PauseTable, ResumeTable] do
+      when cmd in [CreateTable, StartTable, FinishTable, PauseTable, ResumeTable, UpdateTableBlinds] do
     Handlers.Lifecycle.handle(table, command)
   end
 
@@ -117,7 +119,7 @@ defmodule Poker.Tables.Aggregates.Table do
   # STATE MUTATORS - Delegate to Apply modules
 
   def apply(table, %evt{} = event)
-      when evt in [TableCreated, TableStarted, TableFinished, TablePaused, TableResumed] do
+      when evt in [TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated] do
     Apply.Lifecycle.apply(table, event)
   end
 

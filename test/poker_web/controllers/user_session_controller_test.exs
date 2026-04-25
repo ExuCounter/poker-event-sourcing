@@ -1,5 +1,5 @@
 defmodule PokerWeb.UserSessionControllerTest do
-  use PokerWeb.ConnCase, async: true
+  use PokerWeb.ConnCase
 
   import Poker.AccountsFixtures
   alias Poker.Accounts

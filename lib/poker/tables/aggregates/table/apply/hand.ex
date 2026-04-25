@@ -21,12 +21,11 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
   }
 
   @doc "Initializes a new hand with empty state."
-  def apply(%Table{prev_hand_id: prev_hand_id} = table, %HandStarted{} = event) do
+  def apply(%Table{} = table, %HandStarted{} = event) do
     hand = %{id: event.id}
 
     table
     |> Map.put(:hand, hand)
-    |> Map.put(:prev_hand_id, prev_hand_id)
     |> Map.put(:community_cards, [])
     |> Map.put(:participant_hands, [])
     |> Map.put(:round, nil)
@@ -103,6 +102,6 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Hand do
   def apply(%Table{hand: hand} = table, %HandFinished{hand_id: hand_id}) do
     finished_hand = Map.put(hand, :status, :finished)
 
-    %{table | hand: finished_hand, prev_hand_id: hand_id}
+    %{table | hand: finished_hand}
   end
 end

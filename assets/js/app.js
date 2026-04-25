@@ -26,6 +26,39 @@ import { hooks as colocatedHooks } from "phoenix-colocated/poker";
 import topbar from "../vendor/topbar";
 import { PokerCanvas } from "./poker_canvas.js";
 
+const BlindCountdown = {
+  mounted() {
+    this.startCountdown();
+  },
+  updated() {
+    this.startCountdown();
+  },
+  destroyed() {
+    if (this.timer) clearInterval(this.timer);
+  },
+  startCountdown() {
+    if (this.timer) clearInterval(this.timer);
+
+    const tick = () => {
+      const startedAt = new Date(this.el.dataset.levelStartedAt).getTime();
+      const duration = parseInt(this.el.dataset.levelDuration) * 1000;
+      const endsAt = startedAt + duration;
+      const remaining = Math.max(0, endsAt - Date.now());
+      const totalSeconds = Math.ceil(remaining / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      this.el.textContent = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+      if (remaining <= 0 && this.timer) {
+        clearInterval(this.timer);
+      }
+    };
+
+    tick();
+    this.timer = setInterval(tick, 1000);
+  },
+};
+
 const AutoClearFlash = {
   mounted() {
     let ignoredIDs = ["client-error", "server-error"];
@@ -51,7 +84,7 @@ const csrfToken = document
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PokerCanvas, AutoClearFlash },
+  hooks: { ...colocatedHooks, PokerCanvas, AutoClearFlash, BlindCountdown },
 });
 
 // Show progress bar on live navigation and form submits

@@ -39,6 +39,9 @@ defmodule Poker.Storage do
       table_rounds,
       table_list,
       table_lobby,
+      tournaments,
+      wallets,
+      cash_games,
       projection_versions
     RESTART IDENTITY
     CASCADE;

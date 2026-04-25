@@ -39,7 +39,8 @@ defmodule Poker.Tables do
     SitInParticipant,
     BuyInParticipant,
     TimeoutParticipant,
-    LeaveTable
+    LeaveTable,
+    UpdateTableBlinds
   }
 
   import Ecto.Query
@@ -230,6 +231,19 @@ defmodule Poker.Tables do
 
     with {:ok, command} <-
            Poker.Repo.validate_changeset(command_attrs, &LeaveTable.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
+  end
+
+  def update_table_blinds(table_id, small_blind, big_blind) do
+    command_attrs = %{
+      table_id: table_id,
+      small_blind: small_blind,
+      big_blind: big_blind
+    }
+
+    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &UpdateTableBlinds.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end

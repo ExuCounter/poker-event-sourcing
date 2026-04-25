@@ -34,6 +34,7 @@ defmodule Poker.Tables.ProcessManager do
     ParticipantJoined,
     ParticipantSatOut,
     ParticipantLeft,
+    ParticipantBusted,
     RoundStarted
   }
 
@@ -45,6 +46,8 @@ defmodule Poker.Tables.ProcessManager do
     ParticipantFold,
     StartTable
   }
+
+  alias Poker.Tournaments.Commands.RecordPlayerBust
 
   alias Poker.Tables.Jobs.TimeoutJob
   alias Poker.Tables.AtomDecoder
@@ -58,6 +61,7 @@ defmodule Poker.Tables.ProcessManager do
     :current_timeout_job_id,
     :table_status,
     :game_mode,
+    :source_id,
     participants: []
   ]
 
@@ -135,6 +139,10 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def interested?(%ParticipantLeft{table_id: table_id} = _event, _metadata) do
+    {:continue, table_id}
+  end
+
+  def interested?(%ParticipantBusted{table_id: table_id} = _event, _metadata) do
     {:continue, table_id}
   end
 
@@ -250,6 +258,14 @@ defmodule Poker.Tables.ProcessManager do
     end
   end
 
+  # Tournament tables are started by the Tournaments context, not the Tables PM
+  def handle(
+        %Poker.Tables.ProcessManager{table_status: :waiting, game_mode: :tournament},
+        %ParticipantJoined{} = _event
+      ) do
+    []
+  end
+
   # When a participant joins a waiting table, check if we should start
   # Note: handle runs BEFORE apply, so the joining participant isn't in the list yet
   def handle(
@@ -290,6 +306,14 @@ defmodule Poker.Tables.ProcessManager do
     end
   end
 
+  def handle(
+        %Poker.Tables.ProcessManager{game_mode: :tournament, source_id: source_id},
+        %ParticipantBusted{player_id: player_id}
+      )
+      when is_binary(source_id) do
+    [%RecordPlayerBust{tournament_id: source_id, player_id: player_id}]
+  end
+
   # Catch-all for events that only update state (no commands to dispatch)
   def handle(%Poker.Tables.ProcessManager{}, _event) do
     []
@@ -301,8 +325,9 @@ defmodule Poker.Tables.ProcessManager do
           id: id,
           timeout_seconds: timeout_seconds,
           status: status,
-          game_mode: game_mode
-        } = _event
+          game_mode: game_mode,
+          source_id: source_id
+        }
       ) do
     %__MODULE__{
       state
@@ -310,6 +335,7 @@ defmodule Poker.Tables.ProcessManager do
         timeout_seconds: timeout_seconds,
         table_status: status,
         game_mode: game_mode,
+        source_id: source_id,
         participants: []
     }
   end

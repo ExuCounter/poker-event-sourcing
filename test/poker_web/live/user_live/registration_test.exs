@@ -1,5 +1,5 @@
 defmodule PokerWeb.UserLive.RegistrationTest do
-  use PokerWeb.ConnCase, async: true
+  use PokerWeb.ConnCase
 
   import Phoenix.LiveViewTest
   import Poker.AccountsFixtures

@@ -45,6 +45,9 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
   alias Poker.Tables.Aggregates.Table.Helpers
 
   @max_players %{
+    two_max: 2,
+    three_max: 3,
+    four_max: 4,
     six_max: 6
   }
 

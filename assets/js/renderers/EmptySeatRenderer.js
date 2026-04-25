@@ -95,20 +95,29 @@ export class EmptySeatRenderer {
       return;
     }
 
-    // Check if current user is already seated (can't join another seat)
+    // Check if player can join a seat (false for tournaments)
+    const canJoinSeat = state.playerActions?.canJoinSeat === true;
+
+    // Hide empty seats entirely when joining isn't possible (tournaments)
+    if (!canJoinSeat) {
+      this.container.visible = false;
+      return;
+    }
+
     const isCurrentUserSeated = state.participants.some(
       (p) => p.playerId === state.currentUserId,
     );
+    const canClick = !isCurrentUserSeated;
 
     this.container.visible = true;
-    this.container.eventMode = isCurrentUserSeated ? "none" : "static";
-    this.container.cursor = isCurrentUserSeated ? "default" : "pointer";
+    this.container.eventMode = canClick ? "static" : "none";
+    this.container.cursor = canClick ? "pointer" : "default";
 
     const seatPosition = this.#getSeatPosition();
     this.container.position.set(seatPosition.x, seatPosition.y);
 
     // Draw empty seat placeholder
-    this.#renderEmptySeat(isCurrentUserSeated);
+    this.#renderEmptySeat(!canClick);
   }
 
   #renderEmptySeat(isCurrentUserSeated) {
