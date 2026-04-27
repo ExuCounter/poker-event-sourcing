@@ -103,6 +103,7 @@ defmodule Poker.Tables.Queries.HandEvents do
         h.table_id == ^table_id and
           h.start_version <= ^version and
           (is_nil(h.end_version) or h.end_version >= ^version),
+      order_by: [desc: h.start_version],
       limit: 1
     )
     |> Poker.Repo.one()

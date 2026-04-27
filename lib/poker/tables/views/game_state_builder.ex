@@ -32,7 +32,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     since_version = Keyword.get(opts, :since_version)
     game_context = Keyword.get(opts, :game_context)
 
-    # Replay events to build aggregate state
     %{latest_version: latest_version, aggregate: aggregate} =
       replay_events(table_id, since_version)
 
@@ -109,6 +108,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     game_context = Keyword.get(opts, :game_context)
 
     current_participant = find_participant_by_player_id(aggregate, player_id)
+    hand_active? = aggregate.hand != nil and not match?(%{hand: %{status: :finished}}, aggregate)
 
     %{
       table_status: aggregate.status,
@@ -116,16 +116,16 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       game_mode: aggregate.game_mode,
       source_id: aggregate.source_id,
       hand_id: get_hand_id(aggregate),
-      total_pot: calculate_total_pot(aggregate),
+      total_pot: if(hand_active?, do: calculate_total_pot(aggregate), else: 0),
       community_cards:
-        if aggregate.status == :paused do
-          []
-        else
+        if hand_active? and aggregate.status != :paused do
           aggregate.community_cards
+        else
+          []
         end,
       participants: build_participants_list(aggregate, player_id, visibility_mode),
       valid_actions:
-        if calculate_actions do
+        if hand_active? and calculate_actions do
           calculate_valid_actions(aggregate, current_participant)
         else
           default_actions()
@@ -134,13 +134,13 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       latest_version: latest_version,
       hand_status: get_hand_status(aggregate),
       timeout_seconds: get_timeout_seconds(aggregate),
-      current_turn: get_current_turn(aggregate),
-      timeout_info: build_timeout_info(aggregate),
+      current_turn: if(hand_active?, do: get_current_turn(aggregate)),
+      timeout_info: if(hand_active?, do: build_timeout_info(aggregate)),
       my_hand_rank:
-        if aggregate.status == :paused do
-          nil
-        else
+        if hand_active? and aggregate.status != :paused do
           calculate_my_hand_rank(aggregate, current_participant)
+        else
+          nil
         end
     }
   end
@@ -207,9 +207,14 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       participant_hand = find_participant_hand(participant_hands, participant.id)
       hand_status = get_participant_hand_status(participant_hand)
 
+      hand_finished? = match?(%{hand: %{status: :finished}}, aggregate)
+
       # Determine hole cards based on visibility mode
       hole_cards =
         case {table_status, visibility_mode, participant.player_id} do
+          _ when hand_finished? ->
+            []
+
           {:paused, _visibility_mode, _current_player_id} ->
             []
 
@@ -411,7 +416,11 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     }
   end
 
-  defp calculate_can_buy_in(%{game_mode: :cash_game} = _aggregate, participant, %{type: :cash_game} = ctx) do
+  defp calculate_can_buy_in(
+         %{game_mode: :cash_game} = _aggregate,
+         participant,
+         %{type: :cash_game} = ctx
+       ) do
     available = ctx.max_buyin - participant.chips - Map.get(participant, :pending_buyin, 0)
 
     if available >= ctx.min_buyin do
@@ -461,15 +470,26 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     # Max raise is all remaining chips
     max_raise = my_chips + my_bet
 
-    # Can only raise if we have chips beyond the call
-    if my_chips > call_amount && max_raise >= min_raise do
-      %{
-        min: min_raise,
-        max: max_raise,
-        presets: build_raise_presets(total_bets, min_raise, max_raise, call_amount, current_bet)
-      }
-    else
-      false
+    cond do
+      # Normal raise: can afford call + min raise
+      my_chips > call_amount && max_raise >= min_raise ->
+        %{
+          min: min_raise,
+          max: max_raise,
+          presets: build_raise_presets(total_bets, min_raise, max_raise, call_amount, current_bet)
+        }
+
+      # All-in raise: has chips beyond call but not enough for min raise
+      my_chips > call_amount ->
+        %{
+          min: max_raise,
+          max: max_raise,
+          presets: [%{label: "All In", value: max_raise}]
+        }
+
+      # No raise possible (can only call/fold)
+      true ->
+        false
     end
   end
 

@@ -49,7 +49,7 @@ defmodule Poker.Tables.ProcessManager do
 
   alias Poker.Tournaments.Commands.RecordPlayerBust
 
-  alias Poker.Tables.Jobs.TimeoutJob
+  alias Poker.Tables.Jobs.{TimeoutJob, StartHandJob, AutoFoldJob}
   alias Poker.Tables.AtomDecoder
 
   require Logger
@@ -156,6 +156,20 @@ defmodule Poker.Tables.ProcessManager do
   end
 
   def handle(
+        %Poker.Tables.ProcessManager{game_mode: :tournament, participants: participants},
+        %HandFinished{table_id: table_id} = _event
+      ) do
+    playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
+
+    if playing_count < 2 do
+      # Delay scheduled in apply/2 via Oban
+      []
+    else
+      struct(StartHand, %{table_id: table_id, hand_id: UUIDv7.generate()})
+    end
+  end
+
+  def handle(
         %Poker.Tables.ProcessManager{},
         %HandFinished{table_id: table_id} = _event
       ) do
@@ -241,21 +255,12 @@ defmodule Poker.Tables.ProcessManager do
     []
   end
 
+  # Auto-fold for sitting-out players is scheduled via Oban in apply/2
   def handle(
-        %Poker.Tables.ProcessManager{participants: participants} = _state,
-        %ParticipantToActSelected{} = event
+        %Poker.Tables.ProcessManager{} = _state,
+        %ParticipantToActSelected{} = _event
       ) do
-    participant = Enum.find(participants, fn p -> p.id == event.participant_id end)
-
-    if participant && participant.is_sitting_out do
-      struct(ParticipantFold, %{
-        hand_action_id: UUIDv7.generate(),
-        player_id: participant.player_id,
-        table_id: event.table_id
-      })
-    else
-      []
-    end
+    []
   end
 
   # Tournament tables are started by the Tournaments context, not the Tables PM
@@ -344,9 +349,11 @@ defmodule Poker.Tables.ProcessManager do
     %__MODULE__{state | table_status: :live}
   end
 
-  # When ParticipantToActSelected event is applied, schedule Oban job
+  @auto_fold_delay_seconds 2
+
+  # When ParticipantToActSelected event is applied, schedule appropriate job
   def apply(
-        %__MODULE__{timeout_seconds: timeout_seconds} = state,
+        %__MODULE__{timeout_seconds: timeout_seconds, participants: participants} = state,
         %ParticipantToActSelected{} = event
       ) do
     # Cancel any existing timeout job
@@ -354,15 +361,24 @@ defmodule Poker.Tables.ProcessManager do
       Oban.cancel_job(state.current_timeout_job_id)
     end
 
-    # Schedule timeout job in tables queue
+    participant = Enum.find(participants, fn p -> p.id == event.participant_id end)
+
     {:ok, job} =
-      %{
-        table_id: event.table_id,
-        participant_id: event.participant_id,
-        round_id: event.round_id
-      }
-      |> TimeoutJob.new(schedule_in: timeout_seconds, queue: :tables)
-      |> Oban.insert()
+      if participant && participant.is_sitting_out do
+        # Sitting out: auto-fold after short delay
+        %{table_id: event.table_id, player_id: participant.player_id}
+        |> AutoFoldJob.new(schedule_in: @auto_fold_delay_seconds, queue: :tables)
+        |> Oban.insert()
+      else
+        # Active player: normal timeout
+        %{
+          table_id: event.table_id,
+          participant_id: event.participant_id,
+          round_id: event.round_id
+        }
+        |> TimeoutJob.new(schedule_in: timeout_seconds, queue: :tables)
+        |> Oban.insert()
+      end
 
     %__MODULE__{state | current_timeout_job_id: job.id}
   end
@@ -427,6 +443,23 @@ defmodule Poker.Tables.ProcessManager do
   def apply(%__MODULE__{participants: participants} = state, %ParticipantLeft{} = event) do
     updated_participants = Enum.reject(participants, &(&1.id == event.participant_id))
     %__MODULE__{state | participants: updated_participants}
+  end
+
+  @hand_delay_seconds 3
+
+  def apply(
+        %__MODULE__{game_mode: :tournament, participants: participants} = state,
+        %HandFinished{table_id: table_id}
+      ) do
+    playing_count = Enum.count(participants, fn p -> not p.is_sitting_out end)
+
+    if playing_count < 2 do
+      %{table_id: table_id}
+      |> StartHandJob.new(schedule_in: @hand_delay_seconds, queue: :tables)
+      |> Oban.insert()
+    end
+
+    state
   end
 
   def apply(%__MODULE__{} = state, _event) do

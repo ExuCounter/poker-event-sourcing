@@ -612,14 +612,29 @@ export const PokerCanvas = {
   },
 
   async rebuildCanvas() {
-    // Clear empty seat renderers before rebuilding
+    // Stop any in-flight animations
+    this.stopTimeoutAnimation();
+    gsap.killTweensOf("*");
+
+    // Clear all renderers
     this.renderers.emptySeats.forEach((renderer) => renderer.destroy());
     this.renderers.emptySeats.clear();
+    this.renderers.participants.clear();
+    this.renderers.communityCards = null;
+    this.renderers.totalPot = null;
+    this.renderers.tableInfo = null;
+    this.renderers.dealerButton = null;
 
+    // Rebuild from scratch
     this.clear();
     await this.createTable();
     this.renderCommunityCards();
     this.resize();
+
+    // Restart timeout animation if needed
+    if (this.state.currentTurn && this.state.timeoutInfo) {
+      this.startTimeoutAnimation();
+    }
   },
 
   startTimeoutAnimation() {

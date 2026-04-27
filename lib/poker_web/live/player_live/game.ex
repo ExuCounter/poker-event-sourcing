@@ -61,8 +61,10 @@ defmodule PokerWeb.PlayerLive.Game do
 
   @impl true
   def handle_info({:tournament, _event, _data}, socket) do
-    {:ok, game_context} = build_game_context(socket.assigns.table_id)
-    {:noreply, assign(socket, game_context: game_context)}
+    case build_game_context(socket.assigns.table_id) do
+      {:ok, game_context} -> {:noreply, assign(socket, game_context: game_context)}
+      _ -> {:noreply, socket}
+    end
   end
 
   @impl true
@@ -174,8 +176,8 @@ defmodule PokerWeb.PlayerLive.Game do
 
   def handle_event("sit_in", _params, socket) do
     case Tables.sit_in_participant(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, refresh_player_actions(socket)}
-      {:ok, _} -> {:noreply, refresh_player_actions(socket)}
+      :ok -> {:noreply, maybe_rebuild_or_refresh(socket)}
+      {:ok, _} -> {:noreply, maybe_rebuild_or_refresh(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
@@ -201,9 +203,11 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  def handle_event("confirm_buy_in", _params, socket) do
-    cash_game = socket.assigns.game_context.cash_game
-
+  def handle_event(
+        "confirm_buy_in",
+        _params,
+        %{assigns: %{game_context: %{cash_game: cash_game}}} = socket
+      ) do
     case CashGames.buy_in(
            socket.assigns.current_scope,
            cash_game.id,
@@ -257,11 +261,53 @@ defmodule PokerWeb.PlayerLive.Game do
 
   # Dynamic timing based on event age
   # {min_age_ms, multiplier} - :skip means instant jump
+
   @speed_thresholds [
-    {12_500, 0},
+    {12_500, 0.2},
     {10_000, 0.5},
     {7_500, 0.8}
   ]
+
+  defp maybe_rebuild_or_refresh(socket) do
+    queue_has_other_hand = Enum.any?(socket.assigns.queue, &(&1.type == "HandStarted"))
+
+    if queue_has_other_hand do
+      flush_and_rebuild(socket)
+    else
+      socket
+    end
+  end
+
+  defp flush_and_rebuild(socket) do
+    game_context =
+      case build_game_context(socket.assigns.table_id) do
+        {:ok, ctx} -> ctx
+        _ -> socket.assigns.game_context
+      end
+
+    game_view =
+      Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
+        game_context: game_context
+      )
+
+    buy_in_amount =
+      case game_view.player_actions.can_buy_in do
+        %{max: max} -> max
+        false -> 0
+      end
+
+    socket
+    |> assign(
+      queue: [],
+      current_animated_event_id: nil,
+      game_view: game_view,
+      game_context: game_context,
+      buy_in_amount: buy_in_amount,
+      raise_amount: nil,
+      show_buy_in: false
+    )
+    |> push_event("rebuild_state", %{state: JsonEncoder.transform_keys(game_view)})
+  end
 
   defp process_next_event(socket) do
     case socket.assigns.queue do
@@ -294,19 +340,11 @@ defmodule PokerWeb.PlayerLive.Game do
 
   defp apply_dynamic_timing(event) do
     age_ms = System.monotonic_time(:millisecond) - event.received_at
+    multiplier = get_speed_multiplier(age_ms)
 
-    case get_speed_multiplier(age_ms) do
-      :skip ->
-        event
-        |> Map.put(:skip_animation, true)
-        |> put_in([:timing, :duration], 0)
-        |> maybe_put_in([:timing, :stagger], 0)
-
-      multiplier when is_number(multiplier) ->
-        event
-        |> update_in([:timing, :duration], &round(&1 * multiplier))
-        |> maybe_update_in([:timing, :stagger], &round(&1 * multiplier))
-    end
+    event
+    |> update_in([:timing, :duration], &round(&1 * multiplier))
+    |> maybe_update_in([:timing, :stagger], &round(&1 * multiplier))
   end
 
   defp maybe_update_in(map, path, fun) do
@@ -380,7 +418,9 @@ defmodule PokerWeb.PlayerLive.Game do
     )
   end
 
-  defp lobby_path(%{type: :tournament, tournament_id: tid}, _table_id), do: ~p"/tournaments/#{tid}/lobby"
+  defp lobby_path(%{type: :tournament, tournament_id: tid}, _table_id),
+    do: ~p"/tournaments/#{tid}/lobby"
+
   defp lobby_path(_game_context, table_id), do: ~p"/cash/#{table_id}/lobby"
 
   defp build_game_context(table_id) do

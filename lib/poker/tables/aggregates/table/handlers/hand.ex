@@ -49,24 +49,24 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
 
   @doc "Starts a new hand or pauses/finishes table if not enough players."
   def handle(table, %StartHand{} = command) do
-    dbg(table)
+    active_participants = Helpers.filter_active_participants(table.participants)
     playing_participants = Helpers.filter_playing_participants(table.participants)
 
     cond do
-      length(playing_participants) < 2 ->
-        active_participants = Helpers.filter_active_participants(table.participants)
+      length(active_participants) < 2 ->
+        %TableFinished{
+          table_id: table.id,
+          reason: :completed
+        }
 
-        if length(active_participants) < 2 do
-          %TableFinished{
-            table_id: table.id,
-            reason: :completed
-          }
-        else
-          %TablePaused{
-            table_id: table.id,
-            reason: :all_sitting_out
-          }
-        end
+      length(playing_participants) < 2 && table.game_mode == :tournament ->
+        start_hand(table, command.hand_id)
+
+      length(playing_participants) < 2 ->
+        %TablePaused{
+          table_id: table.id,
+          reason: :all_sitting_out
+        }
 
       true ->
         start_hand(table, command.hand_id)
@@ -150,23 +150,26 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
           Helpers.find_participant_by_position(table, :small_blind)
         end
 
+      sb_amount = min(table.settings.small_blind, sb_participant.chips)
+
       %SmallBlindPosted{
         id: UUIDv7.generate(),
         table_id: table.id,
         hand_id: hand_id,
         participant_id: sb_participant.id,
-        amount: table.settings.small_blind
+        amount: sb_amount
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
       bb_participant = Helpers.find_participant_by_position(table, :big_blind)
+      bb_amount = min(table.settings.big_blind, bb_participant.chips)
 
       %BigBlindPosted{
         id: UUIDv7.generate(),
         table_id: table.id,
         hand_id: hand_id,
         participant_id: bb_participant.id,
-        amount: table.settings.big_blind
+        amount: bb_amount
       }
     end)
     |> Commanded.Aggregate.Multi.execute(fn table ->
@@ -183,16 +186,20 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
   end
 
   defp deal_hole_cards(table, hand_id) do
-    playing_participants = Helpers.filter_playing_participants(table.participants)
+    hand_participants =
+      case table.game_mode do
+        :tournament -> Helpers.filter_active_participants(table.participants)
+        _ -> Helpers.filter_playing_participants(table.participants)
+      end
 
     position_participants =
       case table.game_mode do
-        :cash_game -> playing_participants
+        :cash_game -> hand_participants
         :tournament -> table.participants
       end
 
     {events, _remaining_deck} =
-      Enum.reduce(playing_participants, {[], table.remaining_deck}, fn participant, {events, deck} ->
+      Enum.reduce(hand_participants, {[], table.remaining_deck}, fn participant, {events, deck} ->
         {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(deck, 2)
         position = Position.calculate_position(table, participant, position_participants)
 
