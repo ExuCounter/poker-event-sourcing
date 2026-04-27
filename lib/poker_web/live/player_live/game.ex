@@ -113,36 +113,44 @@ defmodule PokerWeb.PlayerLive.Game do
     {:noreply, socket}
   end
 
+  # Errors that should be silently ignored (double-clicks, stale UI state)
+  @silent_errors [
+    :not_your_turn,
+    :not_participants_turn,
+    :no_active_hand,
+    :already_folded,
+    :stale_timeout,
+    :already_sat_out,
+    :not_sitting_out
+  ]
+
+  defp handle_action_result(:ok, socket), do: {:noreply, socket}
+  defp handle_action_result({:error, reason}, socket) when reason in @silent_errors, do: {:noreply, socket}
+  defp handle_action_result({:error, %{status: status}}, socket) when status in @silent_errors, do: {:noreply, socket}
+  defp handle_action_result({:error, reason}, socket), do: {:noreply, put_flash(socket, :error, format_error(reason))}
+
   # Action event handlers
   @impl true
   def handle_event("fold_hand", _params, socket) do
-    case Tables.fold_hand(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
-    end
+    Tables.fold_hand(socket.assigns.current_scope, socket.assigns.table_id)
+    |> handle_action_result(socket)
   end
 
   def handle_event("check_hand", _params, socket) do
-    case Tables.check_hand(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
-    end
+    Tables.check_hand(socket.assigns.current_scope, socket.assigns.table_id)
+    |> handle_action_result(socket)
   end
 
   def handle_event("call_hand", _params, socket) do
-    case Tables.call_hand(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
-    end
+    Tables.call_hand(socket.assigns.current_scope, socket.assigns.table_id)
+    |> handle_action_result(socket)
   end
 
   def handle_event("raise_hand", %{"amount" => amount}, socket) do
     case Integer.parse(amount) do
       {amount_int, _} ->
-        case Tables.raise_hand(socket.assigns.current_scope, socket.assigns.table_id, amount_int) do
-          :ok -> {:noreply, socket}
-          {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
-        end
+        Tables.raise_hand(socket.assigns.current_scope, socket.assigns.table_id, amount_int)
+        |> handle_action_result(socket)
 
       :error ->
         {:noreply, put_flash(socket, :error, "Invalid raise amount")}
@@ -150,10 +158,8 @@ defmodule PokerWeb.PlayerLive.Game do
   end
 
   def handle_event("all_in_hand", _params, socket) do
-    case Tables.all_in_hand(socket.assigns.current_scope, socket.assigns.table_id) do
-      :ok -> {:noreply, socket}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, format_error(reason))}
-    end
+    Tables.all_in_hand(socket.assigns.current_scope, socket.assigns.table_id)
+    |> handle_action_result(socket)
   end
 
   def handle_event("update_raise_amount", %{"raise_amount" => amount}, socket) do
@@ -482,9 +488,11 @@ defmodule PokerWeb.PlayerLive.Game do
       end
 
     ~H"""
-    <.flash kind={:error} flash={@flash} />
-    <.flash kind={:info} flash={@flash} />
     <div style="height: 100vh; position: relative; overflow: hidden;">
+      <div class="absolute top-4 left-1/2 z-50" style="transform: translateX(-50%) scale(var(--ui-scale, 1)); transform-origin: top center;">
+        <.flash kind={:error} flash={@flash} />
+        <.flash kind={:info} flash={@flash} />
+      </div>
       <canvas
         id="poker-canvas"
         phx-hook="PokerCanvas"
@@ -533,12 +541,11 @@ defmodule PokerWeb.PlayerLive.Game do
         </div>
       <% end %>
 
-      <div style="transform: scale(var(--game-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1));">
+      <div style="transform: scale(var(--ui-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1));">
         <!-- Sit Out/In/Buy In Button - bottom-left corner -->
         <%= if @game_view.player_actions.is_participant do %>
           <div
             class="absolute left-5 bottom-5 z-10 flex"
-            style="transform: scale(var(--button-boost, 1)); transform-origin: bottom left;"
           >
             <!-- Buy In button (cash games) -->
             <%= if @game_view.player_actions.can_buy_in != false or @game_view.game_mode == :cash_game do %>
@@ -580,7 +587,7 @@ defmodule PokerWeb.PlayerLive.Game do
             <%= if @game_view.player_actions.can_sit_out do %>
               <button
                 phx-click="sit_out"
-                class="px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
+                class="cursor-pointer px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
               >
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -598,7 +605,7 @@ defmodule PokerWeb.PlayerLive.Game do
             <%= if @game_view.player_actions.can_sit_in do %>
               <button
                 phx-click="sit_in"
-                class="px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20"
+                class="cursor-pointer px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20"
               >
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -635,7 +642,6 @@ defmodule PokerWeb.PlayerLive.Game do
     <!-- Action Controls - positioned and scaled -->
         <div
           class="absolute bottom-[16px] right-[16px]"
-          style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;"
         >
           <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
             <div class="bg-gray-900 rounded-xl p-4 shadow-2xl border-2 border-gray-700 flex flex-col">
@@ -649,7 +655,7 @@ defmodule PokerWeb.PlayerLive.Game do
                         type="button"
                         phx-click="update_raise_amount"
                         phx-value-raise_amount={preset.value}
-                        class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-3 py-1.5 rounded"
+                        class="cursor-pointer bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-3 py-1.5 rounded"
                       >
                         {preset.label}
                       </button>
@@ -679,7 +685,7 @@ defmodule PokerWeb.PlayerLive.Game do
                 <%= if @game_view.valid_actions.fold do %>
                   <.button
                     phx-click="fold_hand"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="cursor-pointer bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Fold
                   </.button>
@@ -688,7 +694,7 @@ defmodule PokerWeb.PlayerLive.Game do
                 <%= if @game_view.valid_actions.check do %>
                   <.button
                     phx-click="check_hand"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Check
                   </.button>
@@ -698,7 +704,7 @@ defmodule PokerWeb.PlayerLive.Game do
                 <%= if @game_view.valid_actions.call do %>
                   <.button
                     phx-click="call_hand"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="cursor-pointer bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     Call {@game_view.valid_actions.call.amount}
                   </.button>
@@ -709,7 +715,7 @@ defmodule PokerWeb.PlayerLive.Game do
                   <.button
                     phx-click="raise_hand"
                     phx-value-amount={@raise_amount}
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="cursor-pointer bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
                   >
                     <div class="w-[110px] text-center">
                       Raise {@raise_amount}
@@ -767,7 +773,7 @@ defmodule PokerWeb.PlayerLive.Game do
               </button>
               <button
                 phx-click="confirm_buy_in"
-                class="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all"
+                class="cursor-pointer flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all"
               >
                 Confirm
               </button>

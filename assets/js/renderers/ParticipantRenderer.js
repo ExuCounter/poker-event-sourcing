@@ -64,6 +64,8 @@ export class ParticipantRenderer {
     CHECK: 0x60a5fa,
     FOLD: 0xef4444,
     "ALL IN": 0xf97316,
+    AWAY: 0x9ca3af,
+    "I'M BACK": 0x4ade80,
   };
 
   async showActionIndicator(actionType) {
@@ -92,15 +94,9 @@ export class ParticipantRenderer {
     // Position over hood (hood is at y = CARD_OVERLAP)
     this.actionIndicatorContainer.position.set(0, CARD_OVERLAP);
 
-    // Semi-transparent background overlay covering upper half of hood
+    // Semi-transparent background overlay matching hood shape
     const overlay = new PIXI.Graphics();
-    overlay.roundRect(
-      2,
-      2,
-      HOOD_WIDTH - 4,
-      HOOD_HEIGHT / 2 - 4,
-      HOOD_BORDER_RADIUS - 2,
-    );
+    overlay.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
     overlay.fill({ color: 0x000000, alpha: 0.85 });
     this.actionIndicatorContainer.addChild(overlay);
 
@@ -115,7 +111,7 @@ export class ParticipantRenderer {
       },
     });
     actionText.anchor.set(0.5, 0.5);
-    actionText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 4);
+    actionText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 2);
     this.actionIndicatorContainer.addChild(actionText);
 
     this.actionIndicatorContainer.alpha = 0;

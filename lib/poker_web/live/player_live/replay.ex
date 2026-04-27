@@ -153,10 +153,9 @@ defmodule PokerWeb.PlayerLive.Replay do
     <.flash kind={:info} flash={@flash} />
     <div style="height: 100vh; position: relative; overflow: hidden;">
       <!-- Replay controls - bottom right -->
-      <div style="transform: scale(var(--game-scale, 1)); transform-origin: bottom left; width: calc(100vw / var(--game-scale, 1)); position: absolute; bottom: 0; left: 0;">
+      <div style="transform: scale(var(--ui-scale, 1)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1)); position: absolute; bottom: 0; left: 0;">
         <div
           class="absolute bottom-[16px] right-[16px]"
-          style="transform: scale(var(--button-boost, 1)); transform-origin: bottom right;"
         >
           <div
             class="replay-controls"

@@ -196,8 +196,12 @@ export const PokerCanvas = {
         this.showActionIndicator(event.participantId, "CHECK");
         break;
       case "ParticipantSatOut":
+        this.rerenderParticipant(event.participantId);
+        this.showActionIndicator(event.participantId, "AWAY");
+        break;
       case "ParticipantSatIn":
         this.rerenderParticipant(event.participantId);
+        this.showActionIndicator(event.participantId, "I'M BACK");
         break;
       case "ParticipantLeft": {
         const renderer = this.renderers.participants.get(event.participantId);
@@ -696,11 +700,7 @@ export const PokerCanvas = {
     this.containers.container.x = width / 2;
     this.containers.container.y = height / 2;
 
-    document.documentElement.style.setProperty("--game-scale", scale);
-
-    // Boost buttons on smaller screens to maintain touch-friendly size
-    const buttonBoost = scale < 1 ? Math.min(1 / scale, 1.5) : 1;
-    document.documentElement.style.setProperty("--button-boost", buttonBoost);
+    document.documentElement.style.setProperty("--ui-scale", scale * 1.4);
   },
 
   clear() {
