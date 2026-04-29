@@ -18,14 +18,33 @@ defmodule Poker.Tournaments do
   end
 
   def register_player(tournament_id, player_id) do
-    with {:ok, tournament} <- get_tournament(tournament_id),
-         :ok <- Poker.Wallet.reserve_funds(player_id, tournament_id, tournament.buy_in) do
-      command_attrs = %{tournament_id: tournament_id, player_id: player_id}
+    with {:ok, tournament} <- get_tournament(tournament_id) do
+      register_player_with_buyin(tournament_id, player_id, tournament.buy_in)
+    end
+  end
 
-      with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
-           :ok <- Poker.App.dispatch(command, consistency: :strong) do
-        :ok
-      end
+  defp register_player_with_buyin(tournament_id, player_id, buy_in) do
+    with {:reserve_funds, :ok} <-
+           {:reserve_funds, Poker.Wallet.reserve_funds(player_id, tournament_id, buy_in)},
+         {:register, :ok} <-
+           {:register, dispatch_register(tournament_id, player_id)} do
+      :ok
+    else
+      {failed_step, error} ->
+        Poker.Saga.compensate(failed_step, [
+          {:reserve_funds, fn -> Poker.Wallet.release_funds(player_id, tournament_id, buy_in) end}
+        ])
+
+        error
+    end
+  end
+
+  defp dispatch_register(tournament_id, player_id) do
+    command_attrs = %{tournament_id: tournament_id, player_id: player_id}
+
+    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
     end
   end
 
