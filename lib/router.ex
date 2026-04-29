@@ -41,6 +41,7 @@ defmodule Poker.Router do
     RegisterPlayer,
     AdvanceBlindLevel,
     RecordPlayerBust,
+    RecordTournamentTable,
     FinishTournament
   }
 
@@ -111,6 +112,7 @@ defmodule Poker.Router do
       RegisterPlayer,
       AdvanceBlindLevel,
       RecordPlayerBust,
+      RecordTournamentTable,
       FinishTournament
     ],
     to: Tournament

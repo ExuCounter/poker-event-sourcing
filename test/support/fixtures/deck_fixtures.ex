@@ -1,40 +1,50 @@
 defmodule Poker.DeckFixtures do
   import Mox
 
-  def setup_winning_hand(ctx) do
-    # Player 1 gets winner
-    expect(Poker.Services.DeckMock, :pick_cards, fn _deck, 2 ->
-      {[%{rank: :A, suit: :spades}, %{rank: :K, suit: :spades}], []}
-    end)
+  @dealing_order %{
+    dealer: 0,
+    small_blind: 1,
+    big_blind: 2,
+    utg: 3,
+    hijack: 4,
+    cutoff: 5
+  }
 
-    # Other players get unique losing hands
-    losing_hands = [
-      {[%{rank: 2, suit: :hearts}, %{rank: 7, suit: :clubs}], []},
-      {[%{rank: 3, suit: :hearts}, %{rank: 8, suit: :clubs}], []},
-      {[%{rank: 4, suit: :hearts}, %{rank: 9, suit: :clubs}], []},
-      {[%{rank: 5, suit: :hearts}, %{rank: :T, suit: :clubs}], []},
-      {[%{rank: 6, suit: :hearts}, %{rank: :J, suit: :clubs}], []}
-    ]
+  @doc """
+  Arranges the deck so specific positions receive specific hole cards.
 
-    losing_hands
-    |> Enum.take(length(ctx.table.participants) - 1)
-    |> Enum.each(fn hand ->
-      expect(Poker.Services.DeckMock, :pick_cards, fn _deck, 2 -> hand end)
-    end)
+  Stubs `generate_deck` to return the arranged deck and `shuffle_deck` as no-op.
+  `pick_cards` stays default (`Enum.split`), so cards are dealt off the top in order.
 
-    # # Community
-    expect(Poker.Services.DeckMock, :pick_cards, fn _deck, 3 ->
-      {[%{rank: :Q, suit: :spades}, %{rank: :J, suit: :spades}, %{rank: :T, suit: :spades}], []}
-    end)
+  ## Example
 
-    expect(Poker.Services.DeckMock, :pick_cards, fn _deck, 1 ->
-      {[%{rank: 2, suit: :diamonds}], []}
-    end)
+      arrange_deck(%{
+        dealer: [%{rank: :A, suit: :spades}, %{rank: :K, suit: :spades}],
+        big_blind: [%{rank: 7, suit: :hearts}, %{rank: 7, suit: :clubs}],
+        community: [
+          %{rank: :Q, suit: :spades}, %{rank: :J, suit: :spades}, %{rank: :T, suit: :spades},
+          %{rank: 7, suit: :diamonds}, %{rank: 2, suit: :diamonds}
+        ]
+      })
+  """
+  def arrange_deck(hands) do
+    community = Map.get(hands, :community, [])
 
-    expect(Poker.Services.DeckMock, :pick_cards, fn _deck, 1 ->
-      {[%{rank: 3, suit: :diamonds}], []}
-    end)
+    hole_cards =
+      hands
+      |> Map.drop([:community])
+      |> Enum.sort_by(fn {position, _cards} -> Map.fetch!(@dealing_order, position) end)
+      |> Enum.flat_map(fn {_position, cards} -> cards end)
 
-    ctx
+    filler = Poker.Services.DeckStub.generate_deck()
+    deck = hole_cards ++ community ++ filler
+
+    arranged = deck
+
+    stub(Poker.Services.DeckMock, :generate_deck, fn -> arranged end)
+    stub(Poker.Services.DeckMock, :shuffle_deck, fn deck -> deck end)
+    stub(Poker.Services.DeckMock, :pick_cards, &Poker.Services.DeckStub.pick_cards/2)
+
+    :ok
   end
 end

@@ -1,13 +1,7 @@
 defmodule Poker.Tables.TableTest do
   use Poker.DataCase
-  alias Poker.Tables.Projections.Table
-  import Poker.DeckFixtures
 
-  test "test", ctx do
-    ctx =
-      ctx
-      |> exec(:add_participants, generate_players: 2)
-      |> exec(:start_table)
-      |> exec(:start_runout)
-  end
+  # Placeholder — table tests are now split into:
+  # - test/poker/tournaments/tournament_table_test.exs (table mechanics via tournament flow)
+  # - Cash game specific tests to be added later
 end

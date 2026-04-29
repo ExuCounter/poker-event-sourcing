@@ -95,7 +95,9 @@ defmodule Poker.Tables.Aggregates.Table.Helpers do
 
     Enum.find_value(indices, fn index ->
       participant = Enum.at(participants, index)
-      participant_hand = Enum.find(table.participant_hands, &(&1.participant_id == participant.id))
+
+      participant_hand =
+        Enum.find(table.participant_hands, &(&1.participant_id == participant.id))
 
       # Must be active, have chips, and not folded in current hand
       can_act? =

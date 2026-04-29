@@ -185,6 +185,15 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
     end)
   end
 
+  @dealing_order %{
+    dealer: 0,
+    small_blind: 1,
+    big_blind: 2,
+    utg: 3,
+    hijack: 4,
+    cutoff: 5
+  }
+
   defp deal_hole_cards(table, hand_id) do
     hand_participants =
       case table.game_mode do
@@ -198,10 +207,17 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
         :tournament -> table.participants
       end
 
-    {events, _remaining_deck} =
-      Enum.reduce(hand_participants, {[], table.remaining_deck}, fn participant, {events, deck} ->
-        {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(deck, 2)
+    participants_with_positions =
+      hand_participants
+      |> Enum.map(fn participant ->
         position = Position.calculate_position(table, participant, position_participants)
+        {participant, position}
+      end)
+      |> Enum.sort_by(fn {_participant, position} -> Map.fetch!(@dealing_order, position) end)
+
+    {events, _remaining_deck} =
+      Enum.reduce(participants_with_positions, {[], table.remaining_deck}, fn {participant, position}, {events, deck} ->
+        {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(deck, 2)
 
         new_events = [
           %ParticipantHandGiven{

@@ -4,6 +4,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     RegisterPlayer,
     AdvanceBlindLevel,
     RecordPlayerBust,
+    RecordTournamentTable,
     FinishTournament
   }
 
@@ -13,6 +14,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     TournamentStarted,
     BlindLevelAdvanced,
     TournamentPlayerBusted,
+    TournamentTableCreated,
     TournamentFinished
   }
 
@@ -28,6 +30,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     :table_type,
     :max_players,
     :current_level,
+    table_ids: [],
     registered_players: [],
     busted_players: []
   ]
@@ -123,6 +126,17 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     end
   end
 
+  def execute(%__MODULE__{} = tournament, %RecordTournamentTable{} = cmd) do
+    if Enum.any?(tournament.table_ids, &(&1 == cmd.table_id)) do
+      {:error, :table_already_recorded}
+    else
+      %TournamentTableCreated{
+        tournament_id: tournament.id,
+        table_id: cmd.table_id
+      }
+    end
+  end
+
   def execute(%__MODULE__{status: :active} = tournament, %FinishTournament{}) do
     busted_ids = MapSet.new(tournament.busted_players)
     winner = Enum.find(tournament.registered_players, &(not MapSet.member?(busted_ids, &1)))
@@ -177,6 +191,10 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
 
   def apply(%__MODULE__{} = state, %BlindLevelAdvanced{level: level}) do
     %__MODULE__{state | current_level: level}
+  end
+
+  def apply(%__MODULE__{} = state, %TournamentTableCreated{table_id: table_id}) do
+    %__MODULE__{state | table_ids: state.table_ids ++ [table_id]}
   end
 
   def apply(%__MODULE__{} = state, %TournamentPlayerBusted{player_id: player_id}) do

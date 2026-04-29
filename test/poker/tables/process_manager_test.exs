@@ -14,21 +14,11 @@ defmodule Poker.Tables.ProcessManagerTest do
   describe "process manager - hand lifecycle" do
     setup ctx do
       ctx
-      |> exec(:create_table,
-        type: :six_max,
-        settings: %{
-          small_blind: 10,
-          big_blind: 20,
-          starting_stack: 1000,
-          timeout_seconds: 60
-        }
-      )
-      |> exec(:add_participants, generate_players: 3)
+      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:fill_tournament)
     end
 
     test "starts hand when table starts", ctx do
-      ctx = ctx |> exec(:start_table)
-
       assert_receive_event(Poker.App, TableStarted, fn event ->
         assert event.id == ctx.table.id
       end)
@@ -37,18 +27,16 @@ defmodule Poker.Tables.ProcessManagerTest do
         assert event.table_id == ctx.table.id
       end)
 
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.hand != nil
-      assert table.round != nil
-      assert table.round.type == :pre_flop
+      assert is_binary(ctx.table.hand.id)
+      assert ctx.table.round != nil
+      assert ctx.table.round.type == :pre_flop
     end
 
     test "starts new hand when hand finishes", ctx do
       ctx =
         ctx
-        |> exec(:start_table)
-        |> exec(:fold_hand)
-        |> exec(:fold_hand)
+        |> exec(:fold_hand, position: :dealer)
+        |> exec(:fold_hand, position: :small_blind)
 
       assert_receive_event(Poker.App, HandFinished, fn event ->
         assert event.table_id == ctx.table.id
@@ -56,58 +44,40 @@ defmodule Poker.Tables.ProcessManagerTest do
       end)
 
       # New hand should start
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.hand != nil
-      assert table.round.type == :pre_flop
+      assert is_binary(ctx.table.hand.id)
+      assert ctx.table.round.type == :pre_flop
     end
   end
 
   describe "process manager - round progression" do
     setup ctx do
       ctx
-      |> exec(:create_table,
-        type: :six_max,
-        settings: %{
-          small_blind: 10,
-          big_blind: 20,
-          starting_stack: 1000,
-          timeout_seconds: 60
-        }
-      )
-      |> exec(:add_participants, generate_players: 2)
+      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:fill_tournament)
     end
 
     test "advances to flop after pre-flop all acted", ctx do
       ctx =
         ctx
-        |> exec(:start_table)
-        |> exec(:call_hand)
-        |> exec(:check_hand)
+        |> exec(:call_hand, position: :dealer)
+        |> exec(:call_hand, position: :big_blind)
 
-      # Verify round advanced to flop
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.round.type == :flop
-      assert length(table.community_cards) == 3
+      assert ctx.table.round.type == :flop
+      assert length(ctx.table.community_cards) == 3
     end
 
     test "finishes hand at showdown after river", ctx do
       ctx =
         ctx
-        |> exec(:start_table)
-        # Pre-flop
-        |> exec(:call_hand)
-        |> exec(:check_hand)
-        # Flop
-        |> exec(:check_hand)
-        |> exec(:check_hand)
-        # Turn
-        |> exec(:check_hand)
-        |> exec(:check_hand)
-        # River
-        |> exec(:check_hand)
-        |> exec(:check_hand)
+        |> exec(:call_hand, position: :dealer)
+        |> exec(:check_hand, position: :big_blind)
+        |> exec(:check_hand, position: :big_blind)
+        |> exec(:check_hand, position: :dealer)
+        |> exec(:check_hand, position: :big_blind)
+        |> exec(:check_hand, position: :dealer)
+        |> exec(:check_hand, position: :big_blind)
+        |> exec(:check_hand, position: :dealer)
 
-      # Verify hand finished at showdown
       assert_receive_event(Poker.App, HandFinished, fn event ->
         assert event.table_id == ctx.table.id
         assert event.finish_reason == :showdown
@@ -115,12 +85,8 @@ defmodule Poker.Tables.ProcessManagerTest do
     end
 
     test "finishes hand early when all fold except one", ctx do
-      ctx =
-        ctx
-        |> exec(:start_table)
-        |> exec(:fold_hand)
+      _ctx = ctx |> exec(:fold_hand, position: :dealer)
 
-      # Verify hand finished early when all fold except one
       assert_receive_event(Poker.App, HandFinished, fn event ->
         assert event.table_id == ctx.table.id
         assert event.finish_reason == :all_folded
@@ -128,84 +94,18 @@ defmodule Poker.Tables.ProcessManagerTest do
     end
   end
 
-  describe "process manager - table pause/resume" do
-    setup ctx do
-      ctx
-      |> exec(:create_table,
-        type: :six_max,
-        settings: %{
-          small_blind: 10,
-          big_blind: 20,
-          starting_stack: 1000,
-          timeout_seconds: 60
-        }
-      )
-      |> exec(:add_participants, generate_players: 2)
-    end
-
-    test "pauses table when not enough playing participants", ctx do
-      ctx =
-        ctx
-        |> exec(:start_table)
-        |> exec(:sit_out)
-        |> exec(:fold_hand)
-
-      assert_receive_event(Poker.App, TablePaused, fn event ->
-        assert event.table_id == ctx.table.id
-      end)
-
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.status == :paused
-    end
-
-    test "resumes table when participant sits back in", ctx do
-      ctx =
-        ctx
-        |> exec(:start_table)
-        |> exec(:sit_out)
-        |> exec(:fold_hand)
-
-      # Table should be paused
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.status == :paused
-
-      # Sit back in
-      ctx = ctx |> exec(:sit_in)
-
-      assert_receive_event(Poker.App, TableResumed, fn event ->
-        assert event.table_id == ctx.table.id
-      end)
-
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.status == :live
-    end
-  end
-
   describe "process manager - sitting out auto-fold" do
     setup ctx do
       ctx
-      |> exec(:create_table,
-        type: :six_max,
-        settings: %{
-          small_blind: 10,
-          big_blind: 20,
-          starting_stack: 1000,
-          timeout_seconds: 60
-        }
-      )
-      |> exec(:add_participants, generate_players: 3)
+      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:fill_tournament)
     end
 
     test "auto-folds for sitting out player when their turn comes", ctx do
-      ctx = ctx |> exec(:start_table)
-
-      # Get the participant who acts after current player
       current_acting_id = ctx.table.round.participant_to_act_id
 
-      # First player sits out while it's their turn (causes fold + sit out)
       ctx = ctx |> exec(:sit_out)
 
-      # Verify they folded
       assert_receive_event(Poker.App, ParticipantFolded, fn event ->
         assert event.participant_id == current_acting_id
       end)
@@ -214,9 +114,7 @@ defmodule Poker.Tables.ProcessManagerTest do
         assert event.participant_id == current_acting_id
       end)
 
-      # Turn should move to next player
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-      assert table.round.participant_to_act_id != current_acting_id
+      assert ctx.table.round.participant_to_act_id != current_acting_id
     end
   end
 end

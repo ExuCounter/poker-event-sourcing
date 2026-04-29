@@ -10,12 +10,13 @@ defmodule Poker.Tournaments.ProcessManager do
     TournamentStarted,
     BlindLevelAdvanced,
     TournamentPlayerBusted,
+    TournamentTableCreated,
     TournamentFinished
   }
 
   alias Poker.Tables.Events.TableCreated
   alias Poker.Tables.Commands.{CreateTable, CreateTableSettings, JoinTableParticipant, StartTable, UpdateTableBlinds}
-  alias Poker.Tournaments.Commands.FinishTournament
+  alias Poker.Tournaments.Commands.{FinishTournament, RecordTournamentTable}
   alias Poker.Tournaments.Jobs.BlindAdvanceJob
   alias Poker.Tournaments.BlindStructure
 
@@ -41,6 +42,7 @@ defmodule Poker.Tournaments.ProcessManager do
   def interested?(%TournamentStarted{tournament_id: id}, _metadata), do: {:continue, id}
   def interested?(%BlindLevelAdvanced{tournament_id: id}, _metadata), do: {:continue, id}
   def interested?(%TournamentPlayerBusted{tournament_id: id}, _metadata), do: {:continue, id}
+  def interested?(%TournamentTableCreated{tournament_id: id}, _metadata), do: {:continue, id}
   def interested?(%TournamentFinished{tournament_id: id}, _metadata), do: {:stop, id}
 
   def interested?(%TableCreated{source_id: source_id}, _metadata) when is_binary(source_id) do
@@ -53,7 +55,9 @@ defmodule Poker.Tournaments.ProcessManager do
 
   def handle(%__MODULE__{}, %TournamentCreated{}), do: []
   def handle(%__MODULE__{}, %PlayerRegistered{}), do: []
-  def handle(%__MODULE__{}, %TableCreated{}), do: []
+  def handle(%__MODULE__{id: tournament_id}, %TableCreated{id: table_id}) do
+    [%RecordTournamentTable{tournament_id: tournament_id, table_id: table_id}]
+  end
 
   def handle(%__MODULE__{} = state, %TournamentStarted{tournament_id: tournament_id}) do
     table_id = UUIDv7.generate()
@@ -106,6 +110,7 @@ defmodule Poker.Tournaments.ProcessManager do
     end
   end
 
+  def handle(%__MODULE__{}, %TournamentTableCreated{}), do: []
   def handle(%__MODULE__{}, %TournamentFinished{}), do: []
 
   # STATE UPDATES
