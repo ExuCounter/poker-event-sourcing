@@ -371,14 +371,13 @@ defmodule Poker.SeedFactorySchema do
     update(:table)
   end
 
-  # Sit out / sit in — kept as-is for now
-
   command :sit_out do
     param(:table, entity: :table)
+    param(:position)
 
     resolve(fn args ->
-      acting_participant = Enum.find(args.table.participants, &(&1.id == args.table.round.participant_to_act_id))
-      :ok = Poker.Tables.sit_out_participant(args.table.id, acting_participant.player_id)
+      player_id = resolve_acting_player(args.table, args.position)
+      :ok = Poker.Tables.sit_out_participant(args.table.id, player_id)
       table = aggregate_state(:table, args.table.id)
       {:ok, %{table: table}}
     end)
@@ -388,10 +387,11 @@ defmodule Poker.SeedFactorySchema do
 
   command :sit_in do
     param(:table, entity: :table)
+    param(:position)
 
     resolve(fn args ->
-      acting_participant = Enum.find(args.table.participants, &(&1.id == args.table.round.participant_to_act_id))
-      :ok = Poker.Tables.sit_in_participant(args.table.id, acting_participant.player_id)
+      player_id = resolve_acting_player(args.table, args.position)
+      :ok = Poker.Tables.sit_in_participant(args.table.id, player_id)
       table = aggregate_state(:table, args.table.id)
       {:ok, %{table: table}}
     end)

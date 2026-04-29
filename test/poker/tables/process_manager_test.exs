@@ -104,7 +104,7 @@ defmodule Poker.Tables.ProcessManagerTest do
     test "auto-folds for sitting out player when their turn comes", ctx do
       current_acting_id = ctx.table.round.participant_to_act_id
 
-      ctx = ctx |> exec(:sit_out)
+      ctx = ctx |> exec(:sit_out, position: :dealer)
 
       assert_receive_event(Poker.App, ParticipantFolded, fn event ->
         assert event.participant_id == current_acting_id
