@@ -67,17 +67,16 @@ Events used by projector:
 - `TableFinished` — update status
 - `TablePaused` / `TableResumed` — update status
 
-**User dependency:** `ParticipantJoined` handler calls `Poker.Accounts.get_user!(player_id)` to fetch email/nickname. Tests that involve `ParticipantJoined` must create a real user via `Poker.Accounts.register_user/1`.
+**User dependency:** `ParticipantJoined` handler calls `Poker.Accounts.get_user!(player_id)` to fetch email/nickname. Tests that involve `ParticipantJoined` must create a real user via SeedFactory's `produce(:player)` with the appropriate trait.
 
 ## What Gets Removed
 
-- `use SeedFactory.Test` no longer needed in projector test modules
 - `import Poker.DeckFixtures` / `arrange_deck` removed entirely
 - `exec(:create_tournament)`, `exec(:fill_tournament)`, `exec(:start_runout)` replaced with direct `handle/2` calls
 - No more PubSub noise from intermediate events
 
 ## What Stays
 
-- `use Poker.DataCase` — still needed for Repo/sandbox
+- `use Poker.DataCase` — still needed for Repo/sandbox (includes `use SeedFactory.Test`)
+- SeedFactory `produce(:player)` — used to create users where TableLobby needs user data
 - PubSub subscribe + `assert_receive` — still tested inline
-- `Poker.Accounts.register_user/1` — used directly (not via SeedFactory) where TableLobby needs user data
