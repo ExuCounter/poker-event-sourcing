@@ -15,13 +15,10 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
       view = GameStateBuilder.build(ctx.table.id, player_id)
 
       assert Map.has_key?(view, :table_status)
-      assert Map.has_key?(view, :hand_id)
       assert Map.has_key?(view, :total_pot)
       assert Map.has_key?(view, :community_cards)
       assert Map.has_key?(view, :participants)
       assert Map.has_key?(view, :valid_actions)
-      assert Map.has_key?(view, :latest_version)
-      assert Map.has_key?(view, :hand_status)
       assert Map.has_key?(view, :timeout_seconds)
       assert Map.has_key?(view, :current_turn)
       assert Map.has_key?(view, :timeout_info)
@@ -314,13 +311,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
       assert replayed_aggregate == commanded_aggregate
     end
 
-    test "returns correct latest_version", ctx do
-      result = GameStateBuilder.replay_events(ctx.table.id)
-
-      assert %{latest_version: latest_version} = result
-      assert is_integer(latest_version)
-      assert latest_version > 0
-    end
   end
 
   describe "replay_events/2 - replay with hand history checkpoint" do
@@ -374,33 +364,6 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
       commanded_aggregate = get_commanded_aggregate(ctx.table.id)
 
       assert replayed_aggregate == commanded_aggregate
-    end
-  end
-
-  describe "replay_events/2 - incremental replay with since_version" do
-    setup ctx do
-      ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
-      |> exec(:fill_tournament)
-    end
-
-    test "returns aggregate at specific version", ctx do
-      %{latest_version: latest_version} = GameStateBuilder.replay_events(ctx.table.id)
-
-      result = GameStateBuilder.replay_events(ctx.table.id, latest_version)
-
-      assert %{aggregate: aggregate, latest_version: ^latest_version} = result
-      assert aggregate.id == ctx.table.id
-    end
-
-    test "incremental replay produces same state as full replay", ctx do
-      %{aggregate: full_aggregate, latest_version: latest_version} =
-        GameStateBuilder.replay_events(ctx.table.id)
-
-      %{aggregate: incremental_aggregate} =
-        GameStateBuilder.replay_events(ctx.table.id, latest_version)
-
-      assert full_aggregate == incremental_aggregate
     end
   end
 

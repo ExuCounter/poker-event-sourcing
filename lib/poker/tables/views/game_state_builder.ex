@@ -32,10 +32,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     since_version = Keyword.get(opts, :since_version)
     game_context = Keyword.get(opts, :game_context)
 
-    %{latest_version: latest_version, aggregate: aggregate} =
-      replay_events(table_id, since_version)
+    %{aggregate: aggregate} = replay_events(table_id, since_version)
 
-    build_view(aggregate, player_id, latest_version,
+    build_view(aggregate, player_id,
       visibility_mode: visibility_mode,
       calculate_actions: calculate_actions,
       game_context: game_context
@@ -47,7 +46,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
   Uses hand histories as checkpoints for efficient replay.
   Supports incremental updates when `since_version` is provided.
-  Returns map with aggregate and latest stream version.
   """
   def replay_events(table_id, since_version \\ nil) do
     stream_id = "table-#{table_id}"
@@ -62,32 +60,26 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     if hand_history do
       initial_aggregate = :erlang.binary_to_term(hand_history.initial_state)
 
-      events =
+      aggregate =
         Poker.App
         |> Commanded.EventStore.stream_forward(stream_id, hand_history.start_version)
         |> limit_events(since_version, hand_history.start_version)
         |> Enum.to_list()
-
-      aggregate =
-        events
         |> Enum.map(& &1.data)
         |> Enum.reduce(initial_aggregate, &Table.apply(&2, &1))
 
-      %{aggregate: aggregate, latest_version: since_version || get_latest_version(events)}
+      %{aggregate: aggregate}
     else
       # No hand history - replay from beginning (table creation, joins, etc.)
-      all_events =
+      aggregate =
         Poker.App
         |> Commanded.EventStore.stream_forward(stream_id)
         |> limit_events(since_version, 0)
         |> Enum.to_list()
-
-      aggregate =
-        all_events
         |> Enum.map(& &1.data)
         |> Enum.reduce(%Table{}, &Table.apply(&2, &1))
 
-      %{aggregate: aggregate, latest_version: since_version || get_latest_version(all_events)}
+      %{aggregate: aggregate}
     end
   end
 
@@ -102,7 +94,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
   Applies visibility rules and optionally calculates valid actions.
   """
-  def build_view(aggregate, player_id, latest_version, opts \\ []) do
+  def build_view(aggregate, player_id, opts \\ []) do
     visibility_mode = Keyword.get(opts, :visibility_mode, :live)
     calculate_actions = Keyword.get(opts, :calculate_actions, true)
     game_context = Keyword.get(opts, :game_context)
@@ -112,10 +104,9 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
     %{
       table_status: aggregate.status,
-      table_type: get_table_type(aggregate),
+      table_type: if(aggregate.settings, do: aggregate.settings.table_type),
       game_mode: aggregate.game_mode,
       source_id: aggregate.source_id,
-      hand_id: get_hand_id(aggregate),
       total_pot: if(hand_active?, do: calculate_total_pot(aggregate), else: 0),
       community_cards:
         if hand_active? and aggregate.status != :paused do
@@ -131,9 +122,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
           default_actions()
         end,
       player_actions: calculate_player_actions(aggregate, current_participant, game_context),
-      latest_version: latest_version,
-      hand_status: get_hand_status(aggregate),
-      timeout_seconds: get_timeout_seconds(aggregate),
+      timeout_seconds: if(aggregate.settings, do: aggregate.settings.timeout_seconds),
       current_turn: if(hand_active?, do: get_current_turn(aggregate)),
       timeout_info: if(hand_active?, do: build_timeout_info(aggregate)),
       my_hand_rank:
@@ -146,22 +135,6 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   end
 
   # Private helpers
-
-  defp get_latest_version(events) do
-    case List.last(events) do
-      nil -> nil
-      event -> event.stream_version
-    end
-  end
-
-  defp get_hand_status(%{hand: %{status: status}}), do: status
-  defp get_hand_status(_), do: nil
-
-  defp get_hand_id(%{hand: %{id: id}}), do: id
-  defp get_hand_id(_), do: nil
-
-  defp get_table_type(%{settings: %{table_type: table_type}}), do: table_type
-  defp get_table_type(_), do: nil
 
   defp calculate_total_pot(%{pots: pots}) when is_list(pots) do
     Enum.reduce(pots, 0, fn pot, acc -> acc + pot.amount end)
@@ -205,7 +178,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     participants
     |> Enum.map(fn participant ->
       participant_hand = find_participant_hand(participant_hands, participant.id)
-      hand_status = get_participant_hand_status(participant_hand)
+      hand_status = if(participant_hand, do: participant_hand.status)
 
       hand_finished? = match?(%{hand: %{status: :finished}}, aggregate)
 
@@ -261,10 +234,10 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         player_id: participant.player_id,
         nickname: participant.nickname,
         chips: participant.chips,
-        position: if(hand_finished?, do: nil, else: get_participant_position(participant_hand)),
+        position: if(hand_finished?, do: nil, else: participant_hand && participant_hand.position),
         seat_number: participant.seat_number,
         status: participant.status,
-        bet_this_round: if(hand_finished?, do: 0, else: get_bet_this_round(participant_hand)),
+        bet_this_round: if(hand_finished?, do: 0, else: (participant_hand && participant_hand.bet_this_round) || 0),
         hand_status: if(hand_finished?, do: nil, else: hand_status),
         hole_cards: hole_cards,
         is_sitting_out: participant.is_sitting_out,
@@ -287,27 +260,12 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     Enum.find(participant_hands, &(&1.participant_id == participant_id))
   end
 
-  defp get_participant_position(%{position: position}), do: position
-  defp get_participant_position(_), do: nil
-
-  defp get_bet_this_round(%{bet_this_round: bet}), do: bet
-  defp get_bet_this_round(_), do: 0
-
-  defp get_participant_hand_status(%{status: status}), do: status
-  defp get_participant_hand_status(_), do: nil
-
   defp find_participant_by_player_id(%{participants: participants}, player_id)
        when is_list(participants) do
     Enum.find(participants, &(&1.player_id == player_id))
   end
 
   defp find_participant_by_player_id(_, _), do: nil
-
-  defp get_big_blind(%{settings: %{big_blind: bb}}), do: bb
-  defp get_big_blind(_), do: 0
-
-  defp get_timeout_seconds(%{settings: %{timeout_seconds: timeout}}), do: timeout
-  defp get_timeout_seconds(_), do: nil
 
   defp get_current_turn(%{round: %{participant_to_act_id: participant_id}})
        when not is_nil(participant_id) do
@@ -460,7 +418,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
 
   defp calculate_raise_options(aggregate, current_participant, call_amount, my_chips) do
     current_bet = get_current_bet(aggregate)
-    big_blind = get_big_blind(aggregate)
+    big_blind = if(aggregate.settings, do: aggregate.settings.big_blind, else: 0)
     total_bets = calculate_total_bets(aggregate)
     my_bet = get_my_bet(aggregate, current_participant)
 

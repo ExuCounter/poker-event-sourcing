@@ -28,14 +28,11 @@ defmodule Poker.Tables.Views.PlayerGameView do
 
   A map containing:
     * `:table_status` - Current table status
-    * `:hand_id` - Current hand identifier
     * `:total_pot` - Total chips in all pots
     * `:community_cards` - Cards on the board
     * `:participants` - List of all participants with their state
     * `:valid_actions` - Actions available to the current player
     * `:player_actions` - Meta-actions available (buy_in, sit_out, sit_in, leave)
-    * `:latest_version` - Stream version of the latest processed event
-    * `:hand_status` - Current hand status (:pre_flop, :flop, etc.)
   """
   def build(table_id, player_id, opts \\ []) do
     GameStateBuilder.build(table_id, player_id,
