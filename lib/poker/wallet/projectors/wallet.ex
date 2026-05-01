@@ -9,7 +9,9 @@ defmodule Poker.Wallet.Projectors.Wallet do
     WalletCreated,
     FundsDeposited,
     FundsReserved,
-    FundsReleased
+    FundsReleased,
+    ReservationToppedUp,
+    TopUpUndone
   }
 
   alias Poker.Wallet.Projections.Wallet
@@ -37,6 +39,24 @@ defmodule Poker.Wallet.Projectors.Wallet do
       :wallet,
       from(w in Wallet, where: w.player_id == ^player_id),
       inc: [balance: -amount, reserved: amount]
+    )
+  end)
+
+  project(%ReservationToppedUp{player_id: player_id, amount: amount}, _metadata, fn multi ->
+    Ecto.Multi.update_all(
+      multi,
+      :wallet,
+      from(w in Wallet, where: w.player_id == ^player_id),
+      inc: [balance: -amount, reserved: amount]
+    )
+  end)
+
+  project(%TopUpUndone{player_id: player_id, amount: amount}, _metadata, fn multi ->
+    Ecto.Multi.update_all(
+      multi,
+      :wallet,
+      from(w in Wallet, where: w.player_id == ^player_id),
+      inc: [balance: amount, reserved: -amount]
     )
   end)
 

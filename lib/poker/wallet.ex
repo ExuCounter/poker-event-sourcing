@@ -12,7 +12,9 @@ defmodule Poker.Wallet do
     CreateWallet,
     DepositFunds,
     ReserveFunds,
-    ReleaseFunds
+    ReleaseFunds,
+    TopUpReservation,
+    UndoTopUp
   }
 
   @doc """
@@ -56,6 +58,38 @@ defmodule Poker.Wallet do
     }
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &ReserveFunds.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
+  end
+
+  @doc """
+  Adds funds to an existing reservation (e.g., cash game rebuy).
+  """
+  def top_up_reservation(player_id, game_id, amount) do
+    command_attrs = %{
+      player_id: player_id,
+      game_id: game_id,
+      amount: amount
+    }
+
+    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &TopUpReservation.changeset/1),
+         :ok <- Poker.App.dispatch(command, consistency: :strong) do
+      :ok
+    end
+  end
+
+  @doc """
+  Reverses a top-up on a reservation (compensation for failed buy-in).
+  """
+  def undo_top_up(player_id, game_id, amount) do
+    command_attrs = %{
+      player_id: player_id,
+      game_id: game_id,
+      amount: amount
+    }
+
+    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &UndoTopUp.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end

@@ -28,7 +28,9 @@ defmodule Poker.Router do
     CreateWallet,
     DepositFunds,
     ReserveFunds,
-    ReleaseFunds
+    ReleaseFunds,
+    TopUpReservation,
+    UndoTopUp
   }
 
   alias Poker.CashGames.Commands.{
@@ -87,7 +89,9 @@ defmodule Poker.Router do
       CreateWallet,
       DepositFunds,
       ReserveFunds,
-      ReleaseFunds
+      ReleaseFunds,
+      TopUpReservation,
+      UndoTopUp
     ],
     to: Wallet
   )

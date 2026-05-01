@@ -34,25 +34,19 @@ defmodule Poker.CashGames do
   Reserves funds from wallet and joins the table.
   """
   def join_cash_game(cash_game_id, player_id, buyin_amount) do
-    with {:get_cash_game, {:ok, cash_game}} <-
-           {:get_cash_game, get_cash_game(cash_game_id)},
-         {:validate_buyin, :ok} <-
-           {:validate_buyin, validate_buyin(cash_game, buyin_amount)},
-         {:reserve_funds, :ok} <-
-           {:reserve_funds, Poker.Wallet.reserve_funds(player_id, cash_game_id, buyin_amount)},
-         {:join_participant, {:ok, participant_id}} <-
-           {:join_participant,
-            Poker.Tables.join_participant(cash_game.table_id, player_id, %{
-              starting_stack: buyin_amount
-            })} do
-      {:ok, participant_id}
-    else
-      {failed_step, error} ->
-        Poker.Saga.compensate(failed_step, [
-          {:reserve_funds, fn -> Poker.Wallet.release_funds(player_id, cash_game_id, buyin_amount) end}
-        ])
+    with {:ok, cash_game} <- get_cash_game(cash_game_id),
+         :ok <- validate_buyin(cash_game, buyin_amount),
+         :ok <- Poker.Wallet.reserve_funds(player_id, cash_game_id, buyin_amount) do
+      case Poker.Tables.join_participant(cash_game.table_id, player_id, %{
+             starting_stack: buyin_amount
+           }) do
+        {:ok, participant_id} ->
+          {:ok, participant_id}
 
-        error
+        error ->
+          Poker.Wallet.release_funds(player_id, cash_game_id, buyin_amount)
+          error
+      end
     end
   end
 
@@ -61,23 +55,17 @@ defmodule Poker.CashGames do
   Reserves additional funds from wallet and adds chips.
   """
   def buy_in(cash_game_id, player_id, amount) do
-    with {:get_cash_game, {:ok, cash_game}} <-
-           {:get_cash_game, get_cash_game(cash_game_id)},
-         {:validate_buyin, :ok} <-
-           {:validate_buyin, validate_buyin(cash_game, amount)},
-         {:reserve_funds, :ok} <-
-           {:reserve_funds, Poker.Wallet.reserve_funds(player_id, cash_game_id, amount)},
-         {:buy_in_participant, :ok} <-
-           {:buy_in_participant,
-            Poker.Tables.buy_in_participant(cash_game.table_id, player_id, amount)} do
-      :ok
-    else
-      {failed_step, error} ->
-        Poker.Saga.compensate(failed_step, [
-          {:reserve_funds, fn -> Poker.Wallet.release_funds(player_id, cash_game_id, amount) end}
-        ])
+    with {:ok, cash_game} <- get_cash_game(cash_game_id),
+         :ok <- validate_buyin(cash_game, amount),
+         :ok <- Poker.Wallet.top_up_reservation(player_id, cash_game_id, amount) do
+      case Poker.Tables.buy_in_participant(cash_game.table_id, player_id, amount) do
+        :ok ->
+          :ok
 
-        error
+        error ->
+          Poker.Wallet.undo_top_up(player_id, cash_game_id, amount)
+          error
+      end
     end
   end
 

@@ -19,14 +19,18 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     CreateWallet,
     DepositFunds,
     ReserveFunds,
-    ReleaseFunds
+    ReleaseFunds,
+    TopUpReservation,
+    UndoTopUp
   }
 
   alias Poker.Wallet.Events.{
     WalletCreated,
     FundsDeposited,
     FundsReserved,
-    FundsReleased
+    FundsReleased,
+    ReservationToppedUp,
+    TopUpUndone
   }
 
   defstruct [
@@ -76,6 +80,35 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     end
   end
 
+  def execute(%__MODULE__{balance: balance}, %TopUpReservation{amount: amount})
+      when balance < amount do
+    {:error, :insufficient_funds}
+  end
+
+  def execute(%__MODULE__{reservations: reservations}, %TopUpReservation{} = cmd) do
+    case Map.get(reservations, cmd.game_id) do
+      nil -> {:error, :reservation_not_found}
+      _existing ->
+        %ReservationToppedUp{
+          player_id: cmd.player_id,
+          game_id: cmd.game_id,
+          amount: cmd.amount
+        }
+    end
+  end
+
+  def execute(%__MODULE__{reservations: reservations}, %UndoTopUp{} = cmd) do
+    case Map.get(reservations, cmd.game_id) do
+      nil -> {:error, :reservation_not_found}
+      _existing ->
+        %TopUpUndone{
+          player_id: cmd.player_id,
+          game_id: cmd.game_id,
+          amount: cmd.amount
+        }
+    end
+  end
+
   def execute(%__MODULE__{reservations: reservations}, %ReleaseFunds{} = cmd) do
     case Map.get(reservations, cmd.game_id) do
       nil ->
@@ -110,6 +143,22 @@ defmodule Poker.Wallet.Aggregates.Wallet do
       wallet
       | balance: balance - event.amount,
         reservations: Map.put(reservations, event.game_id, event.amount)
+    }
+  end
+
+  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %ReservationToppedUp{} = event) do
+    %__MODULE__{
+      wallet
+      | balance: balance - event.amount,
+        reservations: Map.update!(reservations, event.game_id, &(&1 + event.amount))
+    }
+  end
+
+  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %TopUpUndone{} = event) do
+    %__MODULE__{
+      wallet
+      | balance: balance + event.amount,
+        reservations: Map.update!(reservations, event.game_id, &(&1 - event.amount))
     }
   end
 
