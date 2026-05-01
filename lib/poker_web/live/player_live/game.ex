@@ -125,9 +125,15 @@ defmodule PokerWeb.PlayerLive.Game do
   ]
 
   defp handle_action_result(:ok, socket), do: {:noreply, socket}
-  defp handle_action_result({:error, reason}, socket) when reason in @silent_errors, do: {:noreply, socket}
-  defp handle_action_result({:error, %{status: status}}, socket) when status in @silent_errors, do: {:noreply, socket}
-  defp handle_action_result({:error, reason}, socket), do: {:noreply, put_flash(socket, :error, format_error(reason))}
+
+  defp handle_action_result({:error, reason}, socket) when reason in @silent_errors,
+    do: {:noreply, socket}
+
+  defp handle_action_result({:error, %{status: status}}, socket) when status in @silent_errors,
+    do: {:noreply, socket}
+
+  defp handle_action_result({:error, reason}, socket),
+    do: {:noreply, put_flash(socket, :error, format_error(reason))}
 
   # Action event handlers
   @impl true
@@ -395,24 +401,6 @@ defmodule PokerWeb.PlayerLive.Game do
 
   defp format_error(reason), do: "Action failed: #{inspect(reason)}"
 
-  defp tournament_position(participants, current_user_id) do
-    sorted =
-      participants
-      |> Enum.sort_by(& &1.chips, :desc)
-
-    case Enum.find_index(sorted, &(&1.player_id == current_user_id)) do
-      nil -> nil
-      idx -> idx + 1
-    end
-  end
-
-  defp payout_for_position(payouts, position) do
-    case Enum.find(payouts, &(&1.position == position)) do
-      %{payout_amount: amount} -> amount
-      _ -> nil
-    end
-  end
-
   defp refresh_player_actions(socket) do
     game_view =
       Tables.get_player_game_view(socket.assigns.current_scope, socket.assigns.table_id,
@@ -489,7 +477,10 @@ defmodule PokerWeb.PlayerLive.Game do
 
     ~H"""
     <div style="height: 100vh; position: relative; overflow: hidden;">
-      <div class="absolute top-4 left-1/2 z-50" style="transform: translateX(-50%) scale(var(--ui-scale, 1)); transform-origin: top center;">
+      <div
+        class="absolute top-4 left-1/2 z-50"
+        style="transform: translateX(-50%) scale(var(--ui-scale, 1)); transform-origin: top center;"
+      >
         <.flash kind={:error} flash={@flash} />
         <.flash kind={:info} flash={@flash} />
       </div>
@@ -503,8 +494,6 @@ defmodule PokerWeb.PlayerLive.Game do
       
     <!-- Tournament HUD (outside scaled container) -->
       <%= if @game_context && @game_context.type == :tournament do %>
-        <% position = tournament_position(@game_view.participants, @current_user_id) %>
-        <% current_payout = if position, do: payout_for_position(@game_context.payouts, position) %>
         <div class="absolute top-14 right-5 z-10 text-right leading-snug">
           <div class="text-xs text-gray-400">
             Blinds level: {@game_context.current_level}
@@ -522,14 +511,16 @@ defmodule PokerWeb.PlayerLive.Game do
               />
             <% end %>
           </div>
-          <%= if position do %>
+          <%= if @game_view.tournament_position do %>
             <div class="text-xs text-gray-400">
               Sit & Go <span class="text-gray-500">·</span>
               {@game_context.players_remaining}/{@game_context.total_players} players
               <span class="text-gray-500">·</span>
-              <span class="text-white font-medium">{position}/{@game_context.players_remaining}</span>
-              <%= if current_payout do %>
-                <span class="text-emerald-400 font-medium">(+{current_payout})</span>
+              <span class="text-white font-medium">
+                {@game_view.tournament_position}/{@game_context.players_remaining}
+              </span>
+              <%= if @game_view.current_payout do %>
+                <span class="text-emerald-400 font-medium">(+{@game_view.current_payout})</span>
               <% end %>
             </div>
           <% else %>
@@ -544,9 +535,7 @@ defmodule PokerWeb.PlayerLive.Game do
       <div style="transform: scale(var(--ui-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1));">
         <!-- Sit Out/In/Buy In Button - bottom-left corner -->
         <%= if @game_view.player_actions.is_participant do %>
-          <div
-            class="absolute left-5 bottom-5 z-10 flex"
-          >
+          <div class="absolute left-5 bottom-5 z-10 flex">
             <!-- Buy In button (cash games) -->
             <%= if @game_view.player_actions.can_buy_in != false or @game_view.game_mode == :cash_game do %>
               <% can_buy_in = @game_view.player_actions.can_buy_in != false %>
@@ -640,9 +629,7 @@ defmodule PokerWeb.PlayerLive.Game do
         <% end %>
         
     <!-- Action Controls - positioned and scaled -->
-        <div
-          class="absolute bottom-[16px] right-[16px]"
-        >
+        <div class="absolute bottom-[16px] right-[16px]">
           <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
             <div class="bg-gray-900 rounded-xl p-4 shadow-2xl border-2 border-gray-700 flex flex-col">
               

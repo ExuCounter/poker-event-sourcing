@@ -100,7 +100,12 @@ defmodule Poker.Tables.Views.GameStateBuilder do
     game_context = Keyword.get(opts, :game_context)
 
     current_participant = find_participant_by_player_id(aggregate, player_id)
-    hand_active? = aggregate.hand != nil and not match?(%{hand: %{status: :finished}}, aggregate)
+
+    hand_active? =
+      if aggregate.hand, do: not match?(%{hand: %{status: :finished}}, aggregate), else: false
+
+    participants = build_participants_list(aggregate, player_id, visibility_mode)
+    tournament_position = get_tournament_position(participants, player_id)
 
     %{
       table_status: aggregate.status,
@@ -108,13 +113,19 @@ defmodule Poker.Tables.Views.GameStateBuilder do
       game_mode: aggregate.game_mode,
       source_id: aggregate.source_id,
       total_pot: if(hand_active?, do: calculate_total_pot(aggregate), else: 0),
+      current_payout:
+        if(game_context[:payouts],
+          do: get_current_payout(game_context.payouts, tournament_position),
+          else: nil
+        ),
+      tournament_position: tournament_position,
       community_cards:
         if hand_active? and aggregate.status != :paused do
           aggregate.community_cards
         else
           []
         end,
-      participants: build_participants_list(aggregate, player_id, visibility_mode),
+      participants: participants,
       valid_actions:
         if hand_active? and calculate_actions do
           calculate_valid_actions(aggregate, current_participant)
@@ -135,6 +146,21 @@ defmodule Poker.Tables.Views.GameStateBuilder do
   end
 
   # Private helpers
+  defp get_tournament_position(participants, current_user_id) do
+    sorted = participants |> Enum.sort_by(& &1.chips, :desc)
+
+    case Enum.find_index(sorted, &(&1.player_id == current_user_id)) do
+      nil -> nil
+      idx -> idx + 1
+    end
+  end
+
+  defp get_current_payout(payouts, position) do
+    case Enum.find(payouts, &(&1.position == position)) do
+      %{payout_amount: amount} -> amount
+      _ -> nil
+    end
+  end
 
   defp calculate_total_pot(%{pots: pots}) when is_list(pots) do
     Enum.reduce(pots, 0, fn pot, acc -> acc + pot.amount end)
@@ -234,10 +260,15 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         player_id: participant.player_id,
         nickname: participant.nickname,
         chips: participant.chips,
-        position: if(hand_finished?, do: nil, else: participant_hand && participant_hand.position),
+        position:
+          if(hand_finished?, do: nil, else: participant_hand && participant_hand.position),
         seat_number: participant.seat_number,
         status: participant.status,
-        bet_this_round: if(hand_finished?, do: 0, else: (participant_hand && participant_hand.bet_this_round) || 0),
+        bet_this_round:
+          if(hand_finished?,
+            do: 0,
+            else: (participant_hand && participant_hand.bet_this_round) || 0
+          ),
         hand_status: if(hand_finished?, do: nil, else: hand_status),
         hole_cards: hole_cards,
         is_sitting_out: participant.is_sitting_out,
