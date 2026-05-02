@@ -7,76 +7,69 @@ defmodule PokerWeb.UserLive.Registration do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-md w-full">
-        <!-- Main Card -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <!-- Header -->
-          <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-500">
-            <h1 class="text-2xl font-bold text-white text-center">Create Your Account</h1>
-            <p class="text-emerald-50 text-center text-sm mt-1">
-              Join the poker action today
-            </p>
-          </div>
-
-          <div class="p-6">
-            <.form for={@form} id="registration_form" phx-submit="save" phx-change="validate" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Email Address
-                  </div>
-                </label>
-                <.input
-                  field={@form[:email]}
-                  type="email"
-                  label=""
-                  autocomplete="username"
-                  required
-                  phx-mounted={JS.focus()}
-                  class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
-                />
-              </div>
-
-              <.button
-                phx-disable-with="Creating account..."
-                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                Create Account
-              </.button>
-            </.form>
-
-            <!-- Info Box -->
-            <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-750 rounded-lg border border-slate-200 dark:border-slate-600">
-              <div class="flex gap-3">
-                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div class="text-sm text-slate-600 dark:text-slate-400">
-                  <p class="font-medium text-slate-900 dark:text-white">Email-based Authentication</p>
-                  <p class="mt-1">We'll send you a magic link to log in. No password needed unless you set one up later.</p>
-                </div>
-              </div>
-            </div>
+    <div class="min-h-screen flex font-[family-name:var(--pkr-font-ui)]">
+      <!-- Left poster -->
+      <div class="hidden lg:flex flex-1 relative overflow-hidden bg-[var(--pkr-bg-1)]">
+        <div class="absolute inset-0 opacity-60" style="background: radial-gradient(ellipse at 30% 50%, var(--pkr-accent), transparent 65%)"></div>
+        <div class="absolute top-8 left-8">
+          <div class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
+            Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
           </div>
         </div>
+        <div class="absolute left-14 bottom-14 right-14 flex flex-col gap-3.5">
+          <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">EST. 2026</div>
+          <h1 class="font-[family-name:var(--pkr-font-display)] text-[56px] leading-[0.96] max-w-[480px] text-[var(--pkr-ink-1)]">
+            A poker room <em class="text-[var(--pkr-accent)]">built for the hand,</em> not the hype.
+          </h1>
+          <p class="text-[var(--pkr-ink-2)] text-sm max-w-[420px] leading-relaxed">
+            Honest tables, integrated stats. No flashy pop-ups, no juiced rake.
+          </p>
+        </div>
+      </div>
 
-        <!-- Login Link -->
-        <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-          Already have an account?
-          <.link
-            navigate={~p"/users/log-in"}
-            class="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
-          >
-            Log in here
+      <!-- Right form -->
+      <div class="w-full lg:w-[460px] border-l border-[var(--pkr-line)] flex flex-col justify-center px-10 lg:px-14 py-16">
+        <.flash kind={:error} flash={@flash} />
+        <.flash kind={:info} flash={@flash} />
+
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">CREATE ACCOUNT</div>
+        <h2 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)] mb-6">
+          Pull up a chair.
+        </h2>
+
+        <.form for={@form} id="registration_form" phx-submit="save" phx-change="validate" class="space-y-3">
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+            <.input
+              field={@form[:email]}
+              type="email"
+              autocomplete="username"
+              required
+              phx-mounted={JS.focus()}
+              placeholder="you@example.com"
+              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+            />
+          </div>
+
+          <button type="submit" phx-disable-with="Creating account..." class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer mt-1">
+            Create Account
+          </button>
+        </.form>
+
+        <!-- Info -->
+        <div class="mt-5 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)]">
+          <p class="text-xs text-[var(--pkr-ink-3)] leading-relaxed">
+            We'll send you a magic link to log in. No password needed &mdash; you can set one up later in settings.
+          </p>
+        </div>
+
+        <!-- Login link -->
+        <div class="text-xs text-[var(--pkr-ink-3)] text-center mt-8">
+          Have an account?
+          <.link navigate={~p"/users/log-in"} class="text-[var(--pkr-accent)] hover:underline">
+            Sign in
           </.link>
-        </p>
+        </div>
       </div>
     </div>
     """

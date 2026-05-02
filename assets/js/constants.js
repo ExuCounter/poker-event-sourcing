@@ -1,4 +1,5 @@
 // Poker canvas constants - single source of truth for positioning and offsets
+// Design direction: "Cellar" — editorial casino warmth (oxblood + forest felt + brass)
 
 // ============================================================================
 // BASE LAYOUT
@@ -55,20 +56,23 @@ export const CARD_TEXT_POSITIONS = {
 };
 
 // ============================================================================
-// CARD COLORS
+// CARD COLORS — Cellar direction
 // ============================================================================
 export const CARD_COLORS = {
-  // Face down card
-  backBg: 0x1a365d,
-  backBorder: 0x2d4a6f,
-  backPattern: 0x152951,
-  backDiamond: 0x3b5998,
+  // Face down card — tartan oxblood pattern
+  backBg: 0x5c2420,
+  backBorder: 0x3a1510,
+  backPattern: 0x4a1c18,
+  backStripe1: 0x6b2c28,
+  backStripe2: 0x4a1c18,
+  backInnerBorder: 0xffffff,
 
   // Face up card
   faceBg: 0xffffff,
-  faceBorder: 0x333333,
-  red: 0xdc2626,
-  black: 0x1f2937,
+  faceGradientEnd: 0xf4f1ea,
+  faceBorder: 0xe0dcd4,
+  red: 0xb53236,
+  black: 0x1a1a1a,
 };
 
 export const CARD_SUIT_SYMBOLS = {
@@ -89,13 +93,47 @@ export const CHIP_NOTCH_RADIUS = 16;
 export const CHIP_NOTCH_SIZE = 3;
 export const CHIP_INNER_RING_RADIUS = 12;
 
-export const CHIP_VALUES = [100, 25, 5, 1];
+export const CHIP_VALUES = [1000, 100, 25, 5, 1];
 
 export const CHIP_COLORS = {
+  1000: 0xb8902f, // Brass
   100: 0x1a1a1a, // Black
-  25: 0x059669, // Emerald green
-  5: 0xdc2626, // Red
-  1: 0xf5f5f5, // Off-white
+  25: 0x2d6a4f, // Forest green
+  5: 0xb53236, // Oxblood red
+  1: 0xf4f1ea, // Bone white
+};
+
+export const CHIP_EDGE_COLORS = {
+  1000: 0x6b5117,
+  100: 0x000000,
+  25: 0x163d2a,
+  5: 0x7a1c20,
+  1: 0xcfc8ba,
+};
+
+// ============================================================================
+// TABLE COLORS — Cellar direction
+// ============================================================================
+export const TABLE_COLORS = {
+  // Room background
+  roomBg: 0x1f1714,
+  roomPatternShadow: 0x150f0c,
+  roomPatternMain: 0x241a15,
+
+  // Felt
+  felt: 0x2a5940,
+  feltGlow: 0x3a7258,
+  feltRim: 0x1a3d2c,
+
+  // Table rail
+  outerRim: 0x2d1f18,
+  outerRimBottom: 0x1a110d,
+  innerAccent: 0xc4a43a,
+  innerAccentAlpha: 0.3,
+
+  // Pot text
+  potLabel: 0xc4a43a,
+  potAmount: 0xf4f1ea,
 };
 
 // ============================================================================
@@ -103,29 +141,94 @@ export const CHIP_COLORS = {
 // ============================================================================
 export const HOOD_WIDTH = 180;
 export const HOOD_HEIGHT = 95;
-export const HOOD_BORDER_RADIUS = 48;
-export const HOOD_PADDING = 16;
+export const HOOD_BORDER_RADIUS = 12;
+export const HOOD_PADDING = 12;
 export const CARD_OVERLAP = 79;
 export const CARD_OFFSET_X = 0;
 
+// Avatar
+export const AVATAR_SIZE = 30;
+export const AVATAR_SIZE_HERO = 38;
+
 // ============================================================================
-// PARTICIPANT COLORS
+// PARTICIPANT COLORS — Cellar direction
 // ============================================================================
 export const PARTICIPANT_COLORS = {
-  hoodBg: 0x1a1a1a,
-  hoodBgFolded: 0x2a2a2a,
-  border: 0x4a4a4a,
-  borderFolded: 0x404040,
-  divider: 0x3a3a3a,
-  text: 0xffffff,
-  textFolded: 0x888888,
-  chips: 0x4ade80,
-  chipsFolded: 0x666666,
-  activeGlow: 0xf4d03f,
+  hoodBg: 0x0f0f12,
+  hoodBgAlpha: 0.88,
+  hoodBgFolded: 0x0f0f12,
+  hoodBgFoldedAlpha: 0.55,
+  border: 0x3a3428,
+  borderFolded: 0x2a2620,
+  borderActive: 0xc4a43a,
+  divider: 0x3a3428,
+  text: 0xc8c0b0,
+  textFolded: 0x7a7468,
+  chips: 0xc4a43a,
+  chipsFolded: 0x5a5448,
+  activeGlow: 0xc4a43a,
+  activeGlowAlpha: 0.25,
   timerGreen: 0x4ade80,
   timerYellow: 0xfbbf24,
   timerRed: 0xef4444,
-  timerBg: 0x333333,
+  timerBg: 0x2a2620,
+  positionBadgeBg: 0x2a2620,
+  positionBadgeBorder: 0x3a3428,
+  positionBadgeText: 0xc4a43a,
+  allInText: 0xc4a43a,
+  actionLabelBg: 0x2a2620,
+  actionLabelBorder: 0x3a3428,
+  actionLabelText: 0x7a7468,
+  actionLabelAllIn: 0xc4a43a,
+  sittingOutText: 0x7a7468,
+};
+
+// Action indicator colors — Cellar palette
+export const ACTION_INDICATOR_COLORS = {
+  RAISE: 0xc4a43a,
+  CALL: 0x4ade80,
+  CHECK: 0x60a5fa,
+  FOLD: 0x8a2f20,
+  "ALL IN": 0xc4a43a,
+  AWAY: 0x7a7468,
+  "I'M BACK": 0x4ade80,
+};
+
+// ============================================================================
+// DEALER BUTTON — Cellar (brass)
+// ============================================================================
+export const DEALER_BUTTON = {
+  bgGradientTop: 0xf4f1ea,
+  bgGradientBottom: 0xd8d2c0,
+  border: 0x8a7a55,
+  text: 0x3a2a14,
+  shadow: 0x000000,
+  shadowAlpha: 0.4,
+  radius: 14,
+};
+
+// ============================================================================
+// EMPTY SEAT
+// ============================================================================
+export const EMPTY_SEAT_COLORS = {
+  bg: 0x0f0f12,
+  bgAlpha: 0.6,
+  border: 0x3a3428,
+  borderAlpha: 0.5,
+  labelText: 0x7a7468,
+  openText: 0xc4a43a,
+  hoverBg: 0x1a1814,
+  hoverBgAlpha: 0.8,
+  hoverBorder: 0xc4a43a,
+};
+
+// ============================================================================
+// FONTS
+// ============================================================================
+export const FONTS = {
+  ui: "'DM Sans', system-ui, sans-serif",
+  display: "'Bodoni Moda', 'Times New Roman', serif",
+  mono: "'IBM Plex Mono', monospace",
 };
 
 // ============================================================================

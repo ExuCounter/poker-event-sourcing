@@ -7,6 +7,9 @@
     <.live_title default="Poker" suffix=" · Phoenix Framework">
       {assigns[:page_title]}
     </.live_title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Bodoni+Moda:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
@@ -32,30 +35,28 @@
   </head>
   <body>
     <div class="absolute left-0 top-0 w-full z-10">
-      <div class="flex items-center justify-between" style="transform: scale(var(--ui-scale, 0)); width: calc(100vw / var(--ui-scale, 1)); transform-origin: 0 0">
+      <div class="flex items-center justify-between border-b border-[var(--pkr-line)] bg-black/40 backdrop-blur-lg font-[family-name:var(--pkr-font-ui)]" style="transform: scale(var(--ui-scale, 0)); width: calc(100vw / var(--ui-scale, 1)); transform-origin: 0 0">
         <!-- Left Navigation -->
-        <div class="flex items-center gap-2 pl-6 py-4">
+        <div class="flex items-center gap-3 pl-5 py-3">
           <.link
             href={@lobby_path}
-            class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+            class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] px-3 py-1.5 rounded-md border border-transparent hover:border-[var(--pkr-line)] transition-all"
           >
             <span class="flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+              <span class="text-sm">&larr;</span>
               Lobby
             </span>
           </.link>
 
+          <div class="w-px h-4 bg-[var(--pkr-line)]"></div>
+
           <%= if assigns[:replay] do %>
             <.link
               href={~p"/tables/#{@table_id}/game"}
-              class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+              class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] px-3 py-1.5 rounded-md border border-transparent hover:border-[var(--pkr-line)] transition-all"
             >
               <span class="flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
+                <span class="text-sm">&larr;</span>
                 Back to Game
               </span>
             </.link>
@@ -63,10 +64,10 @@
             <.link
               href={~p"/tables/#{@table_id}/replay"}
               target="_blank"
-              class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+              class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] px-3 py-1.5 rounded-md border border-transparent hover:border-[var(--pkr-line)] transition-all"
             >
               <span class="flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -77,10 +78,10 @@
         </div>
 
         <!-- Right Navigation -->
-        <div class="flex items-center gap-2 pr-6 py-4">
+        <div class="flex items-center gap-2 pr-5 py-3">
           <.link
             href={~p"/users/settings"}
-            class="px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+            class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] hover:text-[var(--pkr-ink-1)] transition-all cursor-pointer"
           >
             Settings
           </.link>
@@ -89,20 +90,15 @@
             <button
               phx-click="leave_table"
               data-confirm="Are you sure you want to leave the table? Your chips will be returned to your balance."
-              class="px-4 py-2 text-sm font-medium text-white bg-red-500/80 hover:bg-red-600/90 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+              class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all cursor-pointer"
             >
-              <span class="flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Leave
-              </span>
+              Leave
             </button>
           <% else %>
             <.link
               href={~p"/users/log-out"}
               method="delete"
-              class="px-4 py-2 text-sm font-medium text-white bg-red-500/80 hover:bg-red-600/90 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
+              class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all cursor-pointer"
             >
               Log out
             </.link>

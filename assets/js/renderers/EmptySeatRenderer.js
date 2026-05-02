@@ -2,6 +2,8 @@ import * as PIXI from "pixi.js";
 import {
   TABLE_WIDTH,
   TABLE_HEIGHT,
+  EMPTY_SEAT_COLORS,
+  FONTS,
 } from "../constants.js";
 
 const EMPTY_SEAT_SIZE = 110; // Diameter for circular empty seats
@@ -127,33 +129,38 @@ export class EmptySeatRenderer {
     // Circular semi-transparent background
     const bg = new PIXI.Graphics();
     bg.circle(halfSize, halfSize, halfSize);
-    bg.fill({ color: 0x1a1a1a, alpha: 0.6 });
-    bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.5 });
+    bg.fill({ color: EMPTY_SEAT_COLORS.bg, alpha: EMPTY_SEAT_COLORS.bgAlpha });
+    bg.stroke({
+      color: EMPTY_SEAT_COLORS.border,
+      width: 1.5,
+      alpha: EMPTY_SEAT_COLORS.borderAlpha,
+    });
     seatContainer.addChild(bg);
 
     // "Seat N" label
     const seatLabel = new PIXI.Text({
       text: `Seat ${this.seatNumber}`,
       style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
-        fontWeight: "bold",
-        fill: 0xaaaaaa,
+        fontFamily: FONTS.mono,
+        fontSize: 16,
+        fontWeight: "500",
+        fill: EMPTY_SEAT_COLORS.labelText,
+        letterSpacing: 1,
       },
     });
     seatLabel.anchor.set(0.5, 0.5);
     seatLabel.position.set(halfSize, halfSize - 12);
     seatContainer.addChild(seatLabel);
 
-    // "Click to join" or empty placeholder based on user status
+    // "Open" or "Empty" based on user status
     if (!isCurrentUserSeated) {
       const joinText = new PIXI.Text({
         text: "Open",
         style: {
-          fontFamily: "Arial, sans-serif",
+          fontFamily: FONTS.ui,
           fontSize: 16,
           fontWeight: "bold",
-          fill: 0x4ade80,
+          fill: EMPTY_SEAT_COLORS.openText,
         },
       });
       joinText.anchor.set(0.5, 0.5);
@@ -164,24 +171,38 @@ export class EmptySeatRenderer {
       this.container.on("pointerover", () => {
         bg.clear();
         bg.circle(halfSize, halfSize, halfSize);
-        bg.fill({ color: 0x2a2a2a, alpha: 0.8 });
-        bg.stroke({ color: 0x4ade80, width: 2, alpha: 0.9 });
+        bg.fill({
+          color: EMPTY_SEAT_COLORS.hoverBg,
+          alpha: EMPTY_SEAT_COLORS.hoverBgAlpha,
+        });
+        bg.stroke({
+          color: EMPTY_SEAT_COLORS.hoverBorder,
+          width: 2,
+          alpha: 0.9,
+        });
       });
 
       this.container.on("pointerout", () => {
         bg.clear();
         bg.circle(halfSize, halfSize, halfSize);
-        bg.fill({ color: 0x1a1a1a, alpha: 0.6 });
-        bg.stroke({ color: 0x4a4a4a, width: 2, alpha: 0.5 });
+        bg.fill({
+          color: EMPTY_SEAT_COLORS.bg,
+          alpha: EMPTY_SEAT_COLORS.bgAlpha,
+        });
+        bg.stroke({
+          color: EMPTY_SEAT_COLORS.border,
+          width: 1.5,
+          alpha: EMPTY_SEAT_COLORS.borderAlpha,
+        });
       });
     } else {
       // Show "Empty" for seated users
       const emptyText = new PIXI.Text({
         text: "Empty",
         style: {
-          fontFamily: "Arial, sans-serif",
+          fontFamily: FONTS.ui,
           fontSize: 16,
-          fill: 0x999999,
+          fill: EMPTY_SEAT_COLORS.labelText,
         },
       });
       emptyText.anchor.set(0.5, 0.5);

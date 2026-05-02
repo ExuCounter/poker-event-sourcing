@@ -107,6 +107,29 @@
 
 /* This file is for your main application CSS */
 
+/* ============================================================================
+   POKER TABLE — "Cellar" Design Direction
+   Design tokens only — all component styles use Tailwind utility classes
+   ============================================================================ */
+
+:root {
+  --pkr-bg-0: oklch(15% 0.018 30);
+  --pkr-bg-1: oklch(20% 0.028 28);
+  --pkr-bg-2: oklch(26% 0.04 28);
+  --pkr-line: oklch(34% 0.04 28);
+  --pkr-ink-1: oklch(96% 0.01 80);
+  --pkr-ink-2: oklch(78% 0.02 80);
+  --pkr-ink-3: oklch(58% 0.02 80);
+  --pkr-accent: oklch(76% 0.13 85);
+  --pkr-accent-2: oklch(58% 0.18 28);
+  --pkr-positive: oklch(72% 0.13 150);
+  --pkr-warn: oklch(72% 0.16 60);
+  --pkr-danger: oklch(64% 0.2 25);
+  --pkr-font-ui: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --pkr-font-display: 'Bodoni Moda', ui-serif, 'Times New Roman', serif;
+  --pkr-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
 /* Poker Game Animations */
 @keyframes fadeInOut {
   0% {

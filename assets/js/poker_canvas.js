@@ -16,6 +16,7 @@ import {
   TABLE_WIDTH,
   TABLE_HEIGHT,
   TABLE_BORDER_RADIUS,
+  TABLE_COLORS,
 } from "./constants.js";
 
 export const PokerCanvas = {
@@ -34,11 +35,11 @@ export const PokerCanvas = {
 
     await this.app.init({
       canvas: this.el,
-      backgroundColor: 0x1a3d2e,
+      backgroundColor: TABLE_COLORS.roomBg,
       resizeTo: window,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
-      antialias: false,
+      antialias: true,
     });
 
     console.log(this.state);
@@ -433,13 +434,13 @@ export const PokerCanvas = {
     const w = BASE_WIDTH + margin * 2;
     const h = BASE_HEIGHT + margin * 2;
 
+    // Warm near-black background (Cellar)
     bg.rect(x, y, w, h);
-    bg.fill(0x1a3d2e);
+    bg.fill(TABLE_COLORS.roomBg);
 
-    // Shadow layer (offset slightly down-right)
-    this.drawDiamondPattern(bg, x + 1.5, y + 2, w, h, 18, 0x0e2a1a, 0.5);
-    // Main diamonds (darker, more subtle)
-    this.drawDiamondPattern(bg, x, y, w, h, 18, 0x173d2b, 0.8);
+    // Subtle diamond pattern in warm tones
+    this.drawDiamondPattern(bg, x + 1.5, y + 2, w, h, 18, TABLE_COLORS.roomPatternShadow, 0.5);
+    this.drawDiamondPattern(bg, x, y, w, h, 18, TABLE_COLORS.roomPatternMain, 0.8);
 
     return bg;
   },
@@ -458,12 +459,12 @@ export const PokerCanvas = {
     roomBg.zIndex = -10;
     this.containers.tableContainer.addChild(roomBg);
 
-    // Create table with fixed dimensions (rounded rectangle like poker room)
+    // Create table — elliptical felt with Cellar styling
     const tableGraphics = new PIXI.Graphics();
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
 
-    // Outer glow/shadow effect
+    // Outer shadow/glow
     tableGraphics.roundRect(
       -halfW - 15,
       -halfH - 11,
@@ -471,9 +472,9 @@ export const PokerCanvas = {
       TABLE_HEIGHT + 30,
       TABLE_BORDER_RADIUS + 10,
     );
-    tableGraphics.fill({ color: 0x000000, alpha: 0.03 });
+    tableGraphics.fill({ color: 0x000000, alpha: 0.3 });
 
-    // Main table felt
+    // Outer rim — dark oxblood
     tableGraphics.roundRect(
       -halfW,
       -halfH,
@@ -481,21 +482,31 @@ export const PokerCanvas = {
       TABLE_HEIGHT,
       TABLE_BORDER_RADIUS,
     );
-    tableGraphics.fill(0x35654d);
+    tableGraphics.fill(TABLE_COLORS.outerRim);
 
-    // Inner felt highlight
+    // Inner felt — forest green with glow
     tableGraphics.roundRect(
-      -halfW + 20,
-      -halfH + 10,
-      TABLE_WIDTH - 40,
-      TABLE_HEIGHT - 30,
-      TABLE_BORDER_RADIUS - 20,
+      -halfW + 16,
+      -halfH + 12,
+      TABLE_WIDTH - 32,
+      TABLE_HEIGHT - 24,
+      TABLE_BORDER_RADIUS - 16,
     );
-    tableGraphics.fill(0x3d7359);
+    tableGraphics.fill(TABLE_COLORS.felt);
+
+    // Felt center glow highlight
+    tableGraphics.roundRect(
+      -halfW + 40,
+      -halfH + 30,
+      TABLE_WIDTH - 80,
+      TABLE_HEIGHT - 60,
+      TABLE_BORDER_RADIUS - 40,
+    );
+    tableGraphics.fill({ color: TABLE_COLORS.feltGlow, alpha: 0.4 });
 
     this.containers.tableContainer.addChild(tableGraphics);
 
-    // Table rail (border)
+    // Table rail border
     const railGraphics = new PIXI.Graphics();
     railGraphics.roundRect(
       -halfW,
@@ -504,17 +515,21 @@ export const PokerCanvas = {
       TABLE_HEIGHT,
       TABLE_BORDER_RADIUS,
     );
-    railGraphics.stroke({ width: 12, color: 0x5c3d2e }); // Wood color
+    railGraphics.stroke({ width: 10, color: TABLE_COLORS.outerRimBottom });
 
-    // Inner rail edge
+    // Inner accent line — brass
     railGraphics.roundRect(
-      -halfW + 6,
-      -halfH + 4,
-      TABLE_WIDTH - 12,
-      TABLE_HEIGHT - 8,
-      TABLE_BORDER_RADIUS - 6,
+      -halfW + 14,
+      -halfH + 10,
+      TABLE_WIDTH - 28,
+      TABLE_HEIGHT - 20,
+      TABLE_BORDER_RADIUS - 14,
     );
-    railGraphics.stroke({ width: 2, color: 0x8b6914 }); // Gold trim
+    railGraphics.stroke({
+      width: 1,
+      color: TABLE_COLORS.innerAccent,
+      alpha: TABLE_COLORS.innerAccentAlpha,
+    });
 
     this.containers.tableContainer.addChild(railGraphics);
 

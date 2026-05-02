@@ -129,388 +129,315 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   defp validate_buyins(min, max) when min <= max, do: :ok
   defp validate_buyins(_, _), do: {:error, "Min buy-in must be less than or equal to max buy-in"}
 
+  defp format_table_type(:two_max), do: "HU"
+  defp format_table_type(:three_max), do: "3-max"
+  defp format_table_type(:four_max), do: "4-max"
+  defp format_table_type(:six_max), do: "6-max"
+  defp format_table_type(_), do: "—"
+
+  defp format_stakes(small_blind, big_blind), do: "$#{small_blind}/$#{big_blind}"
+
+  defp seats_total(:two_max), do: 2
+  defp seats_total(:three_max), do: 3
+  defp seats_total(:four_max), do: 4
+  defp seats_total(:six_max), do: 6
+  defp seats_total(_), do: 6
+
+  defp status_color(:live), do: "bg-[var(--pkr-positive)]"
+  defp status_color(:waiting), do: "bg-[var(--pkr-accent)]"
+  defp status_color(:paused), do: "bg-[var(--pkr-ink-3)]"
+  defp status_color(:finished), do: "bg-[var(--pkr-danger)]"
+  defp status_color(_), do: "bg-[var(--pkr-ink-3)]"
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="mb-8 flex items-center justify-between">
-          <div>
-            <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">Poker Lobby</h1>
-            <p class="text-slate-600 dark:text-slate-400">Join a game or create your own</p>
-          </div>
-          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 px-6 py-4">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Balance</p>
-            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${@balance}</p>
-          </div>
+    <div class="min-h-screen flex flex-col font-[family-name:var(--pkr-font-ui)]">
+      <!-- Top bar -->
+      <header class="h-14 flex items-center justify-between px-5 border-b border-[var(--pkr-line)]">
+        <div class="flex items-center gap-3.5">
+          <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
+            Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
+          </.link>
         </div>
+        <div class="flex items-center gap-3.5">
+          <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)]">
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">BANKROLL</span>
+            <span class="font-[family-name:var(--pkr-font-mono)] text-sm font-semibold text-[var(--pkr-ink-1)]">${@balance}</span>
+          </div>
+          <span class="text-xs text-[var(--pkr-ink-3)]">{@current_scope.user.email}</span>
+          <.link href={~p"/users/settings"} class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] transition-all">
+            Settings
+          </.link>
+          <.link href={~p"/users/log-out"} method="delete" class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all">
+            Log out
+          </.link>
+        </div>
+      </header>
 
-        <!-- Tabs -->
-        <div class="mb-6">
-          <div class="border-b border-slate-200 dark:border-slate-700">
-            <nav class="-mb-px flex space-x-8">
+      <div class="flex flex-1 min-h-0">
+        <!-- Sidebar -->
+        <aside class="w-[260px] border-r border-[var(--pkr-line)] flex flex-col shrink-0">
+          <!-- Nav links (scrollable) -->
+          <div class="p-5 pb-3">
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">PLAY</div>
+            <div class="flex flex-col gap-0.5">
               <.link
                 patch={~p"/cash"}
-                class={"py-4 px-1 border-b-2 font-medium text-sm transition-colors #{
-                  if @active_tab == :cash_games do
-                    "border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                  else
-                    "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
-                  end
-                }"}
+                class={"flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-all " <>
+                  if(@active_tab == :cash_games,
+                    do: "bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-1)] border border-[var(--pkr-line)]",
+                    else: "text-[var(--pkr-ink-2)] border border-transparent hover:bg-[var(--pkr-bg-2)]/50"
+                  )}
               >
-                <span class="flex items-center gap-2">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Cash Games
-                </span>
+                <span class={"w-4 text-center " <> if(@active_tab == :cash_games, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>&#x25D0;</span>
+                <span class="flex-1">Cash games</span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">{length(@cash_games_list)}</span>
               </.link>
               <.link
                 patch={~p"/tournaments"}
-                class={"py-4 px-1 border-b-2 font-medium text-sm transition-colors #{
-                  if @active_tab == :tournaments do
-                    "border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                  else
-                    "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
-                  end
-                }"}
+                class={"flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] transition-all " <>
+                  if(@active_tab == :tournaments,
+                    do: "bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-1)] border border-[var(--pkr-line)]",
+                    else: "text-[var(--pkr-ink-2)] border border-transparent hover:bg-[var(--pkr-bg-2)]/50"
+                  )}
               >
-                <span class="flex items-center gap-2">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                    />
-                  </svg>
-                  Tournaments
-                </span>
+                <span class={"w-4 text-center " <> if(@active_tab == :tournaments, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>&#x25C7;</span>
+                <span class="flex-1">Tournaments</span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">{length(@tournaments_list)}</span>
               </.link>
-            </nav>
-          </div>
-        </div>
-
-        <div class="grid lg:grid-cols-3 gap-8">
-          <!-- Games List -->
-          <div class="lg:col-span-2">
-            <%= if @active_tab == :cash_games do %>
-              <.cash_games_list cash_games={@cash_games_list} />
-            <% else %>
-              <.tournaments_list tournaments={@tournaments_list} />
-            <% end %>
+            </div>
           </div>
 
-          <!-- Create Form -->
-          <div class="lg:col-span-1">
+          <div class="flex-1"></div>
+
+          <!-- Create form (sticky at bottom) -->
+          <div class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]">
             <%= if @active_tab == :cash_games do %>
               <.create_cash_game_form form={@form} />
             <% else %>
               <.create_tournament_form form={@form} />
             <% end %>
           </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 p-6 overflow-auto">
+          <.flash kind={:error} flash={@flash} />
+          <.flash kind={:info} flash={@flash} />
+
+          <header class="mb-6">
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">Lobby</div>
+            <h1 class="font-[family-name:var(--pkr-font-display)] text-[44px] leading-none text-[var(--pkr-ink-1)]">
+              <%= if @active_tab == :cash_games, do: "Cash games", else: "Tournaments" %>
+            </h1>
+            <p class="text-[var(--pkr-ink-3)] text-[13px] mt-1.5">
+              <%= if @active_tab == :cash_games do %>
+                Live tables. Take a seat or watch from the rail.
+              <% else %>
+                On-demand sit-&amp;-gos. Register and play.
+              <% end %>
+            </p>
+          </header>
+
+          <%= if @active_tab == :cash_games do %>
+            <.cash_games_table cash_games={@cash_games_list} />
+          <% else %>
+            <.tournaments_grid tournaments={@tournaments_list} />
+          <% end %>
+        </main>
+      </div>
+    </div>
+    """
+  end
+
+  defp cash_games_table(assigns) do
+    ~H"""
+    <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
+      <!-- Table header -->
+      <div class="grid grid-cols-[1.6fr_0.8fr_0.6fr_0.6fr_0.8fr] px-4 py-2.5 border-b border-[var(--pkr-line)] font-[family-name:var(--pkr-font-mono)] text-[10px] tracking-[0.1em] text-[var(--pkr-ink-3)] uppercase">
+        <span>TABLE</span>
+        <span>STAKES</span>
+        <span>SEATS</span>
+        <span>STATUS</span>
+        <span class="text-right">ACTION</span>
+      </div>
+
+      <%= if Enum.empty?(@cash_games) do %>
+        <div class="px-6 py-16 text-center">
+          <p class="text-[var(--pkr-ink-3)] font-medium">No active cash games</p>
+          <p class="text-sm text-[var(--pkr-ink-3)]/70 mt-1">Create a new cash game to get started</p>
         </div>
-      </div>
+      <% else %>
+        <%= for {cash_game, index} <- Enum.with_index(@cash_games) do %>
+          <.link
+            navigate={~p"/cash/#{cash_game.table_id}/lobby"}
+            class={"grid grid-cols-[1.6fr_0.8fr_0.6fr_0.6fr_0.8fr] px-4 py-3.5 items-center text-[13px] hover:bg-[var(--pkr-bg-2)]/50 transition-colors group " <>
+              if(index < length(@cash_games) - 1, do: "border-b border-dashed border-[var(--pkr-line)]", else: "")}
+          >
+            <!-- Table name + type -->
+            <div class="flex items-center gap-2.5">
+              <.mini_table seated={cash_game.seated_count || 0} total={seats_total(cash_game.table_type)} />
+              <div>
+                <div class="font-medium text-[var(--pkr-ink-1)] group-hover:text-[var(--pkr-accent)] transition-colors">
+                  NL Hold'em &middot; {format_stakes(cash_game.small_blind, cash_game.big_blind)}
+                </div>
+                <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">
+                  {format_table_type(cash_game.table_type)} &middot; Buy-in {cash_game.min_buyin}&ndash;{cash_game.max_buyin}
+                </div>
+              </div>
+            </div>
+            <!-- Stakes -->
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">
+              {format_stakes(cash_game.small_blind, cash_game.big_blind)}
+            </span>
+            <!-- Seats -->
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[12px]">
+              <span class="text-[var(--pkr-ink-1)]">{cash_game.seated_count || 0}</span><span class="text-[var(--pkr-ink-3)]">/{seats_total(cash_game.table_type)}</span>
+            </span>
+            <!-- Status -->
+            <span class="inline-flex items-center gap-1.5 text-[12px]">
+              <span class={"w-1.5 h-1.5 rounded-full " <> status_color(cash_game.table_status)}></span>
+              <span class="text-[var(--pkr-ink-3)]">{format_status(cash_game.table_status)}</span>
+            </span>
+            <!-- Action -->
+            <div class="text-right">
+              <span class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)]">
+                Take a seat
+              </span>
+            </div>
+          </.link>
+        <% end %>
+      <% end %>
     </div>
     """
   end
 
-  defp cash_games_list(assigns) do
-    ~H"""
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Active Cash Games</h2>
-      </div>
+  defp mini_table(assigns) do
+    total = assigns.total
+    seated = assigns.seated
 
-      <div class="divide-y divide-slate-200 dark:divide-slate-700">
-        <%= if Enum.empty?(@cash_games) do %>
-          <div class="px-6 py-12 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 mb-4">
-              <svg
-                class="w-8 h-8 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <p class="text-slate-500 dark:text-slate-400 font-medium">No active cash games</p>
-            <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">
-              Create a new cash game to get started
-            </p>
-          </div>
-        <% else %>
-          <%= for cash_game <- @cash_games do %>
-            <.link
-              navigate={~p"/cash/#{cash_game.table_id}/lobby"}
-              class="block px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors duration-150 group"
-            >
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      No-Limit Hold'em
-                    </h3>
-                    <span class={"px-2.5 py-0.5 rounded-full text-xs font-medium #{
-                      case cash_game.table_status do
-                        :live -> "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                        :waiting -> "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                        :paused -> "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400"
-                        :finished -> "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        _ -> "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400"
-                      end
-                    }"}>
-                      {String.capitalize(to_string(cash_game.table_status))}
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                    <div class="flex items-center gap-1.5">
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span class="font-medium">
-                        {cash_game.small_blind}/{cash_game.big_blind}
-                      </span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                      <span>Buy-in: {cash_game.min_buyin} - {cash_game.max_buyin}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                        />
-                      </svg>
-                      <span>6-Max</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="ml-4 flex items-center">
-                  <svg
-                    class="w-5 h-5 text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </.link>
-          <% end %>
-        <% end %>
-      </div>
+    dots =
+      for i <- 0..(total - 1) do
+        angle = i / total * :math.pi() * 2 - :math.pi() / 2
+        x = 18 + :math.cos(angle) * 16
+        y = 11 + :math.sin(angle) * 9
+        %{x: x, y: y, filled: i < seated}
+      end
+
+    assigns = assign(assigns, dots: dots)
+
+    ~H"""
+    <div class="relative w-9 h-[22px] rounded-full bg-[var(--pkr-bg-2)] border border-[var(--pkr-accent)]/30 shrink-0">
+      <%= for dot <- @dots do %>
+        <div
+          class={"absolute w-1 h-1 rounded-full " <> if(dot.filled, do: "bg-[var(--pkr-accent)]", else: "bg-[var(--pkr-line)]")}
+          style={"left: #{dot.x - 2}px; top: #{dot.y - 2}px"}
+        />
+      <% end %>
     </div>
     """
   end
 
-  defp tournaments_list(assigns) do
+  defp tournaments_grid(assigns) do
     ~H"""
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Tournaments</h2>
+    <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
+      <!-- Table header -->
+      <div class="grid grid-cols-[1.6fr_0.8fr_0.6fr_0.6fr_0.6fr_0.8fr] px-4 py-2.5 border-b border-[var(--pkr-line)] font-[family-name:var(--pkr-font-mono)] text-[10px] tracking-[0.1em] text-[var(--pkr-ink-3)] uppercase">
+        <span>TOURNAMENT</span>
+        <span>BUY-IN</span>
+        <span>PLAYERS</span>
+        <span>SPEED</span>
+        <span>STATUS</span>
+        <span class="text-right">ACTION</span>
       </div>
 
-      <div class="divide-y divide-slate-200 dark:divide-slate-700">
-        <%= if Enum.empty?(@tournaments) do %>
-          <div class="px-6 py-12 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 mb-4">
-              <svg
-                class="w-8 h-8 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                />
-              </svg>
-            </div>
-            <p class="text-slate-500 dark:text-slate-400 font-medium">No active tournaments</p>
-            <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">
-              Create a new tournament to get started
-            </p>
-          </div>
-        <% else %>
-          <%= for tournament <- @tournaments do %>
-            <.link
-              navigate={~p"/tournaments/#{tournament.id}/lobby"}
-              class="block px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors duration-150 group"
-            >
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                      Sit & Go - {format_speed(tournament.speed)}
-                    </h3>
-                    <span class={"px-2.5 py-0.5 rounded-full text-xs font-medium #{
-                      case tournament.status do
-                        :active -> "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                        :registering -> "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                        :finished -> "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        _ -> "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400"
-                      end
-                    }"}>
-                      {String.capitalize(to_string(tournament.status))}
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                    <span class="font-medium">Buy-in: {tournament.buy_in}</span>
-                    <span>Stack: {tournament.starting_stack}</span>
-                    <span>Players: {tournament.registered_count}/{tournament.max_players}</span>
-                    <span>6-Max</span>
-                  </div>
-                </div>
-                <div class="ml-4 flex items-center">
-                  <svg
-                    class="w-5 h-5 text-slate-400 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </div>
+      <%= if Enum.empty?(@tournaments) do %>
+        <div class="px-6 py-16 text-center">
+          <p class="text-[var(--pkr-ink-3)] font-medium">No active tournaments</p>
+          <p class="text-sm text-[var(--pkr-ink-3)]/70 mt-1">Create a new tournament to get started</p>
+        </div>
+      <% else %>
+        <%= for {tournament, index} <- Enum.with_index(@tournaments) do %>
+          <.link
+            navigate={~p"/tournaments/#{tournament.id}/lobby"}
+            class={"grid grid-cols-[1.6fr_0.8fr_0.6fr_0.6fr_0.6fr_0.8fr] px-4 py-3 items-center text-[13px] hover:bg-[var(--pkr-bg-2)]/50 transition-colors group " <>
+              if(index < length(@tournaments) - 1, do: "border-b border-dashed border-[var(--pkr-line)]", else: "")}
+          >
+            <!-- Name + type -->
+            <div>
+              <div class="font-medium text-[var(--pkr-ink-1)] group-hover:text-[var(--pkr-accent)] transition-colors">
+                Sit &amp; Go &ndash; {format_speed(tournament.speed)}
               </div>
-            </.link>
-          <% end %>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">
+                {format_table_type(tournament.table_type)} &middot; NLHE
+              </div>
+            </div>
+            <!-- Buy-in -->
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">${tournament.buy_in}</span>
+            <!-- Players -->
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[12px]">
+              <span class="text-[var(--pkr-ink-1)]">{tournament.registered_count}</span><span class="text-[var(--pkr-ink-3)]">/{tournament.max_players}</span>
+            </span>
+            <!-- Speed -->
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[12px] text-[var(--pkr-ink-2)]">{format_speed(tournament.speed)}</span>
+            <!-- Status -->
+            <span class="inline-flex items-center gap-1.5 text-[12px]">
+              <span class={"w-1.5 h-1.5 rounded-full " <> if(tournament.status == :active, do: "bg-[var(--pkr-positive)]", else: "bg-[var(--pkr-accent)]")}></span>
+              <span class="text-[var(--pkr-ink-3)]">{format_tournament_status(tournament.status)}</span>
+            </span>
+            <!-- Action -->
+            <div class="text-right">
+              <span class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)]">
+                <%= if tournament.status == :active, do: "Watch", else: "Register" %>
+              </span>
+            </div>
+          </.link>
         <% end %>
-      </div>
+      <% end %>
     </div>
     """
   end
 
   defp create_cash_game_form(assigns) do
     ~H"""
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden sticky top-8">
-      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-emerald-500 to-teal-500">
-        <h2 class="text-xl font-semibold text-white">Create Cash Game</h2>
+    <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
+      <div class="px-4 py-3 border-b border-[var(--pkr-line)]">
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CREATE CASH GAME</div>
       </div>
-
-      <.form for={@form} phx-submit="create_cash_game" class="p-6 space-y-4">
-        <div>
-          <.input
-            type="number"
-            name="cash_game[small_blind]"
-            label="Small Blind"
-            value="10"
-            class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+      <.form for={@form} phx-submit="create_cash_game" class="p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">SB</label>
+            <input type="number" name="cash_game[small_blind]" value="10" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">BB</label>
+            <input type="number" name="cash_game[big_blind]" value="20" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+          </div>
         </div>
-
-        <div>
-          <.input
-            type="number"
-            name="cash_game[big_blind]"
-            label="Big Blind"
-            value="20"
-            class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">MIN BUY-IN</label>
+            <input type="number" name="cash_game[min_buyin]" value="200" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">MAX BUY-IN</label>
+            <input type="number" name="cash_game[max_buyin]" value="2000" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+          </div>
         </div>
-
         <div>
-          <.input
-            type="number"
-            name="cash_game[min_buyin]"
-            label="Min Buy-in"
-            value="200"
-            class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">TABLE TYPE</label>
+          <select name="cash_game[table_type]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+            <option value="two_max">Heads-Up (2)</option>
+            <option value="three_max">3-Max</option>
+            <option value="four_max">4-Max</option>
+            <option value="six_max" selected>6-Max</option>
+          </select>
         </div>
-
-        <div>
-          <.input
-            type="number"
-            name="cash_game[max_buyin]"
-            label="Max Buy-in"
-            value="2000"
-            class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
-        </div>
-
-        <div>
-          <.input
-            type="select"
-            name="cash_game[table_type]"
-            label="Table Type"
-            options={[{"Heads-Up (2)", "two_max"}, {"3-Max", "three_max"}, {"4-Max", "four_max"}, {"6-Max", "six_max"}]}
-            value="six_max"
-            class="w-full select select-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
-        </div>
-
-        <.button
-          type="submit"
-          class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-        >
-          <span class="flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Cash Game
-          </span>
-        </.button>
+        <button type="submit" class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+          + Create table
+        </button>
       </.form>
     </div>
     """
@@ -518,62 +445,48 @@ defmodule PokerWeb.PlayerLive.Dashboard do
 
   defp create_tournament_form(assigns) do
     ~H"""
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden sticky top-8">
-      <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-500 to-orange-500">
-        <h2 class="text-xl font-semibold text-white">Create Tournament</h2>
+    <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
+      <div class="px-4 py-3 border-b border-[var(--pkr-line)]">
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CREATE TOURNAMENT</div>
       </div>
-
-      <.form for={@form} phx-submit="create_tournament" class="p-6 space-y-4">
+      <.form for={@form} phx-submit="create_tournament" class="p-4 space-y-3">
         <div>
-          <.input
-            type="number"
-            name="tournament[buy_in]"
-            label="Buy-in"
-            value="100"
-            class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">BUY-IN</label>
+          <input type="number" name="tournament[buy_in]" value="100" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
         </div>
-
         <div>
-          <.input
-            type="select"
-            name="tournament[speed]"
-            label="Speed"
-            options={[{"Regular (10min levels)", "regular"}, {"Turbo (5min levels)", "turbo"}, {"Hyper-Turbo (3min levels)", "hyper_turbo"}]}
-            value="regular"
-            class="w-full select select-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">SPEED</label>
+          <select name="tournament[speed]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+            <option value="regular">Regular (10min)</option>
+            <option value="turbo">Turbo (5min)</option>
+            <option value="hyper_turbo">Hyper-Turbo (3min)</option>
+          </select>
         </div>
-
         <div>
-          <.input
-            type="select"
-            name="tournament[table_type]"
-            label="Table Type"
-            options={[{"Heads-Up (2)", "two_max"}, {"3-Max", "three_max"}, {"4-Max", "four_max"}, {"6-Max", "six_max"}]}
-            value="six_max"
-            class="w-full select select-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
-          />
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">TABLE TYPE</label>
+          <select name="tournament[table_type]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+            <option value="two_max">Heads-Up (2)</option>
+            <option value="three_max">3-Max</option>
+            <option value="four_max">4-Max</option>
+            <option value="six_max" selected>6-Max</option>
+          </select>
         </div>
-
-        <.button
-          type="submit"
-          class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-        >
-          <span class="flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Tournament
-          </span>
-        </.button>
+        <button type="submit" class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+          + Create tournament
+        </button>
       </.form>
     </div>
     """
   end
+
+  defp format_status(:live), do: "live"
+  defp format_status(:waiting), do: "waiting"
+  defp format_status(:paused), do: "paused"
+  defp format_status(:finished), do: "finished"
+  defp format_status(_), do: "—"
+
+  defp format_tournament_status(:active), do: "live"
+  defp format_tournament_status(:registering), do: "registering"
+  defp format_tournament_status(:finished), do: "finished"
+  defp format_tournament_status(_), do: "—"
 end

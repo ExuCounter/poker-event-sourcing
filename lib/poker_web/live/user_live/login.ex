@@ -6,163 +6,120 @@ defmodule PokerWeb.UserLive.Login do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-md w-full">
-        <!-- Main Card -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <!-- Header -->
-          <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-500">
-            <h1 class="text-2xl font-bold text-white text-center">
-              <%= if @current_scope do %>
-                Reauthentication Required
-              <% else %>
-                Welcome Back
-              <% end %>
-            </h1>
-            <p class="text-emerald-50 text-center text-sm mt-1">
-              <%= if @current_scope do %>
-                Please verify your identity to continue
-              <% else %>
-                Log in to your poker account
-              <% end %>
-            </p>
-          </div>
-
-          <div class="p-6 space-y-6">
-            <!-- Info Alert -->
-            <div :if={local_mail_adapter?()} class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div class="flex gap-3">
-                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div class="text-sm text-blue-800 dark:text-blue-300">
-                  <p class="font-medium">Local Mail Adapter Active</p>
-                  <p class="mt-1">
-                    View sent emails in <.link href="/dev/mailbox" class="underline hover:text-blue-900 dark:hover:text-blue-200">the mailbox</.link>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Magic Link Login -->
-            <div>
-              <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Log in with Magic Link
-              </h2>
-
-              <.form
-                :let={f}
-                for={@form}
-                id="login_form_magic"
-                action={~p"/users/log-in"}
-                phx-submit="submit_magic"
-                class="space-y-4"
-              >
-                <div>
-                  <.input
-                    readonly={!!@current_scope}
-                    field={f[:email]}
-                    type="email"
-                    label="Email"
-                    autocomplete="username"
-                    required
-                    phx-mounted={JS.focus()}
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
-                  />
-                </div>
-
-                <.button class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send Magic Link
-                </.button>
-              </.form>
-            </div>
-
-            <!-- Divider -->
-            <div class="relative">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-slate-300 dark:border-slate-600"></div>
-              </div>
-              <div class="relative flex justify-center text-sm">
-                <span class="px-4 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">
-                  or continue with password
-                </span>
-              </div>
-            </div>
-
-            <!-- Password Login -->
-            <div>
-              <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Log in with Password
-              </h2>
-
-              <.form
-                :let={f}
-                for={@form}
-                id="login_form_password"
-                action={~p"/users/log-in"}
-                phx-submit="submit_password"
-                phx-trigger-action={@trigger_submit}
-                class="space-y-4"
-              >
-                <div>
-                  <.input
-                    readonly={!!@current_scope}
-                    field={f[:email]}
-                    type="email"
-                    label="Email"
-                    autocomplete="username"
-                    required
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
-                  />
-                </div>
-
-                <div>
-                  <.input
-                    field={@form[:password]}
-                    type="password"
-                    label="Password"
-                    autocomplete="current-password"
-                    class="w-full input input-bordered bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600"
-                  />
-                </div>
-
-                <div class="space-y-3">
-                  <.button class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2" name={@form[:remember_me].name} value="true">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    Log in and Stay Logged In
-                  </.button>
-
-                  <.button class="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium py-2.5 px-4 rounded-lg border border-slate-300 dark:border-slate-600 transition-colors">
-                    Log in Only This Time
-                  </.button>
-                </div>
-              </.form>
-            </div>
+    <div class="min-h-screen flex font-[family-name:var(--pkr-font-ui)]">
+      <!-- Left poster -->
+      <div class="hidden lg:flex flex-1 relative overflow-hidden bg-[var(--pkr-bg-1)]">
+        <div class="absolute inset-0 opacity-60" style="background: radial-gradient(ellipse at 30% 50%, var(--pkr-accent), transparent 65%)"></div>
+        <div class="absolute top-8 left-8">
+          <div class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
+            Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
           </div>
         </div>
-
-        <!-- Sign up Link -->
-        <%= if !@current_scope do %>
-          <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-            Don't have an account?
-            <.link
-              navigate={~p"/users/register"}
-              class="font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
-            >
-              Create one now
-            </.link>
+        <div class="absolute left-14 bottom-14 right-14 flex flex-col gap-3.5">
+          <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">EST. 2026</div>
+          <h1 class="font-[family-name:var(--pkr-font-display)] text-[56px] leading-[0.96] max-w-[480px] text-[var(--pkr-ink-1)]">
+            A poker room <em class="text-[var(--pkr-accent)]">built for the hand,</em> not the hype.
+          </h1>
+          <p class="text-[var(--pkr-ink-2)] text-sm max-w-[420px] leading-relaxed">
+            Honest tables, integrated stats. No flashy pop-ups, no juiced rake.
           </p>
+        </div>
+      </div>
+
+      <!-- Right form -->
+      <div class="w-full lg:w-[460px] border-l border-[var(--pkr-line)] flex flex-col justify-center px-10 lg:px-14 py-16">
+        <.flash kind={:error} flash={@flash} />
+        <.flash kind={:info} flash={@flash} />
+
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">
+          <%= if @current_scope, do: "REAUTHENTICATE", else: "WELCOME BACK" %>
+        </div>
+        <h2 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)] mb-6">
+          Take your seat.
+        </h2>
+
+        <!-- Dev mail info -->
+        <div :if={local_mail_adapter?()} class="mb-5 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-xs text-[var(--pkr-ink-3)]">
+          View sent emails in <.link href="/dev/mailbox" class="text-[var(--pkr-accent)] underline">the mailbox</.link>
+        </div>
+
+        <!-- Magic link form -->
+        <.form
+          for={@form}
+          id="login_form_magic"
+          action={~p"/users/log-in"}
+          phx-submit="submit_magic"
+          class="space-y-3"
+        >
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+            <.input
+              field={@form[:email]}
+              type="email"
+              autocomplete="username"
+              required
+              readonly={!!@current_scope}
+              phx-mounted={JS.focus()}
+              placeholder="you@example.com"
+              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+            />
+          </div>
+          <button type="submit" class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+            Send Magic Link
+          </button>
+        </.form>
+
+        <!-- Divider -->
+        <div class="flex items-center gap-2.5 my-5">
+          <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
+          <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">OR</span>
+          <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
+        </div>
+
+        <!-- Password form -->
+        <.form
+          for={@form}
+          id="login_form_password"
+          action={~p"/users/log-in"}
+          phx-submit="submit_password"
+          phx-trigger-action={@trigger_submit}
+          class="space-y-3"
+        >
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+            <.input
+              field={@form[:email]}
+              type="email"
+              autocomplete="username"
+              required
+              readonly={!!@current_scope}
+              placeholder="you@example.com"
+              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">PASSWORD</label>
+            <.input
+              field={@form[:password]}
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+            />
+          </div>
+          <button type="submit" name={@form[:remember_me].name} value="true" class="w-full py-3.5 rounded-xl text-[13px] font-medium border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] hover:bg-[var(--pkr-bg-2)] transition-all cursor-pointer">
+            Log in with Password
+          </button>
+        </.form>
+
+        <!-- Register link -->
+        <%= if !@current_scope do %>
+          <div class="text-xs text-[var(--pkr-ink-3)] text-center mt-8">
+            New here?
+            <.link navigate={~p"/users/register"} class="text-[var(--pkr-accent)] hover:underline">
+              Create an account
+            </.link>
+          </div>
         <% end %>
       </div>
     </div>

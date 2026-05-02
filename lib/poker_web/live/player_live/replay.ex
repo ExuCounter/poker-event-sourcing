@@ -154,25 +154,20 @@ defmodule PokerWeb.PlayerLive.Replay do
     <div style="height: 100vh; position: relative; overflow: hidden;">
       <!-- Replay controls - bottom right -->
       <div style="transform: scale(var(--ui-scale, 1)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1)); position: absolute; bottom: 0; left: 0;">
-        <div
-          class="absolute bottom-[16px] right-[16px]"
-        >
-          <div
-            class="replay-controls"
-            style="background: rgba(0, 0, 0, 0.8); padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px;"
-          >
+        <div class="absolute bottom-4 right-4">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--pkr-line)] bg-black/80 backdrop-blur-lg font-[family-name:var(--pkr-font-ui)]">
             <button
               phx-click="step_backward"
               disabled={@replay.current_step == 0}
-              style="padding: 8px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
-              class={if @replay.current_step == 0, do: "opacity-50 cursor-not-allowed", else: ""}
+              class={"w-9 h-9 rounded-full flex items-center justify-center text-[13px] border border-[var(--pkr-line)] transition-all cursor-pointer " <>
+                if(@replay.current_step == 0, do: "opacity-30 cursor-not-allowed text-[var(--pkr-ink-3)] bg-[var(--pkr-bg-2)]", else: "text-[var(--pkr-ink-1)] bg-[var(--pkr-bg-2)] hover:bg-[var(--pkr-bg-1)]")}
             >
-              ←
+              &#x23EE;
             </button>
 
             <button
               phx-click="toggle_play"
-              style="padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;"
+              class="w-9 h-9 rounded-full flex items-center justify-center text-[13px] bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
             >
               {if @replay.playing, do: "⏸", else: "▶"}
             </button>
@@ -180,24 +175,20 @@ defmodule PokerWeb.PlayerLive.Replay do
             <button
               phx-click="step_forward"
               disabled={@replay.current_step >= @replay.total_steps}
-              style="padding: 8px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
-              class={
-                if @replay.current_step >= @replay.total_steps,
-                  do: "opacity-50 cursor-not-allowed",
-                  else: ""
-              }
+              class={"w-9 h-9 rounded-full flex items-center justify-center text-[13px] border border-[var(--pkr-line)] transition-all cursor-pointer " <>
+                if(@replay.current_step >= @replay.total_steps, do: "opacity-30 cursor-not-allowed text-[var(--pkr-ink-3)] bg-[var(--pkr-bg-2)]", else: "text-[var(--pkr-ink-1)] bg-[var(--pkr-bg-2)] hover:bg-[var(--pkr-bg-1)]")}
             >
-              →
+              &#x23ED;
             </button>
 
             <button
               phx-click="reset"
-              style="padding: 8px 10px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;"
+              class="w-9 h-9 rounded-full flex items-center justify-center text-[13px] border border-[var(--pkr-line)] text-[var(--pkr-ink-2)] bg-[var(--pkr-bg-2)] hover:bg-[var(--pkr-bg-1)] transition-all cursor-pointer"
             >
-              ↺
+              &#x21BA;
             </button>
 
-            <span style="color: white; font-size: 12px; margin-left: 4px; font-family: monospace;">
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)] ml-1">
               {@replay.current_step}/{@replay.total_steps}
             </span>
           </div>

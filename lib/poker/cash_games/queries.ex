@@ -22,7 +22,11 @@ defmodule Poker.CashGames.Queries do
     from(cash_game in query,
       join: table_list in TableList,
       on: table_list.id == cash_game.table_id,
-      select_merge: %{table_status: table_list.status}
+      select_merge: %{
+        table_status: table_list.status,
+        seated_count: table_list.seated_count,
+        seats_count: table_list.seats_count
+      }
     )
   end
 

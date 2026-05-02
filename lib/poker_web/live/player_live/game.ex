@@ -492,43 +492,53 @@ defmodule PokerWeb.PlayerLive.Game do
         data-current-user-id={@current_user_id}
       />
       
-    <!-- Tournament HUD (outside scaled container) -->
+    <!-- Tournament HUD (scaled with ui-scale, top-right) -->
       <%= if @game_context && @game_context.type == :tournament do %>
-        <div class="absolute top-14 right-5 z-10 text-right leading-snug">
-          <div class="text-xs text-gray-400">
-            Blinds level: {@game_context.current_level}
-            <span class="text-white font-medium">
-              {@game_context.small_blind}/{@game_context.big_blind}
-            </span>
-            <%= if @game_context.level_started_at do %>
-              <span class="text-gray-500">·</span>
-              <span
-                id="blind-countdown"
-                phx-hook="BlindCountdown"
-                data-level-started-at={DateTime.to_iso8601(@game_context.level_started_at)}
-                data-level-duration={@game_context.level_duration}
-                class="text-amber-400 font-mono font-medium"
-              />
-            <% end %>
+        <div class="absolute top-0 right-0 z-10" style="transform-origin: top right;">
+          <div style="transform: scale(var(--ui-scale, 1)); transform-origin: top right; width: calc(100vw / var(--ui-scale, 1));">
+            <div class="absolute top-17 right-5 text-right">
+              <div class="flex flex-col gap-1.5 items-end">
+                <!-- Blinds -->
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--pkr-line)] bg-black/60 backdrop-blur-lg font-[family-name:var(--pkr-font-mono)]">
+                  <span class="text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                    LVL {@game_context.current_level}
+                  </span>
+                  <span class="text-[13px] font-semibold text-[var(--pkr-ink-1)]">
+                    {@game_context.small_blind}/{@game_context.big_blind}
+                  </span>
+                  <%= if @game_context.level_started_at do %>
+                    <span class="text-[var(--pkr-line)]">&middot;</span>
+                    <span
+                      id="blind-countdown"
+                      phx-hook="BlindCountdown"
+                      data-level-started-at={DateTime.to_iso8601(@game_context.level_started_at)}
+                      data-level-duration={@game_context.level_duration}
+                      class="text-[13px] font-medium text-[var(--pkr-accent)]"
+                    />
+                  <% end %>
+                </div>
+                <!-- Players / Position -->
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--pkr-line)] bg-black/60 backdrop-blur-lg font-[family-name:var(--pkr-font-mono)] text-[12px]">
+                  <span class="text-[var(--pkr-ink-3)]">Sit &amp; Go</span>
+                  <span class="text-[var(--pkr-line)]">&middot;</span>
+                  <span class="text-[var(--pkr-ink-2)]">
+                    {@game_context.players_remaining}/{@game_context.total_players}
+                  </span>
+                  <%= if @game_view.tournament_position do %>
+                    <span class="text-[var(--pkr-line)]">&middot;</span>
+                    <span class="font-semibold text-[var(--pkr-ink-1)]">
+                      #{@game_view.tournament_position}
+                    </span>
+                    <%= if @game_view.current_payout do %>
+                      <span class="text-[var(--pkr-positive)] font-medium">
+                        (+{@game_view.current_payout})
+                      </span>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
           </div>
-          <%= if @game_view.tournament_position do %>
-            <div class="text-xs text-gray-400">
-              Sit & Go <span class="text-gray-500">·</span>
-              {@game_context.players_remaining}/{@game_context.total_players} players
-              <span class="text-gray-500">·</span>
-              <span class="text-white font-medium">
-                {@game_view.tournament_position}/{@game_context.players_remaining}
-              </span>
-              <%= if @game_view.current_payout do %>
-                <span class="text-emerald-400 font-medium">(+{@game_view.current_payout})</span>
-              <% end %>
-            </div>
-          <% else %>
-            <div class="text-xs text-gray-400">
-              Sit & Go <span class="text-gray-500">·</span>
-              {@game_context.players_remaining}/{@game_context.total_players} players
-            </div>
-          <% end %>
         </div>
       <% end %>
 
@@ -544,28 +554,19 @@ defmodule PokerWeb.PlayerLive.Game do
                   phx-click={if can_buy_in, do: "show_buy_in"}
                   disabled={!can_buy_in}
                   class={[
-                    "px-4 mr-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md backdrop-blur-sm border",
+                    "px-3.5 py-1.5 rounded-lg font-medium text-[13px] border backdrop-blur-lg transition-all mr-3 font-[family-name:var(--pkr-font-ui)]",
                     if(can_buy_in,
                       do:
-                        "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-white/20 hover:shadow-lg cursor-pointer",
-                      else: "bg-gray-600/50 text-gray-400 border-gray-500/20 cursor-not-allowed"
+                        "bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] border-[var(--pkr-accent)] hover:brightness-110 cursor-pointer",
+                      else:
+                        "bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-3)] border-[var(--pkr-line)] opacity-60 cursor-not-allowed"
                     )
                   ]}
                 >
-                  <span class="flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Buy In
-                  </span>
+                  Buy In
                 </button>
                 <%= unless can_buy_in do %>
-                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-gray-300 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-600">
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-[var(--pkr-bg-1)] text-[var(--pkr-ink-3)] text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--pkr-line)] font-[family-name:var(--pkr-font-mono)]">
                     Max chips reached
                   </div>
                 <% end %>
@@ -576,53 +577,23 @@ defmodule PokerWeb.PlayerLive.Game do
             <%= if @game_view.player_actions.can_sit_out do %>
               <button
                 phx-click="sit_out"
-                class="cursor-pointer px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-amber-500/90 hover:bg-amber-600/95 text-white border-white/20"
+                class="px-3.5 py-1.5 rounded-lg font-medium text-[13px] border border-[var(--pkr-line)] bg-black/50 text-[var(--pkr-ink-2)] hover:bg-[var(--pkr-bg-2)] hover:text-[var(--pkr-ink-1)] backdrop-blur-lg transition-all cursor-pointer font-[family-name:var(--pkr-font-ui)]"
               >
-                <span class="flex items-center gap-1.5">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Sit Out
-                </span>
+                Sit Out
               </button>
             <% end %>
             <%= if @game_view.player_actions.can_sit_in do %>
               <button
                 phx-click="sit_in"
-                class="cursor-pointer px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-md hover:shadow-lg backdrop-blur-sm border bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-white/20"
+                class="px-3.5 py-1.5 rounded-lg font-medium text-[13px] border border-[var(--pkr-positive)] bg-[var(--pkr-positive)] text-[var(--pkr-bg-0)] hover:brightness-110 backdrop-blur-lg transition-all cursor-pointer font-[family-name:var(--pkr-font-ui)]"
               >
-                <span class="flex items-center gap-1.5">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Sit In
-                </span>
+                Sit In
               </button>
             <% end %>
 
             <%= if @game_view.my_hand_rank do %>
-              <div>
-                <div class="px-3 py-1.5 rounded-lg">
-                  <span class="text-amber-400 text-[12px] font-semibold">
-                    {@game_view.my_hand_rank.display_name}
-                  </span>
-                </div>
+              <div class="px-2.5 py-1 rounded-md font-[family-name:var(--pkr-font-mono)] text-xs font-semibold text-[var(--pkr-accent)] tracking-wide">
+                {@game_view.my_hand_rank.display_name}
               </div>
             <% end %>
           </div>
@@ -631,83 +602,80 @@ defmodule PokerWeb.PlayerLive.Game do
     <!-- Action Controls - positioned and scaled -->
         <div class="absolute bottom-[16px] right-[16px]">
           <%= if Enum.any?(@game_view.valid_actions, fn {_key, value} -> value end) and is_nil(@current_animated_event_id) do %>
-            <div class="bg-gray-900 rounded-xl p-4 shadow-2xl border-2 border-gray-700 flex flex-col">
-              
-    <!-- Raise Controls -->
+            <div class="flex flex-col gap-2 p-2.5 rounded-xl border border-[var(--pkr-line)] bg-black/80 backdrop-blur-lg shadow-2xl w-[260px] font-[family-name:var(--pkr-font-ui)]">
+              <!-- Raise Controls -->
               <%= if @game_view.valid_actions.raise do %>
-                <div class="flex flex-row gap-3 mb-3">
-                  <div class="flex gap-2 flex-wrap">
+                <div class="flex flex-col gap-1 p-2 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)]">
+                  <div class="flex items-baseline justify-between mb-1">
+                    <span class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">
+                      RAISE TO
+                    </span>
+                    <span class="font-[family-name:var(--pkr-font-display)] text-[22px] leading-none text-[var(--pkr-ink-1)] tracking-tight">
+                      ${@raise_amount}
+                    </span>
+                  </div>
+                  <form phx-change="update_raise_amount">
+                    <input
+                      type="range"
+                      name="raise_amount"
+                      min={@game_view.valid_actions.raise.min}
+                      max={@game_view.valid_actions.raise.max}
+                      value={@raise_amount}
+                      class="w-full h-1 appearance-none bg-[var(--pkr-bg-2)] rounded cursor-pointer accent-[var(--pkr-accent)]"
+                    />
+                  </form>
+                  <div class="flex gap-1 mt-1">
                     <%= for preset <- @game_view.valid_actions.raise.presets do %>
                       <button
                         type="button"
                         phx-click="update_raise_amount"
                         phx-value-raise_amount={preset.value}
-                        class="cursor-pointer bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-3 py-1.5 rounded"
+                        class="flex-1 py-1 rounded-md text-[11px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-2)] hover:bg-[var(--pkr-bg-1)] hover:text-[var(--pkr-ink-1)] cursor-pointer font-[family-name:var(--pkr-font-mono)] transition-all"
                       >
                         {preset.label}
                       </button>
                     <% end %>
                   </div>
-                  <div class="flex flex-col gap-0.5 flex-1">
-                    <form phx-change="update_raise_amount">
-                      <input
-                        type="range"
-                        name="raise_amount"
-                        min={@game_view.valid_actions.raise.min}
-                        max={@game_view.valid_actions.raise.max}
-                        value={@raise_amount}
-                        class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                      />
-                    </form>
-                    <div class="flex justify-between text-sm text-gray-500 font-bold">
-                      <span>{@game_view.valid_actions.raise.min}</span>
-                      <span>{@game_view.valid_actions.raise.max}</span>
-                    </div>
-                  </div>
                 </div>
               <% end %>
-
-              <div class="flex gap-2 items-center">
-                <!-- Fold Button -->
+              
+    <!-- 3-up action row -->
+              <div class="grid grid-cols-3 gap-1.5">
                 <%= if @game_view.valid_actions.fold do %>
-                  <.button
+                  <button
                     phx-click="fold_hand"
-                    class="cursor-pointer bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="inline-flex items-center justify-center py-2.5 px-3 rounded-lg text-[13px] font-semibold tracking-wide border border-[var(--pkr-line)] text-[var(--pkr-ink-2)] bg-transparent hover:bg-[var(--pkr-danger)]/15 hover:text-[var(--pkr-danger)] cursor-pointer transition-all"
                   >
                     Fold
-                  </.button>
+                  </button>
                 <% end %>
-                <!-- Check Button -->
                 <%= if @game_view.valid_actions.check do %>
-                  <.button
+                  <button
                     phx-click="check_hand"
-                    class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="inline-flex items-center justify-center py-2.5 px-3 rounded-lg text-[13px] font-semibold tracking-wide border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] bg-[var(--pkr-bg-2)] hover:bg-[var(--pkr-bg-1)] cursor-pointer transition-all"
                   >
                     Check
-                  </.button>
+                  </button>
                 <% end %>
-                
-    <!-- Call Button -->
                 <%= if @game_view.valid_actions.call do %>
-                  <.button
+                  <button
                     phx-click="call_hand"
-                    class="cursor-pointer bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="inline-flex items-center justify-center gap-1 py-2.5 px-3 rounded-lg text-[13px] font-semibold tracking-wide border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] bg-[var(--pkr-bg-2)] hover:bg-[var(--pkr-bg-1)] cursor-pointer transition-all"
                   >
-                    Call {@game_view.valid_actions.call.amount}
-                  </.button>
+                    <span>Call</span>
+                    <span class="font-[family-name:var(--pkr-font-mono)] text-[10px] opacity-70">
+                      ${@game_view.valid_actions.call.amount}
+                    </span>
+                  </button>
                 <% end %>
-                
-    <!-- Raise Controls -->
                 <%= if @game_view.valid_actions.raise do %>
-                  <.button
+                  <button
                     phx-click="raise_hand"
                     phx-value-amount={@raise_amount}
-                    class="cursor-pointer bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2.5 rounded-lg text-base"
+                    class="inline-flex items-center justify-center py-2.5 px-3 rounded-lg text-[13px] font-semibold tracking-wide border border-[var(--pkr-accent)] text-[var(--pkr-bg-0)] bg-[var(--pkr-accent)] hover:brightness-110 cursor-pointer transition-all shadow-[0_6px_16px_color-mix(in_oklch,var(--pkr-accent),transparent_70%)]"
                   >
-                    <div class="w-[110px] text-center">
-                      Raise {@raise_amount}
-                    </div>
-                  </.button>
+                    Raise
+                  </button>
                 <% end %>
               </div>
             </div>
@@ -728,11 +696,13 @@ defmodule PokerWeb.PlayerLive.Game do
       <%= if @show_buy_in && @game_view.player_actions.can_buy_in do %>
         <% buy_in = @game_view.player_actions.can_buy_in %>
         <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div class="bg-gray-900 rounded-xl p-6 shadow-2xl border-2 border-gray-700 w-80">
-            <h3 class="text-white text-lg font-bold mb-4">Buy In</h3>
+          <div class="bg-[var(--pkr-bg-1)] rounded-xl p-6 shadow-2xl border border-[var(--pkr-line)] w-80 font-[family-name:var(--pkr-font-ui)]">
+            <h3 class="font-[family-name:var(--pkr-font-display)] text-xl text-[var(--pkr-ink-1)] mb-4 tracking-tight">
+              Buy In
+            </h3>
 
             <div class="mb-4">
-              <div class="text-center text-3xl font-bold text-amber-400 mb-3">
+              <div class="text-center font-[family-name:var(--pkr-font-display)] text-[32px] text-[var(--pkr-accent)] mb-3 tracking-tight">
                 ${@buy_in_amount}
               </div>
               <form phx-change="update_buy_in_amount">
@@ -742,10 +712,10 @@ defmodule PokerWeb.PlayerLive.Game do
                   min={buy_in.min}
                   max={buy_in.max}
                   value={@buy_in_amount}
-                  class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  class="w-full h-1 appearance-none bg-[var(--pkr-bg-2)] rounded cursor-pointer accent-[var(--pkr-accent)]"
                 />
               </form>
-              <div class="flex justify-between text-sm text-gray-500 font-bold mt-1">
+              <div class="flex justify-between font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)] mt-1">
                 <span>${buy_in.min}</span>
                 <span>${buy_in.max}</span>
               </div>
@@ -754,13 +724,13 @@ defmodule PokerWeb.PlayerLive.Game do
             <div class="flex gap-3">
               <button
                 phx-click="close_buy_in"
-                class="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 transition-all"
+                class="flex-1 px-4 py-2.5 rounded-lg font-medium text-[13px] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-0)] transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 phx-click="confirm_buy_in"
-                class="cursor-pointer flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all"
+                class="flex-1 px-4 py-2.5 rounded-lg font-medium text-[13px] bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] border border-[var(--pkr-accent)] hover:brightness-110 transition-all cursor-pointer"
               >
                 Confirm
               </button>

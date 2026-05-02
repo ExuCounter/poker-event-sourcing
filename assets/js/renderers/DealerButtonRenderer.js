@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { HOOD_WIDTH, CARD_OVERLAP } from "../constants.js";
+import { HOOD_WIDTH, CARD_OVERLAP, DEALER_BUTTON, FONTS } from "../constants.js";
 
 export class DealerButtonRenderer {
   constructor(getState, getParticipantPosition) {
@@ -12,36 +12,36 @@ export class DealerButtonRenderer {
   }
 
   #createButton() {
-    const buttonRadius = 14;
+    const r = DEALER_BUTTON.radius;
 
     // Shadow
     const shadow = new PIXI.Graphics();
-    shadow.circle(1.5, 2, buttonRadius + 1);
-    shadow.fill({ color: 0x000000, alpha: 0.4 });
+    shadow.circle(1.5, 2, r + 1);
+    shadow.fill({ color: DEALER_BUTTON.shadow, alpha: DEALER_BUTTON.shadowAlpha });
     this.container.addChild(shadow);
 
-    // Red outer ring
+    // Brass outer
     const button = new PIXI.Graphics();
-    button.circle(0, 0, buttonRadius);
-    button.fill(0xcc2222);
-    button.circle(0, 0, buttonRadius);
-    button.stroke({ color: 0x991111, width: 1.5 });
+    button.circle(0, 0, r);
+    button.fill(DEALER_BUTTON.bgGradientTop);
+    button.circle(0, 0, r);
+    button.stroke({ color: DEALER_BUTTON.border, width: 1.5 });
     this.container.addChild(button);
 
-    // Inner circle (darker red)
+    // Inner circle (slightly darker)
     const inner = new PIXI.Graphics();
-    inner.circle(0, 0, buttonRadius - 3);
-    inner.fill(0xb81c1c);
+    inner.circle(0, 0, r - 3);
+    inner.fill(DEALER_BUTTON.bgGradientBottom);
     this.container.addChild(inner);
 
     // "D" text
     const dealerText = new PIXI.Text({
       text: "D",
       style: {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: FONTS.display,
         fontSize: 15,
         fontWeight: "bold",
-        fill: 0xffffff,
+        fill: DEALER_BUTTON.text,
       },
     });
     dealerText.anchor.set(0.5, 0.5);

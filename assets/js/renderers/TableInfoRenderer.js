@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { TABLE_HEIGHT } from "../constants.js";
+import { TABLE_COLORS, FONTS } from "../constants.js";
 
 export class TableInfoRenderer {
   constructor(getState) {
@@ -40,14 +40,16 @@ export class TableInfoRenderer {
       displayParts.push(formattedStatus);
     }
 
+    // Watermark-style brand text on the felt
     const tableTypeText = new PIXI.Text({
-      text: displayParts.join(", "),
+      text: displayParts.join(" \u00B7 "),
       style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 38,
-        fontWeight: "600",
-        fill: 0xffffff,
-        letterSpacing: 1,
+        fontFamily: FONTS.display,
+        fontStyle: "italic",
+        fontSize: 32,
+        fontWeight: "400",
+        fill: TABLE_COLORS.potAmount,
+        letterSpacing: 4,
       },
     });
 
@@ -60,17 +62,17 @@ export class TableInfoRenderer {
     // Show "Waiting for players" message when table is waiting
     if (tableStatus === "waiting") {
       const waitingText = new PIXI.Text({
-        text: "Waiting for players...",
+        text: "Waiting for players\u2026",
         style: {
-          fontFamily: "Arial, sans-serif",
-          fontSize: 28,
-          fontWeight: "600",
-          fill: "white",
+          fontFamily: FONTS.ui,
+          fontSize: 24,
+          fontWeight: "500",
+          fill: TABLE_COLORS.potAmount,
           letterSpacing: 1,
         },
       });
 
-      waitingText.alpha = 0.2;
+      waitingText.alpha = 0.25;
       waitingText.anchor.set(0.5);
       waitingText.position.set(0, -30);
 

@@ -5,7 +5,6 @@ import { ChipsRenderer } from "./ChipsRenderer.js";
 import {
   TABLE_WIDTH,
   TABLE_HEIGHT,
-  TABLE_BORDER_RADIUS,
   HOLE_CARD_SPACING,
   CARD_OFFSET_X,
   HOOD_WIDTH,
@@ -14,7 +13,9 @@ import {
   HOOD_PADDING,
   CARD_OVERLAP,
   PARTICIPANT_COLORS,
+  ACTION_INDICATOR_COLORS,
   CARD_HEIGHT,
+  FONTS,
 } from "../constants.js";
 
 export class ParticipantRenderer {
@@ -57,17 +58,6 @@ export class ParticipantRenderer {
     this.actionIndicatorTween = null;
   }
 
-  // Action indicator colors
-  static ACTION_COLORS = {
-    RAISE: 0xfbbf24,
-    CALL: 0x4ade80,
-    CHECK: 0x60a5fa,
-    FOLD: 0xef4444,
-    "ALL IN": 0xf97316,
-    AWAY: 0x9ca3af,
-    "I'M BACK": 0x4ade80,
-  };
-
   async showActionIndicator(actionType) {
     // Kill existing tween if running
     if (this.actionIndicatorTween) {
@@ -97,17 +87,18 @@ export class ParticipantRenderer {
     // Semi-transparent background overlay matching hood shape
     const overlay = new PIXI.Graphics();
     overlay.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    overlay.fill({ color: 0x000000, alpha: 0.85 });
+    overlay.fill({ color: 0x000000, alpha: 0.88 });
     this.actionIndicatorContainer.addChild(overlay);
 
     // Action text
     const actionText = new PIXI.Text({
       text: actionType,
       style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 22,
+        fontFamily: FONTS.mono,
+        fontSize: 20,
         fontWeight: "bold",
-        fill: ParticipantRenderer.ACTION_COLORS[actionType] || 0xffffff,
+        fill: ACTION_INDICATOR_COLORS[actionType] || 0xffffff,
+        letterSpacing: 2,
       },
     });
     actionText.anchor.set(0.5, 0.5);
@@ -159,19 +150,16 @@ export class ParticipantRenderer {
     this.container.zIndex = 60;
 
     const duration = timing.duration / 1000;
-    const staggerDelay = 0.08; // Delay between each card
+    const staggerDelay = 0.08;
     const cards = [...this.holeCardsContainer.children];
 
     // Animate each card individually with stagger and sideways spread
     const animations = cards.map((card, index) => {
-      // Add sideways spread - first card goes slightly left, second slightly right
       const spreadX = (index === 0 ? -30 : 30) + (Math.random() * 20 - 10);
       const spreadY = Math.random() * 20 - 10;
+      const rotation =
+        Math.random() * 0.5 - 0.25 + (index === 0 ? -0.2 : 0.2);
 
-      // Random rotation for natural throw effect
-      const rotation = Math.random() * 0.5 - 0.25 + (index === 0 ? -0.2 : 0.2);
-
-      // Target position (relative to holeCardsContainer)
       const targetX = tableCenterLocal.x - HOOD_WIDTH / 2 + spreadX - card.x;
       const targetY = tableCenterLocal.y - CARD_HEIGHT / 2 + spreadY - card.y;
 
@@ -233,10 +221,7 @@ export class ParticipantRenderer {
   }
 
   async #flipCard(cardContainer, card, timing) {
-    const flipDuration = timing.duration / 1000 / 2; // Half for flip out, half for flip in
-
-    console.log(timing);
-    console.log(flipDuration);
+    const flipDuration = timing.duration / 1000 / 2;
 
     await gsap.to(cardContainer.scale, {
       x: 0,
@@ -284,9 +269,10 @@ export class ParticipantRenderer {
       const chipsText = new PIXI.Text({
         text: this.formatChips(participant.betThisRound),
         style: {
-          fontSize: 20,
-          fontWeight: "bold",
-          fill: "#e2e2e2",
+          fontSize: 18,
+          fontWeight: "600",
+          fill: PARTICIPANT_COLORS.text,
+          fontFamily: FONTS.mono,
         },
       });
 
@@ -334,74 +320,107 @@ export class ParticipantRenderer {
 
     const isFolded =
       participant.handStatus === "folded" || participant.isSittingOut;
+    const isAllIn = participant.handStatus === "all_in";
 
-    this.hoodContainer.zIndex = 2; // Above cards
-    this.hoodContainer.position.set(0, CARD_OVERLAP); // Position below cards top
+    this.hoodContainer.zIndex = 2;
+    this.hoodContainer.position.set(0, CARD_OVERLAP);
 
     const hood = new PIXI.Graphics();
 
-    // Main background
+    // Main background with alpha
     hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    hood.fill(
-      isFolded ? PARTICIPANT_COLORS.hoodBgFolded : PARTICIPANT_COLORS.hoodBg,
-    );
-
-    // Subtle border
-    hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    hood.stroke({
+    hood.fill({
       color: isFolded
-        ? PARTICIPANT_COLORS.borderFolded
-        : PARTICIPANT_COLORS.border,
-      width: 1.5,
+        ? PARTICIPANT_COLORS.hoodBgFolded
+        : PARTICIPANT_COLORS.hoodBg,
+      alpha: isFolded
+        ? PARTICIPANT_COLORS.hoodBgFoldedAlpha
+        : PARTICIPANT_COLORS.hoodBgAlpha,
     });
+
+    // Border — accent color when it's this player's turn
+    const isActive =
+      state.currentTurn?.participantId === this.participantId;
+    const borderColor = isActive
+      ? PARTICIPANT_COLORS.borderActive
+      : isFolded
+        ? PARTICIPANT_COLORS.borderFolded
+        : PARTICIPANT_COLORS.border;
+
+    hood.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
+    hood.stroke({ color: borderColor, width: isActive ? 1.5 : 1 });
+
+    // Active glow
+    if (isActive) {
+      const glow = new PIXI.Graphics();
+      glow.roundRect(-4, -4, HOOD_WIDTH + 8, HOOD_HEIGHT + 8, HOOD_BORDER_RADIUS + 4);
+      glow.fill({ color: PARTICIPANT_COLORS.activeGlow, alpha: PARTICIPANT_COLORS.activeGlowAlpha });
+      this.hoodContainer.addChild(glow);
+    }
 
     this.hoodContainer.addChild(hood);
 
-    const divider = new PIXI.Graphics();
+    // Position badge (top-left of hood)
+    if (participant.position) {
+      this.#renderPositionBadge(participant.position);
+    }
 
-    divider.moveTo(HOOD_PADDING, HOOD_HEIGHT / 2);
-    divider.lineTo(HOOD_WIDTH - HOOD_PADDING, HOOD_HEIGHT / 2);
-    divider.stroke({ color: PARTICIPANT_COLORS.divider, width: 1 });
+    // Action label badge (top-right: FOLD, ALL-IN, SITTING OUT)
+    if (isFolded || isAllIn || participant.isSittingOut) {
+      this.#renderActionLabel(participant);
+    }
 
-    this.hoodContainer.addChild(divider);
+    // Centered layout: name on top row, chips on bottom row
+    const centerX = HOOD_WIDTH / 2;
 
-    const nickname = participant.nickname;
-
-    // Name text (centered)
-    const displayName = this.truncateText(nickname, 12);
+    // Name text — centered, auto-shrink to fit
+    const maxNameWidth = HOOD_WIDTH - HOOD_PADDING * 2;
     const nameText = new PIXI.Text({
-      text: displayName,
+      text: participant.nickname,
       style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 22,
-        fontWeight: "bold",
+        fontFamily: FONTS.ui,
+        fontSize: 17,
+        fontWeight: "600",
         fill: isFolded
           ? PARTICIPANT_COLORS.textFolded
           : PARTICIPANT_COLORS.text,
       },
     });
-
+    // Shrink font if name overflows hood width
+    if (nameText.width > maxNameWidth) {
+      const scaledSize = Math.max(11, Math.floor(17 * (maxNameWidth / nameText.width)));
+      nameText.style.fontSize = scaledSize;
+    }
     nameText.anchor.set(0.5, 0.5);
-    nameText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 4 + 2);
-
+    nameText.position.set(centerX, HOOD_HEIGHT * 0.30);
     this.hoodContainer.addChild(nameText);
 
-    // Chips amount
+    // Divider line
+    const divider = new PIXI.Graphics();
+    divider.moveTo(HOOD_PADDING + 4, HOOD_HEIGHT * 0.56);
+    divider.lineTo(HOOD_WIDTH - HOOD_PADDING - 4, HOOD_HEIGHT * 0.56);
+    divider.stroke({ color: PARTICIPANT_COLORS.divider, width: 1 });
+    this.hoodContainer.addChild(divider);
+
+    // Chips amount — centered
+    const chipsDisplay = isAllIn
+      ? "ALL-IN"
+      : this.formatChips(participant.chips);
     const chipsText = new PIXI.Text({
-      text: this.formatChips(participant.chips),
+      text: chipsDisplay,
       style: {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 24,
-        fontWeight: "bold",
-        fill: isFolded
-          ? PARTICIPANT_COLORS.chipsFolded
-          : PARTICIPANT_COLORS.chips,
+        fontFamily: FONTS.mono,
+        fontSize: 20,
+        fontWeight: "700",
+        fill: isAllIn
+          ? PARTICIPANT_COLORS.allInText
+          : isFolded
+            ? PARTICIPANT_COLORS.chipsFolded
+            : PARTICIPANT_COLORS.chips,
       },
     });
-
     chipsText.anchor.set(0.5, 0.5);
-    chipsText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT - HOOD_PADDING - 4);
-
+    chipsText.position.set(centerX, HOOD_HEIGHT * 0.76);
     this.hoodContainer.addChild(chipsText);
 
     // Render equity badge if available
@@ -410,31 +429,100 @@ export class ParticipantRenderer {
     this.container.addChild(this.hoodContainer);
   }
 
+  #renderPositionBadge(position) {
+    const posText = position.toUpperCase();
+    const badge = new PIXI.Container();
+
+    const text = new PIXI.Text({
+      text: posText,
+      style: {
+        fontFamily: FONTS.mono,
+        fontSize: 13,
+        fontWeight: "600",
+        fill: PARTICIPANT_COLORS.positionBadgeText,
+        letterSpacing: 1.5,
+      },
+    });
+
+    const paddingX = 8;
+    const paddingY = 4;
+    const bg = new PIXI.Graphics();
+    bg.roundRect(0, 0, text.width + paddingX * 2, text.height + paddingY * 2, 5);
+    bg.fill(PARTICIPANT_COLORS.positionBadgeBg);
+    bg.stroke({ color: PARTICIPANT_COLORS.positionBadgeBorder, width: 1 });
+
+    text.position.set(paddingX, paddingY);
+
+    badge.addChild(bg);
+    badge.addChild(text);
+    badge.position.set(10, -12);
+
+    this.hoodContainer.addChild(badge);
+  }
+
+  #renderActionLabel(participant) {
+    const isFolded = participant.handStatus === "folded";
+    const isAllIn = participant.handStatus === "all_in";
+    const isSittingOut = participant.isSittingOut;
+
+    const labelText = isFolded
+      ? "FOLD"
+      : isAllIn
+        ? "ALL-IN"
+        : "SITTING OUT";
+
+    const paddingX = 8;
+    const paddingY = 4;
+    const badge = new PIXI.Container();
+
+    const labelTextObj = new PIXI.Text({
+      text: labelText,
+      style: {
+        fontFamily: FONTS.mono,
+        fontSize: 13,
+        fontWeight: "600",
+        fill: isAllIn ? 0x0f0f12 : PARTICIPANT_COLORS.actionLabelText,
+        letterSpacing: 1.5,
+      },
+    });
+
+    const bg = new PIXI.Graphics();
+    bg.roundRect(0, 0, labelTextObj.width + paddingX * 2, labelTextObj.height + paddingY * 2, 5);
+    bg.fill(
+      isAllIn ? PARTICIPANT_COLORS.actionLabelAllIn : PARTICIPANT_COLORS.actionLabelBg,
+    );
+    if (!isAllIn) {
+      bg.stroke({ color: PARTICIPANT_COLORS.actionLabelBorder, width: 1 });
+    }
+
+    labelTextObj.position.set(paddingX, paddingY);
+
+    badge.addChild(bg);
+    badge.addChild(labelTextObj);
+    badge.position.set(HOOD_WIDTH - (labelTextObj.width + paddingX * 2) - 6, -12);
+
+    this.hoodContainer.addChild(badge);
+  }
+
   #renderEquityBadge(participant) {
-    // Only show if equity data exists and has valid values
     if (!participant.equity || participant.equity.win === undefined) return;
 
     const winPercent = participant.equity.win || 0;
     const tiePercent = participant.equity.tie || 0;
-
-    // Show combined equity (win + tie share)
     const totalEquity = winPercent + tiePercent;
     const displayText = `${totalEquity.toFixed(0)}%`;
 
-    // Create badge container
     const badgeContainer = new PIXI.Container();
 
-    // Badge dimensions
     const paddingX = 7;
     const paddingY = 5;
     const fontSize = 16;
     const borderRadius = 6;
 
-    // Create text first to measure
     const equityText = new PIXI.Text({
       text: displayText,
       style: {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: FONTS.mono,
         fontSize: fontSize,
         fontWeight: "bold",
         fill: 0xffffff,
@@ -444,82 +532,24 @@ export class ParticipantRenderer {
     const badgeWidth = equityText.width + paddingX * 2;
     const badgeHeight = equityText.height + paddingY * 2;
 
-    // Red-cherry background
     const badge = new PIXI.Graphics();
     badge.roundRect(0, 0, badgeWidth, badgeHeight, borderRadius);
-    badge.fill(0xdc2626); // Red-cherry color
+    badge.fill(0x8a2f20); // Oxblood
 
     badgeContainer.addChild(badge);
 
-    // Center text in badge
     equityText.anchor.set(0.5, 0.5);
     equityText.position.set(badgeWidth / 2, badgeHeight / 2);
     badgeContainer.addChild(equityText);
 
-    // Position: top-right of hood, close to where right card would be
-    // Hood is at y = CARD_OVERLAP, cards are above it
-    // Position badge above the hood, to the right side
-    badgeContainer.position.set(
-      HOOD_WIDTH - 15, // Right side with small margin
-      -70, // Above the hood (negative Y since hood is at CARD_OVERLAP)
-    );
+    badgeContainer.position.set(HOOD_WIDTH - 15, -70);
 
     this.hoodContainer.addChild(badgeContainer);
 
     this.equityBadge = badgeContainer;
   }
 
-  #getAvatarColor(nickname, isFolded) {
-    if (isFolded) {
-      return 0x555555;
-    }
-
-    // Generate a consistent hue from nickname string
-    let hash = 0;
-    for (let i = 0; i < nickname.length; i++) {
-      hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
-    }
-
-    // Convert hash to hue (0-360)
-    const hue = Math.abs(hash % 360);
-
-    // Convert HSL to RGB (saturation: 65%, lightness: 45%)
-    return this.#hslToHex(hue, 65, 45);
-  }
-
-  #hslToHex(h, s, l) {
-    s /= 100;
-    l /= 100;
-
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-
-    let r, g, b;
-    if (h < 60) {
-      [r, g, b] = [c, x, 0];
-    } else if (h < 120) {
-      [r, g, b] = [x, c, 0];
-    } else if (h < 180) {
-      [r, g, b] = [0, c, x];
-    } else if (h < 240) {
-      [r, g, b] = [0, x, c];
-    } else if (h < 300) {
-      [r, g, b] = [x, 0, c];
-    } else {
-      [r, g, b] = [c, 0, x];
-    }
-
-    const toHex = (val) => {
-      const hex = Math.round((val + m) * 255).toString(16);
-      return hex.length === 1 ? "0" + hex : hex;
-    };
-
-    return parseInt(toHex(r) + toHex(g) + toHex(b), 16);
-  }
-
   // Fixed seat positions for 6-max table (indexed 0-5 for visual positions)
-  // Position 0 is always at bottom center, then clockwise
   #getFixedSeatPositions() {
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
@@ -528,16 +558,15 @@ export class ParticipantRenderer {
     const bottomPadding = -10;
 
     return [
-      { x: 0, y: halfH + bottomPadding }, // Visual 0: Bottom center
-      { x: halfW + sidePadding, y: halfH * 0.4 }, // Visual 1: Bottom right
-      { x: halfW + sidePadding, y: -halfH * 0.4 }, // Visual 2: Top right
-      { x: 0, y: -halfH - topPadding }, // Visual 3: Top center
-      { x: -halfW - sidePadding, y: -halfH * 0.4 }, // Visual 4: Top left
-      { x: -halfW - sidePadding, y: halfH * 0.4 }, // Visual 5: Bottom left
+      { x: 0, y: halfH + bottomPadding },
+      { x: halfW + sidePadding, y: halfH * 0.4 },
+      { x: halfW + sidePadding, y: -halfH * 0.4 },
+      { x: 0, y: -halfH - topPadding },
+      { x: -halfW - sidePadding, y: -halfH * 0.4 },
+      { x: -halfW - sidePadding, y: halfH * 0.4 },
     ];
   }
 
-  // Calculate visual position with rotation so current user is at bottom
   #getVisualPosition() {
     const state = this.getState();
     const participant = state.participants.find(
@@ -547,15 +576,9 @@ export class ParticipantRenderer {
       (p) => p.playerId === state.currentUserId,
     );
 
-    // Get physical seat numbers (1-6)
     const mySeatNumber = participant?.seatNumber || 1;
     const viewerSeatNumber = currentUser?.seatNumber || 1;
-
-    // Calculate rotation offset so viewer's seat appears at visual position 0 (bottom)
     const rotationOffset = viewerSeatNumber - 1;
-
-    // Apply rotation: shift seat numbers so current user is at visual position 0
-    // Seat numbers are 1-6, visual positions are 0-5
     const visualPosition = (mySeatNumber - 1 - rotationOffset + 6) % 6;
 
     return visualPosition;
@@ -579,44 +602,34 @@ export class ParticipantRenderer {
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
 
-    // Calculate bet position - inset from player toward table center
-    // But also offset to the side to avoid community cards
     const betInsetY = 135;
     const betInsetX = 110;
-    const sideOffset = 80; // Horizontal offset to avoid center
+    const sideOffset = 80;
     let betX = pos.x;
     let betY = pos.y;
 
-    // Move bet chips toward center but offset to the side
     if (pos.y > halfH * 0.3) {
-      // Bottom players: bet above them, offset based on x position
       betY = pos.y - betInsetY;
       if (pos.x > 20) {
-        betX = pos.x - sideOffset; // Right side: offset left
+        betX = pos.x - sideOffset;
       } else if (pos.x < -20) {
-        betX = pos.x + sideOffset; // Left side: offset right
+        betX = pos.x + sideOffset;
       }
-      // Center bottom player keeps x position
     } else if (pos.y < -halfH * 0.3) {
-      // Top players: bet below them, offset based on x position
       betY = pos.y + betInsetY;
       if (pos.x > 20) {
-        betX = pos.x - sideOffset; // Right side: offset left
+        betX = pos.x - sideOffset;
       } else if (pos.x < -20) {
-        betX = pos.x + sideOffset; // Left side: offset right
+        betX = pos.x + sideOffset;
       }
-      // Center top player keeps x position
     } else if (pos.x > halfW * 0.3) {
-      // Right players: bet to their left
       betX = pos.x - betInsetX;
-      betY = pos.y + (pos.y > 0 ? -40 : 40); // Slight vertical offset away from center
+      betY = pos.y + (pos.y > 0 ? -40 : 40);
     } else if (pos.x < -halfW * 0.3) {
-      // Left players: bet to their right
       betX = pos.x + betInsetX;
-      betY = pos.y + (pos.y > 0 ? -40 : 40); // Slight vertical offset away from center
+      betY = pos.y + (pos.y > 0 ? -40 : 40);
     }
 
-    // Player position for relative offset
     const playerX = pos.x;
     const playerY = pos.y;
 
@@ -672,47 +685,38 @@ export class ParticipantRenderer {
   }
 
   renderTimeoutProgress() {
-    // Remove existing progress border if any
     if (this.progressArc) {
       this.hoodContainer.removeChild(this.progressArc);
       this.progressArc = null;
     }
 
     const state = this.getState();
-
-    // Check if this participant is the active player (whose turn it is)
     const isActive = state.currentTurn?.participantId === this.participantId;
 
     if (!isActive || !state.timeoutInfo) return;
 
-    // Calculate time remaining
     const startedAt = new Date(state.timeoutInfo.startedAt);
     const now = new Date();
-    const elapsed = (now - startedAt) / 1000; // seconds
+    const elapsed = (now - startedAt) / 1000;
     const remaining = Math.max(0, state.timeoutInfo.timeoutSeconds - elapsed);
 
-    // Only show timer when 15 seconds or less remain
     const TIMER_SHOW_THRESHOLD = 15;
     if (remaining > TIMER_SHOW_THRESHOLD || remaining <= 0) return;
 
-    // Progress is based on the 15-second window (full at 15s, empty at 0s)
     const progress = remaining / TIMER_SHOW_THRESHOLD;
 
-    // Determine border color based on remaining time (green → yellow → red)
-    // 15-10s: green, 10-5s: yellow, <5s: red
     let borderColor;
     if (remaining > 10) {
-      borderColor = 0x4ade80; // Green
+      borderColor = PARTICIPANT_COLORS.timerGreen;
     } else if (remaining > 5) {
-      borderColor = 0xfbbf24; // Yellow/amber
+      borderColor = PARTICIPANT_COLORS.timerYellow;
     } else {
-      borderColor = 0xef4444; // Red
+      borderColor = PARTICIPANT_COLORS.timerRed;
     }
 
-    // Draw rounded rectangle border that shrinks with progress
     const graphics = new PIXI.Graphics();
     const lineWidth = 4;
-    const padding = 3; // Offset from hood edge
+    const padding = 3;
     const w = HOOD_WIDTH + padding * 2;
     const h = HOOD_HEIGHT + padding * 2;
     const r = HOOD_BORDER_RADIUS + padding;
@@ -721,65 +725,51 @@ export class ParticipantRenderer {
     const right = left + w;
     const bottom = top + h;
 
-    // Calculate perimeter
     const straightH = w - 2 * r;
     const straightV = h - 2 * r;
     const cornerLen = (Math.PI / 2) * r;
     const totalPerimeter = 2 * straightH + 2 * straightV + 4 * cornerLen;
     const drawLength = totalPerimeter * progress;
 
-    // Path points going clockwise from top-center
     const halfTop = straightH / 2;
 
-    // Cumulative lengths at the END of each segment
     const cumLengths = [
-      halfTop, // 0: top-right line
-      halfTop + cornerLen, // 1: top-right corner
-      halfTop + cornerLen + straightV, // 2: right line
-      halfTop + 2 * cornerLen + straightV, // 3: bottom-right corner
-      halfTop + 2 * cornerLen + straightV + straightH, // 4: bottom line
-      halfTop + 3 * cornerLen + straightV + straightH, // 5: bottom-left corner
-      halfTop + 3 * cornerLen + 2 * straightV + straightH, // 6: left line
-      halfTop + 4 * cornerLen + 2 * straightV + straightH, // 7: top-left corner
-      totalPerimeter, // 8: top-left line (back to center)
+      halfTop,
+      halfTop + cornerLen,
+      halfTop + cornerLen + straightV,
+      halfTop + 2 * cornerLen + straightV,
+      halfTop + 2 * cornerLen + straightV + straightH,
+      halfTop + 3 * cornerLen + straightV + straightH,
+      halfTop + 3 * cornerLen + 2 * straightV + straightH,
+      halfTop + 4 * cornerLen + 2 * straightV + straightH,
+      totalPerimeter,
     ];
 
-    // Start at exact top-center of the hood (not padded area)
     const startX = HOOD_WIDTH / 2;
     const startY = top;
     graphics.moveTo(startX, startY);
 
     let prevCum = 0;
 
-    // Segment 0: Top edge right half (going right)
     if (drawLength > 0) {
       const segLen = Math.min(halfTop, drawLength);
       graphics.lineTo(startX + segLen, top);
     }
     prevCum = cumLengths[0];
 
-    // Segment 1: Top-right corner
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(
-        right - r,
-        top + r,
-        r,
-        -Math.PI / 2,
-        -Math.PI / 2 + angleSpan,
-      );
+      graphics.arc(right - r, top + r, r, -Math.PI / 2, -Math.PI / 2 + angleSpan);
     }
     prevCum = cumLengths[1];
 
-    // Segment 2: Right edge (going down)
     if (drawLength > prevCum) {
       const segLen = Math.min(straightV, drawLength - prevCum);
       graphics.lineTo(right, top + r + segLen);
     }
     prevCum = cumLengths[2];
 
-    // Segment 3: Bottom-right corner
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
@@ -787,35 +777,25 @@ export class ParticipantRenderer {
     }
     prevCum = cumLengths[3];
 
-    // Segment 4: Bottom edge (going left)
     if (drawLength > prevCum) {
       const segLen = Math.min(straightH, drawLength - prevCum);
       graphics.lineTo(right - r - segLen, bottom);
     }
     prevCum = cumLengths[4];
 
-    // Segment 5: Bottom-left corner
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(
-        left + r,
-        bottom - r,
-        r,
-        Math.PI / 2,
-        Math.PI / 2 + angleSpan,
-      );
+      graphics.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI / 2 + angleSpan);
     }
     prevCum = cumLengths[5];
 
-    // Segment 6: Left edge (going up)
     if (drawLength > prevCum) {
       const segLen = Math.min(straightV, drawLength - prevCum);
       graphics.lineTo(left, bottom - r - segLen);
     }
     prevCum = cumLengths[6];
 
-    // Segment 7: Top-left corner
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
@@ -823,10 +803,8 @@ export class ParticipantRenderer {
     }
     prevCum = cumLengths[7];
 
-    // Segment 8: Top edge left half (going right back to center)
     if (drawLength > prevCum) {
       const segLen = Math.min(halfTop, drawLength - prevCum);
-      // We're at (left + r, top) after the corner, go right
       graphics.lineTo(left + r + segLen, top);
     }
 
@@ -843,7 +821,8 @@ export class ParticipantRenderer {
         style: {
           fontSize: 27,
           fontWeight: "bold",
-          fill: 0xff0000,
+          fill: PARTICIPANT_COLORS.timerRed,
+          fontFamily: FONTS.mono,
         },
       });
       this.countdownText.anchor.set(0.5);
@@ -853,7 +832,6 @@ export class ParticipantRenderer {
       this.countdownText.text = seconds.toString();
     }
 
-    // Add pulsing animation when <= 5 seconds
     if (shouldPulse && !this.countdownPulseTween) {
       this.countdownPulseTween = gsap.to(this.countdownText.scale, {
         x: 1.3,
@@ -864,7 +842,6 @@ export class ParticipantRenderer {
         ease: "power1.inOut",
       });
 
-      // Also pulse the progress arc
       if (this.progressArc && !this.arcPulseTween) {
         this.arcPulseTween = gsap.to(this.progressArc, {
           alpha: 0.5,
@@ -876,7 +853,6 @@ export class ParticipantRenderer {
       }
     }
 
-    // Stop pulsing when time is up or above 5s
     if (!shouldPulse && this.countdownPulseTween) {
       this.countdownPulseTween.kill();
       this.countdownPulseTween = null;
@@ -891,7 +867,6 @@ export class ParticipantRenderer {
   }
 
   playTimeoutAlert() {
-    // Play a short beep sound
     const audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
@@ -900,7 +875,7 @@ export class ParticipantRenderer {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.value = 800; // Hz
+    oscillator.frequency.value = 800;
     oscillator.type = "sine";
 
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
@@ -915,7 +890,7 @@ export class ParticipantRenderer {
 
   truncateText(text, maxLength) {
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength - 1) + "…";
+    return text.substring(0, maxLength - 1) + "\u2026";
   }
 
   formatChips(amount) {

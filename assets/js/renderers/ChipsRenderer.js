@@ -9,6 +9,8 @@ import {
   CHIP_INNER_RING_RADIUS,
   CHIP_VALUES,
   CHIP_COLORS,
+  CHIP_EDGE_COLORS,
+  FONTS,
 } from "../constants.js";
 
 export class ChipsRenderer {
@@ -37,6 +39,7 @@ export class ChipsRenderer {
 
   #createSingleChip(value, color) {
     const chip = new PIXI.Container();
+    const edgeColor = CHIP_EDGE_COLORS[value] || 0x000000;
 
     // Chip shadow
     const shadow = new PIXI.Graphics();
@@ -48,7 +51,7 @@ export class ChipsRenderer {
     const circle = new PIXI.Graphics();
     circle.circle(0, 0, CHIP_RADIUS);
     circle.fill(color);
-    circle.stroke({ width: 2, color: 0xffffff, alpha: 0.3 });
+    circle.stroke({ width: 2, color: edgeColor, alpha: 0.6 });
     chip.addChild(circle);
 
     // Edge notches (classic poker chip style)
@@ -59,23 +62,24 @@ export class ChipsRenderer {
       const y = Math.sin(angle) * CHIP_NOTCH_RADIUS;
       notches.circle(x, y, CHIP_NOTCH_SIZE);
     }
-    notches.fill(0xffffff, 0.4);
+    notches.fill(0xffffff, 0.35);
     chip.addChild(notches);
 
     // Inner ring
     const innerRing = new PIXI.Graphics();
     innerRing.circle(0, 0, CHIP_INNER_RING_RADIUS);
-    innerRing.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
+    innerRing.stroke({ width: 2, color: 0xffffff, alpha: 0.4 });
     chip.addChild(innerRing);
 
     // Value text
+    const isLight = value === 1 || value === 1000;
     const text = new PIXI.Text({
-      text: value.toString(),
+      text: value >= 1000 ? "1K" : value.toString(),
       style: {
         fontSize: 12,
         fontWeight: "bold",
-        fill: color === CHIP_COLORS[1] ? 0x1a1a1a : 0xffffff,
-        fontFamily: "Arial, sans-serif",
+        fill: isLight ? 0x1a1a1a : 0xffffff,
+        fontFamily: FONTS.mono,
       },
       anchor: 0.5,
     });
