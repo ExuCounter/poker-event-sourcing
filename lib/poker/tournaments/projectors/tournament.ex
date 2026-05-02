@@ -45,40 +45,6 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     )
   end)
 
-  @impl Commanded.Projections.Ecto
-  def after_update(%TournamentCreated{id: tournament_id}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament_list(:tournament_created, %{tournament_id: tournament_id})
-    :ok
-  end
-
-  def after_update(%PlayerRegistered{tournament_id: tournament_id, player_id: player_id}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :player_registered, %{player_id: player_id})
-    Poker.Tournaments.PubSub.broadcast_tournament_list(:tournament_updated, %{tournament_id: tournament_id})
-    :ok
-  end
-
-  def after_update(%TournamentStarted{tournament_id: tournament_id}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :tournament_started)
-    :ok
-  end
-
-  def after_update(%BlindLevelAdvanced{tournament_id: tournament_id, level: level}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :blind_level_advanced, %{level: level})
-    :ok
-  end
-
-  def after_update(%TournamentPlayerBusted{tournament_id: tournament_id}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, :player_busted, %{})
-    :ok
-  end
-
-  def after_update(%TournamentFinished{tournament_id: tournament_id}, _metadata, _changes) do
-    Poker.Tournaments.PubSub.broadcast_tournament_list(:tournament_updated, %{tournament_id: tournament_id})
-    :ok
-  end
-
-  def after_update(_event, _metadata, _changes), do: :ok
-
   project(%TournamentStarted{tournament_id: tournament_id}, metadata, fn multi ->
     now = metadata.created_at
 

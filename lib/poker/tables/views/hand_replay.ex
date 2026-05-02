@@ -84,9 +84,7 @@ defmodule Poker.Tables.Views.HandReplay do
       # Build state up to this event
       new_state = build_state_at_step(replay, next_step)
 
-      # Transform the event using EventTransformer for consistent formatting
-      # The event already has event_id from EventStore metadata
-      transformed_event = Poker.Tables.EventTransformer.transform(next_event_info.event)
+      transformed_event = Poker.Events.Transformer.transform(next_event_info.event)
 
       {:ok,
        %{

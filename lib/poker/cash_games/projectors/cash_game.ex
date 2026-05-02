@@ -10,7 +10,7 @@ defmodule Poker.CashGames.Projectors.CashGame do
 
   project(%CashGameCreated{} = event, _metadata, fn multi ->
     Ecto.Multi.insert(multi, :cash_game, %CashGame{
-      id: event.id,
+      id: event.cash_game_id,
       table_id: event.table_id,
       creator_id: event.creator_id,
       small_blind: event.small_blind,

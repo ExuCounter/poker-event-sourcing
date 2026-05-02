@@ -350,7 +350,7 @@ defmodule PokerWeb.PlayerLive.Game do
     end
   end
 
-  defp apply_dynamic_timing(event) do
+  defp apply_dynamic_timing(%{timing: timing} = event) when is_map(timing) do
     age_ms = System.monotonic_time(:millisecond) - event.received_at
     multiplier = get_speed_multiplier(age_ms)
 
@@ -359,12 +359,10 @@ defmodule PokerWeb.PlayerLive.Game do
     |> maybe_update_in([:timing, :stagger], &round(&1 * multiplier))
   end
 
+  defp apply_dynamic_timing(event), do: event
+
   defp maybe_update_in(map, path, fun) do
     if get_in(map, path), do: update_in(map, path, fun), else: map
-  end
-
-  defp maybe_put_in(map, path, value) do
-    if get_in(map, path), do: put_in(map, path, value), else: map
   end
 
   defp get_speed_multiplier(age_ms) do
@@ -542,10 +540,10 @@ defmodule PokerWeb.PlayerLive.Game do
         </div>
       <% end %>
 
-      <div style="transform: scale(var(--ui-scale, 0)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1));">
+      <div style="transform: scale(var(--ui-scale, 1)); transform-origin: bottom left; width: calc(100vw / var(--ui-scale, 1));">
         <!-- Sit Out/In/Buy In Button - bottom-left corner -->
         <%= if @game_view.player_actions.is_participant do %>
-          <div class="absolute left-5 bottom-5 z-10 flex">
+          <div class="absolute left-5 bottom-5 z-10 flex items-center">
             <!-- Buy In button (cash games) -->
             <%= if @game_view.player_actions.can_buy_in != false or @game_view.game_mode == :cash_game do %>
               <% can_buy_in = @game_view.player_actions.can_buy_in != false %>
@@ -621,7 +619,7 @@ defmodule PokerWeb.PlayerLive.Game do
                       min={@game_view.valid_actions.raise.min}
                       max={@game_view.valid_actions.raise.max}
                       value={@raise_amount}
-                      class="w-full h-1 appearance-none bg-[var(--pkr-bg-2)] rounded cursor-pointer accent-[var(--pkr-accent)]"
+                      class="w-full h-1 rounded cursor-pointer accent-[var(--pkr-accent)]"
                     />
                   </form>
                   <div class="flex gap-1 mt-1">
@@ -712,7 +710,7 @@ defmodule PokerWeb.PlayerLive.Game do
                   min={buy_in.min}
                   max={buy_in.max}
                   value={@buy_in_amount}
-                  class="w-full h-1 appearance-none bg-[var(--pkr-bg-2)] rounded cursor-pointer accent-[var(--pkr-accent)]"
+                  class="w-full h-1 rounded cursor-pointer accent-[var(--pkr-accent)]"
                 />
               </form>
               <div class="flex justify-between font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)] mt-1">

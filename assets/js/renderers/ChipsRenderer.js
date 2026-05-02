@@ -18,11 +18,12 @@ export class ChipsRenderer {
     const container = new PIXI.Container();
     const chips = [];
 
+    const MAX_CHIPS = 5;
     let remaining = amount;
     let stackOffset = 0;
 
     for (const value of CHIP_VALUES) {
-      while (remaining >= value) {
+      while (remaining >= value && chips.length < MAX_CHIPS) {
         const chip = this.#createSingleChip(value, CHIP_COLORS[value]);
         chip.y = -stackOffset * CHIP_STACK_OFFSET;
         chip.x = 0;

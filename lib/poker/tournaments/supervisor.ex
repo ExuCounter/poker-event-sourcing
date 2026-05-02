@@ -10,6 +10,7 @@ defmodule Poker.Tournaments.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
+        Tournaments.EventHandlers.EventBroadcaster,
         Tournaments.Projectors.Tournament,
         Tournaments.ProcessManager
       ],

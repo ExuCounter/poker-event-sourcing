@@ -27,7 +27,7 @@ defmodule Poker.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, "test.parallel": :test]
     ]
   end
 

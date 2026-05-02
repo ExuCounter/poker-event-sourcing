@@ -33,7 +33,7 @@ defmodule Poker.CashGames.Aggregates.CashGame do
 
   def execute(%__MODULE__{id: nil}, %CreateCashGame{} = cmd) do
     %CashGameCreated{
-      id: cmd.cash_game_id,
+      cash_game_id: cmd.cash_game_id,
       table_id: cmd.table_id,
       creator_id: cmd.creator_id,
       status: :active,
@@ -59,7 +59,7 @@ defmodule Poker.CashGames.Aggregates.CashGame do
 
   def execute(%__MODULE__{}, %CloseCashGame{} = cmd) do
     %CashGameClosed{
-      id: cmd.cash_game_id
+      cash_game_id: cmd.cash_game_id
     }
   end
 
@@ -67,7 +67,7 @@ defmodule Poker.CashGames.Aggregates.CashGame do
 
   def apply(%__MODULE__{}, %CashGameCreated{} = event) do
     %__MODULE__{
-      id: event.id,
+      id: event.cash_game_id,
       table_id: event.table_id,
       creator_id: event.creator_id,
       status: event.status,

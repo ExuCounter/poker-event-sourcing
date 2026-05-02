@@ -9,6 +9,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
     if connected?(socket) do
       Poker.Tables.PubSub.subscribe_to_table_list()
       Poker.Tournaments.PubSub.subscribe_to_tournament_list()
+      Poker.Wallet.PubSub.subscribe_to_wallet(socket.assigns.current_scope.user.id)
     end
 
     {:ok,
@@ -28,6 +29,11 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   @impl true
   def handle_info({:tournament_list, _event, _data}, socket) do
     {:noreply, assign(socket, tournaments_list: Tournaments.list_tournaments())}
+  end
+
+  @impl true
+  def handle_info({:wallet, _event, _data}, socket) do
+    {:noreply, assign(socket, balance: get_balance(socket.assigns.current_scope.user.id))}
   end
 
   @impl true
@@ -156,20 +162,37 @@ defmodule PokerWeb.PlayerLive.Dashboard do
       <!-- Top bar -->
       <header class="h-14 flex items-center justify-between px-5 border-b border-[var(--pkr-line)]">
         <div class="flex items-center gap-3.5">
-          <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
-            Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
+          <.link
+            navigate={~p"/"}
+            class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1"
+          >
+            Poker
+            <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">
+              by Volodymyr Potiichuk
+            </span>
           </.link>
         </div>
         <div class="flex items-center gap-3.5">
           <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)]">
-            <span class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">BANKROLL</span>
-            <span class="font-[family-name:var(--pkr-font-mono)] text-sm font-semibold text-[var(--pkr-ink-1)]">${@balance}</span>
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">
+              BANKROLL
+            </span>
+            <span class="font-[family-name:var(--pkr-font-mono)] text-sm font-semibold text-[var(--pkr-ink-1)]">
+              ${@balance}
+            </span>
           </div>
           <span class="text-xs text-[var(--pkr-ink-3)]">{@current_scope.user.email}</span>
-          <.link href={~p"/users/settings"} class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] transition-all">
+          <.link
+            href={~p"/users/settings"}
+            class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] transition-all"
+          >
             Settings
           </.link>
-          <.link href={~p"/users/log-out"} method="delete" class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all">
+          <.link
+            href={~p"/users/log-out"}
+            method="delete"
+            class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all"
+          >
             Log out
           </.link>
         </div>
@@ -180,7 +203,9 @@ defmodule PokerWeb.PlayerLive.Dashboard do
         <aside class="w-[260px] border-r border-[var(--pkr-line)] flex flex-col shrink-0">
           <!-- Nav links (scrollable) -->
           <div class="p-5 pb-3">
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">PLAY</div>
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">
+              PLAY
+            </div>
             <div class="flex flex-col gap-0.5">
               <.link
                 patch={~p"/cash"}
@@ -190,9 +215,13 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     else: "text-[var(--pkr-ink-2)] border border-transparent hover:bg-[var(--pkr-bg-2)]/50"
                   )}
               >
-                <span class={"w-4 text-center " <> if(@active_tab == :cash_games, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>&#x25D0;</span>
+                <span class={"w-4 text-center " <> if(@active_tab == :cash_games, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>
+                  &#x25D0;
+                </span>
                 <span class="flex-1">Cash games</span>
-                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">{length(@cash_games_list)}</span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">
+                  {length(@cash_games_list)}
+                </span>
               </.link>
               <.link
                 patch={~p"/tournaments"}
@@ -202,16 +231,20 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                     else: "text-[var(--pkr-ink-2)] border border-transparent hover:bg-[var(--pkr-bg-2)]/50"
                   )}
               >
-                <span class={"w-4 text-center " <> if(@active_tab == :tournaments, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>&#x25C7;</span>
+                <span class={"w-4 text-center " <> if(@active_tab == :tournaments, do: "text-[var(--pkr-accent)]", else: "text-[var(--pkr-ink-3)]")}>
+                  &#x25C7;
+                </span>
                 <span class="flex-1">Tournaments</span>
-                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">{length(@tournaments_list)}</span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">
+                  {length(@tournaments_list)}
+                </span>
               </.link>
             </div>
           </div>
 
           <div class="flex-1"></div>
-
-          <!-- Create form (sticky at bottom) -->
+          
+    <!-- Create form (sticky at bottom) -->
           <div class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]">
             <%= if @active_tab == :cash_games do %>
               <.create_cash_game_form form={@form} />
@@ -220,16 +253,18 @@ defmodule PokerWeb.PlayerLive.Dashboard do
             <% end %>
           </div>
         </aside>
-
-        <!-- Main content -->
+        
+    <!-- Main content -->
         <main class="flex-1 p-6 overflow-auto">
           <.flash kind={:error} flash={@flash} />
           <.flash kind={:info} flash={@flash} />
 
           <header class="mb-6">
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">Lobby</div>
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">
+              Lobby
+            </div>
             <h1 class="font-[family-name:var(--pkr-font-display)] text-[44px] leading-none text-[var(--pkr-ink-1)]">
-              <%= if @active_tab == :cash_games, do: "Cash games", else: "Tournaments" %>
+              {if @active_tab == :cash_games, do: "Cash games", else: "Tournaments"}
             </h1>
             <p class="text-[var(--pkr-ink-3)] text-[13px] mt-1.5">
               <%= if @active_tab == :cash_games do %>
@@ -277,7 +312,10 @@ defmodule PokerWeb.PlayerLive.Dashboard do
           >
             <!-- Table name + type -->
             <div class="flex items-center gap-2.5">
-              <.mini_table seated={cash_game.seated_count || 0} total={seats_total(cash_game.table_type)} />
+              <.mini_table
+                seated={cash_game.seated_count || 0}
+                total={seats_total(cash_game.table_type)}
+              />
               <div>
                 <div class="font-medium text-[var(--pkr-ink-1)] group-hover:text-[var(--pkr-accent)] transition-colors">
                   NL Hold'em &middot; {format_stakes(cash_game.small_blind, cash_game.big_blind)}
@@ -297,7 +335,8 @@ defmodule PokerWeb.PlayerLive.Dashboard do
             </span>
             <!-- Status -->
             <span class="inline-flex items-center gap-1.5 text-[12px]">
-              <span class={"w-1.5 h-1.5 rounded-full " <> status_color(cash_game.table_status)}></span>
+              <span class={"w-1.5 h-1.5 rounded-full " <> status_color(cash_game.table_status)}>
+              </span>
               <span class="text-[var(--pkr-ink-3)]">{format_status(cash_game.table_status)}</span>
             </span>
             <!-- Action -->
@@ -355,7 +394,9 @@ defmodule PokerWeb.PlayerLive.Dashboard do
       <%= if Enum.empty?(@tournaments) do %>
         <div class="px-6 py-16 text-center">
           <p class="text-[var(--pkr-ink-3)] font-medium">No active tournaments</p>
-          <p class="text-sm text-[var(--pkr-ink-3)]/70 mt-1">Create a new tournament to get started</p>
+          <p class="text-sm text-[var(--pkr-ink-3)]/70 mt-1">
+            Create a new tournament to get started
+          </p>
         </div>
       <% else %>
         <%= for {tournament, index} <- Enum.with_index(@tournaments) do %>
@@ -374,22 +415,29 @@ defmodule PokerWeb.PlayerLive.Dashboard do
               </div>
             </div>
             <!-- Buy-in -->
-            <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">${tournament.buy_in}</span>
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">
+              ${tournament.buy_in}
+            </span>
             <!-- Players -->
             <span class="font-[family-name:var(--pkr-font-mono)] text-[12px]">
               <span class="text-[var(--pkr-ink-1)]">{tournament.registered_count}</span><span class="text-[var(--pkr-ink-3)]">/{tournament.max_players}</span>
             </span>
             <!-- Speed -->
-            <span class="font-[family-name:var(--pkr-font-mono)] text-[12px] text-[var(--pkr-ink-2)]">{format_speed(tournament.speed)}</span>
+            <span class="font-[family-name:var(--pkr-font-mono)] text-[12px] text-[var(--pkr-ink-2)]">
+              {format_speed(tournament.speed)}
+            </span>
             <!-- Status -->
             <span class="inline-flex items-center gap-1.5 text-[12px]">
-              <span class={"w-1.5 h-1.5 rounded-full " <> if(tournament.status == :active, do: "bg-[var(--pkr-positive)]", else: "bg-[var(--pkr-accent)]")}></span>
-              <span class="text-[var(--pkr-ink-3)]">{format_tournament_status(tournament.status)}</span>
+              <span class={"w-1.5 h-1.5 rounded-full " <> if(tournament.status == :active, do: "bg-[var(--pkr-positive)]", else: "bg-[var(--pkr-accent)]")}>
+              </span>
+              <span class="text-[var(--pkr-ink-3)]">
+                {format_tournament_status(tournament.status)}
+              </span>
             </span>
             <!-- Action -->
             <div class="text-right">
               <span class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)]">
-                <%= if tournament.status == :active, do: "Watch", else: "Register" %>
+                {if tournament.status == :active, do: "Watch", else: "Register"}
               </span>
             </div>
           </.link>
@@ -403,39 +451,77 @@ defmodule PokerWeb.PlayerLive.Dashboard do
     ~H"""
     <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
       <div class="px-4 py-3 border-b border-[var(--pkr-line)]">
-        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CREATE CASH GAME</div>
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+          CREATE CASH GAME
+        </div>
       </div>
       <.form for={@form} phx-submit="create_cash_game" class="p-4 space-y-3">
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">SB</label>
-            <input type="number" name="cash_game[small_blind]" value="10" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+              SB
+            </label>
+            <input
+              type="number"
+              name="cash_game[small_blind]"
+              value="10"
+              class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]"
+            />
           </div>
           <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">BB</label>
-            <input type="number" name="cash_game[big_blind]" value="20" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+              BB
+            </label>
+            <input
+              type="number"
+              name="cash_game[big_blind]"
+              value="20"
+              class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]"
+            />
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">MIN BUY-IN</label>
-            <input type="number" name="cash_game[min_buyin]" value="200" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+              MIN BUY-IN
+            </label>
+            <input
+              type="number"
+              name="cash_game[min_buyin]"
+              value="200"
+              class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]"
+            />
           </div>
           <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">MAX BUY-IN</label>
-            <input type="number" name="cash_game[max_buyin]" value="2000" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+              MAX BUY-IN
+            </label>
+            <input
+              type="number"
+              name="cash_game[max_buyin]"
+              value="2000"
+              class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]"
+            />
           </div>
         </div>
         <div>
-          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">TABLE TYPE</label>
-          <select name="cash_game[table_type]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+            TABLE TYPE
+          </label>
+          <select
+            name="cash_game[table_type]"
+            class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]"
+          >
             <option value="two_max">Heads-Up (2)</option>
             <option value="three_max">3-Max</option>
             <option value="four_max">4-Max</option>
             <option value="six_max" selected>6-Max</option>
           </select>
         </div>
-        <button type="submit" class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+        <button
+          type="submit"
+          class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+        >
           + Create table
         </button>
       </.form>
@@ -447,31 +533,53 @@ defmodule PokerWeb.PlayerLive.Dashboard do
     ~H"""
     <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
       <div class="px-4 py-3 border-b border-[var(--pkr-line)]">
-        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CREATE TOURNAMENT</div>
+        <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+          CREATE TOURNAMENT
+        </div>
       </div>
       <.form for={@form} phx-submit="create_tournament" class="p-4 space-y-3">
         <div>
-          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">BUY-IN</label>
-          <input type="number" name="tournament[buy_in]" value="100" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]" />
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+            BUY-IN
+          </label>
+          <input
+            type="number"
+            name="tournament[buy_in]"
+            value="100"
+            class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]"
+          />
         </div>
         <div>
-          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">SPEED</label>
-          <select name="tournament[speed]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+            SPEED
+          </label>
+          <select
+            name="tournament[speed]"
+            class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]"
+          >
             <option value="regular">Regular (10min)</option>
             <option value="turbo">Turbo (5min)</option>
             <option value="hyper_turbo">Hyper-Turbo (3min)</option>
           </select>
         </div>
         <div>
-          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">TABLE TYPE</label>
-          <select name="tournament[table_type]" class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]">
+          <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1">
+            TABLE TYPE
+          </label>
+          <select
+            name="tournament[table_type]"
+            class="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)]"
+          >
             <option value="two_max">Heads-Up (2)</option>
             <option value="three_max">3-Max</option>
             <option value="four_max">4-Max</option>
             <option value="six_max" selected>6-Max</option>
           </select>
         </div>
-        <button type="submit" class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+        <button
+          type="submit"
+          class="w-full py-2 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+        >
           + Create tournament
         </button>
       </.form>

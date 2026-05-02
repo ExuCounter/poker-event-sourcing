@@ -132,8 +132,6 @@ defmodule PokerWeb.PlayerLive.Replay do
   end
 
   defp push_event_to_frontend(socket, event) do
-    # Event is already transformed by EventTransformer (has event_id, type, and timing)
-    # Just need to transform keys for JSON encoding
     push_event(socket, "table_event", %{
       event: JsonEncoder.transform_keys(event),
       new_state: JsonEncoder.transform_keys(socket.assigns.replay.current_state)

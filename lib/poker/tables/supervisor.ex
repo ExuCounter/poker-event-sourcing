@@ -11,7 +11,7 @@ defmodule Poker.Tables.Supervisor do
     Supervisor.init(
       [
         # Event handlers (for broadcasting to LiveView)
-        Tables.EventHandlers.TableEventBroadcaster,
+        Tables.EventHandlers.EventBroadcaster,
         # Projectors (for lobby/list views only)
         Tables.Projectors.TableList,
         Tables.Projectors.TableLobby,

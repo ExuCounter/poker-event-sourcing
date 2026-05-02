@@ -1,7 +1,7 @@
 defmodule Poker.CashGames.Events.CashGameCreated do
   @derive {Jason.Encoder,
            only: [
-             :id,
+             :cash_game_id,
              :table_id,
              :creator_id,
              :status,
@@ -12,7 +12,7 @@ defmodule Poker.CashGames.Events.CashGameCreated do
              :table_type
            ]}
   defstruct [
-    :id,
+    :cash_game_id,
     :table_id,
     :creator_id,
     :status,

@@ -20,8 +20,8 @@ defmodule Poker.CashGames.ProcessManager do
   @derive Jason.Encoder
   defstruct [:id, :table_id]
 
-  def interested?(%CashGameCreated{id: id}, _metadata), do: {:start, id}
-  def interested?(%CashGameClosed{id: id}, _metadata), do: {:stop, id}
+  def interested?(%CashGameCreated{cash_game_id: id}, _metadata), do: {:start, id}
+  def interested?(%CashGameClosed{cash_game_id: id}, _metadata), do: {:stop, id}
   def interested?(_event, _metadata), do: false
 
   def handle(%__MODULE__{}, %CashGameCreated{} = event) do
@@ -41,7 +41,7 @@ defmodule Poker.CashGames.ProcessManager do
     }
   end
 
-  def apply(%__MODULE__{} = state, %CashGameCreated{id: id, table_id: table_id}) do
+  def apply(%__MODULE__{} = state, %CashGameCreated{cash_game_id: id, table_id: table_id}) do
     %__MODULE__{state | id: id, table_id: table_id}
   end
 

@@ -10,6 +10,7 @@ defmodule Poker.Wallet.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
+        Wallet.EventHandlers.EventBroadcaster,
         Wallet.Projectors.Wallet
       ],
       strategy: :one_for_one

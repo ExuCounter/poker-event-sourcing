@@ -272,7 +272,7 @@ defmodule Poker.Tables.Views.GameStateBuilder do
         hand_status: if(hand_finished?, do: nil, else: hand_status),
         hole_cards: hole_cards,
         is_sitting_out: participant.is_sitting_out,
-        equity: Map.get(equities, participant.id)
+        equity: if(hand_finished?, do: nil, else: Map.get(equities, participant.id))
       }
     end)
   end
