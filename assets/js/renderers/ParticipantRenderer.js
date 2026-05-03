@@ -87,7 +87,7 @@ export class ParticipantRenderer {
     // Semi-transparent background overlay matching hood shape
     const overlay = new PIXI.Graphics();
     overlay.roundRect(0, 0, HOOD_WIDTH, HOOD_HEIGHT, HOOD_BORDER_RADIUS);
-    overlay.fill({ color: 0x000000, alpha: 0.88 });
+    overlay.fill({ color: 0x000000, alpha: 0.48 });
     this.actionIndicatorContainer.addChild(overlay);
 
     // Action text
@@ -105,7 +105,7 @@ export class ParticipantRenderer {
     actionText.position.set(HOOD_WIDTH / 2, HOOD_HEIGHT / 2);
     this.actionIndicatorContainer.addChild(actionText);
 
-    this.actionIndicatorContainer.alpha = 0;
+    this.actionIndicatorContainer.alpha = 0.5;
     this.actionIndicatorOverlay.addChild(this.actionIndicatorContainer);
 
     // Animate: fade in, stay, fade out
@@ -157,8 +157,7 @@ export class ParticipantRenderer {
     const animations = cards.map((card, index) => {
       const spreadX = (index === 0 ? -30 : 30) + (Math.random() * 20 - 10);
       const spreadY = Math.random() * 20 - 10;
-      const rotation =
-        Math.random() * 0.5 - 0.25 + (index === 0 ? -0.2 : 0.2);
+      const rotation = Math.random() * 0.5 - 0.25 + (index === 0 ? -0.2 : 0.2);
 
       const targetX = tableCenterLocal.x - HOOD_WIDTH / 2 + spreadX - card.x;
       const targetY = tableCenterLocal.y - CARD_HEIGHT / 2 + spreadY - card.y;
@@ -339,8 +338,7 @@ export class ParticipantRenderer {
     });
 
     // Border — accent color when it's this player's turn
-    const isActive =
-      state.currentTurn?.participantId === this.participantId;
+    const isActive = state.currentTurn?.participantId === this.participantId;
     const borderColor = isActive
       ? PARTICIPANT_COLORS.borderActive
       : isFolded
@@ -353,8 +351,17 @@ export class ParticipantRenderer {
     // Active glow
     if (isActive) {
       const glow = new PIXI.Graphics();
-      glow.roundRect(-4, -4, HOOD_WIDTH + 8, HOOD_HEIGHT + 8, HOOD_BORDER_RADIUS + 4);
-      glow.fill({ color: PARTICIPANT_COLORS.activeGlow, alpha: PARTICIPANT_COLORS.activeGlowAlpha });
+      glow.roundRect(
+        -4,
+        -4,
+        HOOD_WIDTH + 8,
+        HOOD_HEIGHT + 8,
+        HOOD_BORDER_RADIUS + 4,
+      );
+      glow.fill({
+        color: PARTICIPANT_COLORS.activeGlow,
+        alpha: PARTICIPANT_COLORS.activeGlowAlpha,
+      });
       this.hoodContainer.addChild(glow);
     }
 
@@ -388,11 +395,14 @@ export class ParticipantRenderer {
     });
     // Shrink font if name overflows hood width
     if (nameText.width > maxNameWidth) {
-      const scaledSize = Math.max(11, Math.floor(17 * (maxNameWidth / nameText.width)));
+      const scaledSize = Math.max(
+        11,
+        Math.floor(17 * (maxNameWidth / nameText.width)),
+      );
       nameText.style.fontSize = scaledSize;
     }
     nameText.anchor.set(0.5, 0.5);
-    nameText.position.set(centerX, HOOD_HEIGHT * 0.30);
+    nameText.position.set(centerX, HOOD_HEIGHT * 0.3);
     this.hoodContainer.addChild(nameText);
 
     // Divider line
@@ -447,7 +457,13 @@ export class ParticipantRenderer {
     const paddingX = 8;
     const paddingY = 4;
     const bg = new PIXI.Graphics();
-    bg.roundRect(0, 0, text.width + paddingX * 2, text.height + paddingY * 2, 5);
+    bg.roundRect(
+      0,
+      0,
+      text.width + paddingX * 2,
+      text.height + paddingY * 2,
+      5,
+    );
     bg.fill(PARTICIPANT_COLORS.positionBadgeBg);
     bg.stroke({ color: PARTICIPANT_COLORS.positionBadgeBorder, width: 1 });
 
@@ -465,11 +481,7 @@ export class ParticipantRenderer {
     const isAllIn = participant.handStatus === "all_in";
     const isSittingOut = participant.isSittingOut;
 
-    const labelText = isFolded
-      ? "FOLD"
-      : isAllIn
-        ? "ALL-IN"
-        : "SITTING OUT";
+    const labelText = isFolded ? "FOLD" : isAllIn ? "ALL-IN" : "SITTING OUT";
 
     const paddingX = 8;
     const paddingY = 4;
@@ -487,9 +499,17 @@ export class ParticipantRenderer {
     });
 
     const bg = new PIXI.Graphics();
-    bg.roundRect(0, 0, labelTextObj.width + paddingX * 2, labelTextObj.height + paddingY * 2, 5);
+    bg.roundRect(
+      0,
+      0,
+      labelTextObj.width + paddingX * 2,
+      labelTextObj.height + paddingY * 2,
+      5,
+    );
     bg.fill(
-      isAllIn ? PARTICIPANT_COLORS.actionLabelAllIn : PARTICIPANT_COLORS.actionLabelBg,
+      isAllIn
+        ? PARTICIPANT_COLORS.actionLabelAllIn
+        : PARTICIPANT_COLORS.actionLabelBg,
     );
     if (!isAllIn) {
       bg.stroke({ color: PARTICIPANT_COLORS.actionLabelBorder, width: 1 });
@@ -499,7 +519,10 @@ export class ParticipantRenderer {
 
     badge.addChild(bg);
     badge.addChild(labelTextObj);
-    badge.position.set(HOOD_WIDTH - (labelTextObj.width + paddingX * 2) - 6, -12);
+    badge.position.set(
+      HOOD_WIDTH - (labelTextObj.width + paddingX * 2) - 6,
+      -12,
+    );
 
     this.hoodContainer.addChild(badge);
   }
@@ -760,7 +783,13 @@ export class ParticipantRenderer {
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(right - r, top + r, r, -Math.PI / 2, -Math.PI / 2 + angleSpan);
+      graphics.arc(
+        right - r,
+        top + r,
+        r,
+        -Math.PI / 2,
+        -Math.PI / 2 + angleSpan,
+      );
     }
     prevCum = cumLengths[1];
 
@@ -786,7 +815,13 @@ export class ParticipantRenderer {
     if (drawLength > prevCum) {
       const segLen = Math.min(cornerLen, drawLength - prevCum);
       const angleSpan = (segLen / cornerLen) * (Math.PI / 2);
-      graphics.arc(left + r, bottom - r, r, Math.PI / 2, Math.PI / 2 + angleSpan);
+      graphics.arc(
+        left + r,
+        bottom - r,
+        r,
+        Math.PI / 2,
+        Math.PI / 2 + angleSpan,
+      );
     }
     prevCum = cumLengths[5];
 
@@ -867,8 +902,9 @@ export class ParticipantRenderer {
   }
 
   playTimeoutAlert() {
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    const audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 

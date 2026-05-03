@@ -139,7 +139,7 @@ export class EmptySeatRenderer {
 
     // "Seat N" label
     const seatLabel = new PIXI.Text({
-      text: `Seat ${this.seatNumber}`,
+      text: `Seat`,
       style: {
         fontFamily: FONTS.mono,
         fontSize: 16,
