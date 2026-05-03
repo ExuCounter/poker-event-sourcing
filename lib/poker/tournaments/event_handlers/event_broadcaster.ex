@@ -35,6 +35,8 @@ defmodule Poker.Tournaments.EventHandlers.EventBroadcaster do
           PubSub.broadcast_tournament_list(transformed_event.type, transformed_event)
         end
 
+        :ok
+
       :skip ->
         :ok
     end

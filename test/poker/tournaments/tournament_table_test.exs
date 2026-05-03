@@ -182,8 +182,6 @@ defmodule Poker.Tournaments.TournamentTableTest do
       ctx = ctx |> exec(:fill_tournament)
       ctx = ctx |> exec(:start_runout)
 
-      table = Poker.SeedFactorySchema.aggregate_state(:table, ctx.table.id)
-
       assert ctx.table.status == :finished
     end
 
