@@ -6,6 +6,7 @@ defmodule Poker.Tables.Projections.TableLobby do
 
     @primary_key false
     embedded_schema do
+      field :participant_id, :binary_id
       field :player_id, :binary_id
       field :email, :string
       field :nickname, :string

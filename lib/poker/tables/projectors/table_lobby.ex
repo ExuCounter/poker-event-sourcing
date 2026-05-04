@@ -57,10 +57,11 @@ defmodule Poker.Tables.Projectors.TableLobby do
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
   end)
 
-  project(%ParticipantJoined{table_id: id, player_id: player_id, seat_number: seat_number}, _metadata, fn multi ->
+  project(%ParticipantJoined{id: participant_id, table_id: id, player_id: player_id, seat_number: seat_number}, _metadata, fn multi ->
     user = Poker.Accounts.get_user!(player_id)
 
     participant_data = %{
+      participant_id: participant_id,
       player_id: player_id,
       email: user.email,
       nickname: user.nickname,
