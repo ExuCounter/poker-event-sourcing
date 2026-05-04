@@ -36,6 +36,11 @@ export class ParticipantRenderer {
 
     this.hoodContainer = new PIXI.Container();
 
+    // Badges container — sits above action indicator overlay
+    this.badgesContainer = new PIXI.Container();
+    this.badgesContainer.sortableChildren = true;
+    this.badgesContainer.zIndex = 110;
+
     this.betAreaContainer = new PIXI.Container();
 
     this.equityBadgeContainer = new PIXI.Graphics();
@@ -200,8 +205,9 @@ export class ParticipantRenderer {
     this.renderHoleCards();
     this.#renderChips();
 
-    // Re-add action indicator overlay (it persists across renders)
+    // Re-add persistent overlays (action indicator + badges above it)
     this.container.addChild(this.actionIndicatorOverlay);
+    this.container.addChild(this.badgesContainer);
   }
 
   renderHood() {
@@ -367,12 +373,14 @@ export class ParticipantRenderer {
 
     this.hoodContainer.addChild(hood);
 
-    // Position badge (top-left of hood)
+    // Badges rendered in separate high-zIndex container (above action indicator)
+    this.badgesContainer.removeChildren();
+    this.badgesContainer.position.set(0, CARD_OVERLAP);
+
     if (participant.position) {
       this.#renderPositionBadge(participant.position);
     }
 
-    // Action label badge (top-right: FOLD, ALL-IN, SITTING OUT)
     if (isFolded || isAllIn || participant.isSittingOut) {
       this.#renderActionLabel(participant);
     }
@@ -473,7 +481,7 @@ export class ParticipantRenderer {
     badge.addChild(text);
     badge.position.set(10, -12);
 
-    this.hoodContainer.addChild(badge);
+    this.badgesContainer.addChild(badge);
   }
 
   #renderActionLabel(participant) {
@@ -524,7 +532,7 @@ export class ParticipantRenderer {
       -12,
     );
 
-    this.hoodContainer.addChild(badge);
+    this.badgesContainer.addChild(badge);
   }
 
   #renderEquityBadge(participant) {

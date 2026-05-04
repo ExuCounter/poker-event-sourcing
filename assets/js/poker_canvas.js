@@ -11,8 +11,6 @@ import { EmptySeatRenderer } from "./renderers/EmptySeatRenderer.js";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
-  TABLE_RADIUS_X,
-  TABLE_RADIUS_Y,
   TABLE_WIDTH,
   TABLE_HEIGHT,
   TABLE_BORDER_RADIUS,
@@ -439,8 +437,26 @@ export const PokerCanvas = {
     bg.fill(TABLE_COLORS.roomBg);
 
     // Subtle diamond pattern in warm tones
-    this.drawDiamondPattern(bg, x + 1.5, y + 2, w, h, 18, TABLE_COLORS.roomPatternShadow, 0.5);
-    this.drawDiamondPattern(bg, x, y, w, h, 18, TABLE_COLORS.roomPatternMain, 0.8);
+    this.drawDiamondPattern(
+      bg,
+      x + 1.5,
+      y + 2,
+      w,
+      h,
+      18,
+      TABLE_COLORS.roomPatternShadow,
+      0.5,
+    );
+    this.drawDiamondPattern(
+      bg,
+      x,
+      y,
+      w,
+      h,
+      18,
+      TABLE_COLORS.roomPatternMain,
+      0.8,
+    );
 
     return bg;
   },
@@ -464,15 +480,23 @@ export const PokerCanvas = {
     const halfW = TABLE_WIDTH / 2;
     const halfH = TABLE_HEIGHT / 2;
 
-    // Outer shadow/glow
-    tableGraphics.roundRect(
-      -halfW - 15,
-      -halfH - 11,
-      TABLE_WIDTH + 30,
-      TABLE_HEIGHT + 30,
-      TABLE_BORDER_RADIUS + 10,
-    );
-    tableGraphics.fill({ color: 0x000000, alpha: 0.3 });
+    // Outer shadow — many thin layers for smooth falloff
+    const shadowSteps = 12;
+    const maxSpread = 45;
+    for (let i = 0; i < shadowSteps; i++) {
+      const t = i / (shadowSteps - 1); // 0 (outermost) to 1 (innermost)
+      const spread = maxSpread * (1 - t);
+      const offsetY = 6 * (1 - t);
+      const alpha = 0.04 + 0.06 * t; // gentle ramp: 0.04 outer → 0.10 inner
+      tableGraphics.roundRect(
+        -halfW - spread,
+        -halfH - spread + offsetY,
+        TABLE_WIDTH + spread * 2,
+        TABLE_HEIGHT + spread * 2,
+        TABLE_BORDER_RADIUS + spread,
+      );
+      tableGraphics.fill({ color: TABLE_COLORS.shadowColor, alpha });
+    }
 
     // Outer rim — dark oxblood
     tableGraphics.roundRect(
@@ -484,27 +508,84 @@ export const PokerCanvas = {
     );
     tableGraphics.fill(TABLE_COLORS.outerRim);
 
-    // Inner felt — forest green with glow
+    // Rim top highlight — subtle 3D pop
     tableGraphics.roundRect(
-      -halfW + 16,
-      -halfH + 12,
-      TABLE_WIDTH - 32,
-      TABLE_HEIGHT - 24,
-      TABLE_BORDER_RADIUS - 16,
+      -halfW + 2,
+      -halfH + 1,
+      TABLE_WIDTH - 4,
+      TABLE_HEIGHT - 4,
+      TABLE_BORDER_RADIUS - 2,
     );
-    tableGraphics.fill(TABLE_COLORS.felt);
+    tableGraphics.stroke({
+      width: 1,
+      color: TABLE_COLORS.outerRimHighlight,
+      alpha: 0.4,
+    });
 
-    // Felt center glow highlight
-    tableGraphics.roundRect(
-      -halfW + 40,
-      -halfH + 30,
-      TABLE_WIDTH - 80,
-      TABLE_HEIGHT - 60,
-      TABLE_BORDER_RADIUS - 40,
+    // Felt gradient + inner shadow — rendered via Canvas2D for true smooth gradients
+    const feltInset = 16;
+    const feltW = TABLE_WIDTH - feltInset * 2;
+    const feltH = TABLE_HEIGHT - feltInset * 2 + 4;
+    const feltR = TABLE_BORDER_RADIUS - feltInset;
+
+    const feltCanvas = document.createElement("canvas");
+    const pW = Math.ceil(feltW);
+    const pH = Math.ceil(feltH);
+    feltCanvas.width = pW;
+    feltCanvas.height = pH;
+    const ctx = feltCanvas.getContext("2d");
+
+    // Elliptical radial gradient for felt color
+    const cx = pW / 2;
+    const cy = pH / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, pH / pW); // circle → ellipse
+    const gr = pW / 2;
+    const feltGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, gr);
+    feltGrad.addColorStop(0, "#2e6c4e");
+    feltGrad.addColorStop(1.0, "#266044");
+    ctx.fillStyle = feltGrad;
+    ctx.fillRect(-gr, -gr, gr * 2, gr * 2);
+    ctx.restore();
+
+    // Inner shadow overlay — dark at edges, transparent center
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, pH / pW);
+    const shadowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, gr);
+    // Many small stops for a smooth ease-in curve (barely visible until far edges)
+    shadowGrad.addColorStop(0, "rgba(10, 31, 21, 0)");
+    shadowGrad.addColorStop(0.3, "rgba(10, 31, 21, 0.01)");
+    shadowGrad.addColorStop(0.5, "rgba(10, 31, 21, 0.03)");
+    shadowGrad.addColorStop(0.65, "rgba(10, 31, 21, 0.07)");
+    shadowGrad.addColorStop(0.75, "rgba(10, 31, 21, 0.13)");
+    shadowGrad.addColorStop(0.85, "rgba(10, 31, 21, 0.22)");
+    shadowGrad.addColorStop(0.92, "rgba(10, 31, 21, 0.35)");
+    shadowGrad.addColorStop(1, "rgba(10, 31, 21, 0.5)");
+    ctx.fillStyle = shadowGrad;
+    ctx.fillRect(-gr, -gr, gr * 2, gr * 2);
+    ctx.restore();
+
+    const feltTexture = PIXI.Texture.from(feltCanvas);
+    const feltSprite = new PIXI.Sprite(feltTexture);
+    feltSprite.position.set(-halfW + feltInset, -halfH + feltInset - 2);
+
+    // Mask sprite to felt rounded-rect shape
+    const feltMask = new PIXI.Graphics();
+    feltMask.roundRect(
+      -halfW + feltInset,
+      -halfH + feltInset - 2,
+      feltW,
+      feltH,
+      feltR,
     );
-    tableGraphics.fill({ color: TABLE_COLORS.feltGlow, alpha: 0.4 });
+    feltMask.fill(0xffffff);
+    feltSprite.mask = feltMask;
 
     this.containers.tableContainer.addChild(tableGraphics);
+    this.containers.tableContainer.addChild(feltMask);
+    this.containers.tableContainer.addChild(feltSprite);
 
     // Table rail border
     const railGraphics = new PIXI.Graphics();
@@ -517,7 +598,7 @@ export const PokerCanvas = {
     );
     railGraphics.stroke({ width: 10, color: TABLE_COLORS.outerRimBottom });
 
-    // Inner accent line — brass
+    // Inner accent line — brass (brighter alpha)
     railGraphics.roundRect(
       -halfW + 14,
       -halfH + 10,
@@ -526,7 +607,7 @@ export const PokerCanvas = {
       TABLE_BORDER_RADIUS - 14,
     );
     railGraphics.stroke({
-      width: 1,
+      width: 1.5,
       color: TABLE_COLORS.innerAccent,
       alpha: TABLE_COLORS.innerAccentAlpha,
     });

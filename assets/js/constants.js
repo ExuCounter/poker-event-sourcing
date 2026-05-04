@@ -116,20 +116,30 @@ export const CHIP_EDGE_COLORS = {
 // ============================================================================
 export const TABLE_COLORS = {
   // Room background
-  roomBg: 0x1f1714,
-  roomPatternShadow: 0x150f0c,
-  roomPatternMain: 0x241a15,
+  roomBg: 0x1a1310,
+  roomPatternShadow: 0x100b08,
+  roomPatternMain: 0x201510,
 
-  // Felt
-  felt: 0x2a5940,
-  feltGlow: 0x3a7258,
-  feltRim: 0x1a3d2c,
+  // Felt — richer, more saturated greens
+  felt: 0x1e4a35,
+  feltMid: 0x2d6a4f,
+  feltGlow: 0x3a8262,
+  feltCenter: 0x44926c,
 
-  // Table rail
-  outerRim: 0x2d1f18,
-  outerRimBottom: 0x1a110d,
+  // Inner shadow on felt
+  feltShadowInner: 0x0a1f15,
+  feltShadowInnerAlpha: 0.6,
+
+  // Table rail — deeper contrast
+  outerRim: 0x251810,
+  outerRimBottom: 0x140c08,
+  outerRimHighlight: 0x3a2a1e,
   innerAccent: 0xc4a43a,
-  innerAccentAlpha: 0.3,
+  innerAccentAlpha: 0.45,
+
+  // Outer shadow
+  shadowColor: 0x000000,
+  shadowAlpha: 0.5,
 
   // Pot text
   potLabel: 0xc4a43a,
