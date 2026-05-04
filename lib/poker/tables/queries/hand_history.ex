@@ -52,6 +52,7 @@ defmodule Poker.Tables.Queries.HandHistory do
           winner_player_id: hand_summary.winner_player_id,
           winner_hand_rank: hand_summary.winner_hand_rank,
           amount_won: participant_result.amount_won,
+          amount_invested: participant_result.amount_invested,
           inserted_at: hand_summary.inserted_at
         }
 

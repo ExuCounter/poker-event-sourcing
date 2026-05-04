@@ -53,6 +53,9 @@ defmodule PokerWeb.Router do
       live "/tournaments", PlayerLive.Dashboard, :tournaments
       live "/cash/:id/lobby", PlayerLive.Lobby, :show
       live "/tournaments/:id/lobby", PlayerLive.TournamentLobby, :show
+      live "/history", PlayerLive.HandHistory, :all
+      live "/history/cash", PlayerLive.HandHistory, :cash
+      live "/history/tournaments", PlayerLive.HandHistory, :tournaments
     end
 
     live_session :table,
@@ -60,6 +63,7 @@ defmodule PokerWeb.Router do
       root_layout: {PokerWeb.Layouts, :table} do
       live "/tables/:id/game", PlayerLive.Game, :play
       live "/tables/:id/replay", PlayerLive.Replay, :play
+      live "/tables/:id/replay/:hand_id", PlayerLive.Replay, :play
     end
 
     post "/users/update-password", UserSessionController, :update_password

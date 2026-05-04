@@ -11,6 +11,10 @@ defmodule PokerWeb.Api.Tables do
     Poker.Tables.get_player_game_view(table_id, user.id, opts)
   end
 
+  def list_hand_history(%{user: user} = _scope, opts \\ []) do
+    Poker.Tables.Queries.HandHistory.list_for_player(user.id, opts)
+  end
+
   def create_table(%{user: user} = _scope, settings) do
     Poker.Tables.create_table(user.id, settings)
   end

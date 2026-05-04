@@ -43,8 +43,8 @@ defmodule Poker.Tables.Views.HandReplay do
           end
 
         id when is_binary(id) ->
-          events = HandEvents.get_hand_events(table_id, id)
-          {events, id}
+          {_hand_history, hand_events} = HandEvents.get_hand_events(table_id, id)
+          {hand_events, id}
       end
 
     # Filter to animated events only

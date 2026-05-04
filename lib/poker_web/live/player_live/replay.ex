@@ -6,7 +6,7 @@ defmodule PokerWeb.PlayerLive.Replay do
   alias Poker.Tables.Views.HandReplay
 
   @impl true
-  def mount(%{"id" => table_id}, _session, socket) do
+  def mount(%{"id" => table_id} = params, _session, socket) do
     lobby = Tables.get_lobby(table_id)
 
     if is_nil(lobby) do
@@ -15,18 +15,14 @@ defmodule PokerWeb.PlayerLive.Replay do
        |> put_flash(:error, "Table not found")
        |> push_navigate(to: ~p"/")}
     else
-      # Initialize replay session for previous hand
-      replay =
-        HandReplay.initialize(
-          table_id,
-          socket.assigns.current_scope.user.id,
-          :previous
-        )
+      hand_id = Map.get(params, "hand_id", :previous)
+      player_id = socket.assigns.current_scope.user.id
 
-      # Check if replay has events
+      replay = HandReplay.initialize(table_id, player_id, hand_id)
+
       socket =
         if replay.total_steps == 0 do
-          put_flash(socket, :info, "No previous hand to replay")
+          put_flash(socket, :info, "No hand to replay")
         else
           socket
         end
@@ -44,7 +40,7 @@ defmodule PokerWeb.PlayerLive.Replay do
          table_id: table_id,
          lobby_path: lobby_path,
          replay: replay,
-         current_user_id: socket.assigns.current_scope.user.id,
+         current_user_id: player_id,
          playing: false
        )}
     end

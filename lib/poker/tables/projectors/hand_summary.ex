@@ -9,7 +9,12 @@ defmodule Poker.Tables.Projectors.HandSummary do
 
   alias Poker.Tables.Events.{
     HandStarted,
+    SmallBlindPosted,
+    BigBlindPosted,
     ParticipantHandGiven,
+    ParticipantCalled,
+    ParticipantRaised,
+    ParticipantWentAllIn,
     PayoutDistributed,
     HandFinished
   }
@@ -50,11 +55,84 @@ defmodule Poker.Tables.Projectors.HandSummary do
         %HandSummaryParticipantResult{
           hand_id: hand_id,
           player_id: player_id,
-          amount_won: 0
+          amount_won: 0,
+          amount_invested: 0
         }
       )
     end
   )
+
+  # Blind events fire after cards are dealt — row already exists, just increment amount_invested.
+  project(%SmallBlindPosted{hand_id: hand_id, table_id: table_id, participant_id: participant_id, amount: amount}, fn multi ->
+    lobby = Poker.Repo.get!(TableLobby, table_id)
+    player_id = find_player_id(lobby, participant_id)
+
+    Ecto.Multi.update_all(
+      multi,
+      {:invest_sb, participant_id},
+      from(participant_result in HandSummaryParticipantResult,
+        where: participant_result.hand_id == ^hand_id and participant_result.player_id == ^player_id
+      ),
+      inc: [amount_invested: amount]
+    )
+  end)
+
+  project(%BigBlindPosted{hand_id: hand_id, table_id: table_id, participant_id: participant_id, amount: amount}, fn multi ->
+    lobby = Poker.Repo.get!(TableLobby, table_id)
+    player_id = find_player_id(lobby, participant_id)
+
+    Ecto.Multi.update_all(
+      multi,
+      {:invest_bb, participant_id},
+      from(participant_result in HandSummaryParticipantResult,
+        where: participant_result.hand_id == ^hand_id and participant_result.player_id == ^player_id
+      ),
+      inc: [amount_invested: amount]
+    )
+  end)
+
+  # Betting actions: accumulate amount_invested.
+  project(%ParticipantCalled{hand_id: hand_id, table_id: table_id, participant_id: participant_id, amount: amount}, fn multi ->
+    lobby = Poker.Repo.get!(TableLobby, table_id)
+    player_id = find_player_id(lobby, participant_id)
+
+    Ecto.Multi.update_all(
+      multi,
+      {:invest_call, participant_id},
+      from(participant_result in HandSummaryParticipantResult,
+        where: participant_result.hand_id == ^hand_id and participant_result.player_id == ^player_id
+      ),
+      inc: [amount_invested: amount]
+    )
+  end)
+
+  project(%ParticipantRaised{hand_id: hand_id, table_id: table_id, participant_id: participant_id, amount: amount}, fn multi ->
+    lobby = Poker.Repo.get!(TableLobby, table_id)
+    player_id = find_player_id(lobby, participant_id)
+
+    Ecto.Multi.update_all(
+      multi,
+      {:invest_raise, participant_id},
+      from(participant_result in HandSummaryParticipantResult,
+        where: participant_result.hand_id == ^hand_id and participant_result.player_id == ^player_id
+      ),
+      inc: [amount_invested: amount]
+    )
+  end)
+
+  project(%ParticipantWentAllIn{hand_id: hand_id, table_id: table_id, participant_id: participant_id, amount: amount}, fn multi ->
+    lobby = Poker.Repo.get!(TableLobby, table_id)
+    player_id = find_player_id(lobby, participant_id)
+
+    Ecto.Multi.update_all(
+      multi,
+      {:invest_allin, participant_id},
+      from(participant_result in HandSummaryParticipantResult,
+        where: participant_result.hand_id == ^hand_id and participant_result.player_id == ^player_id
+      ),
+      inc: [amount_invested: amount]
+    )
+  end)
 
   # Accumulate pot_total on the summary and amount_won on the participant result.
   # Set winner fields when the main or combined pot is distributed.
@@ -120,5 +198,5 @@ defmodule Poker.Tables.Projectors.HandSummary do
   end
 
   defp encode_hand_rank(nil), do: nil
-  defp encode_hand_rank(rank) when is_tuple(rank), do: Poker.Services.HandRank.encode(rank)
+  defp encode_hand_rank(rank) when is_tuple(rank), do: Poker.Services.HandRank.to_display_name(rank)
 end

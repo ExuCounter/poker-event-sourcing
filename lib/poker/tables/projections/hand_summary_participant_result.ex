@@ -6,6 +6,7 @@ defmodule Poker.Tables.Projections.HandSummaryParticipantResult do
     field :hand_id, :binary_id, primary_key: true
     field :player_id, :binary_id, primary_key: true
     field :amount_won, :integer, default: 0
+    field :amount_invested, :integer, default: 0
 
     timestamps()
   end

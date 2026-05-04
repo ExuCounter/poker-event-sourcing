@@ -243,8 +243,23 @@ defmodule PokerWeb.PlayerLive.Dashboard do
           </div>
 
           <div class="flex-1"></div>
-          
-    <!-- Create form (sticky at bottom) -->
+
+          <div class="px-5 pb-3">
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">
+              REVIEW
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <.link
+                navigate={~p"/history"}
+                class="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] text-[var(--pkr-ink-2)] border border-transparent hover:bg-[var(--pkr-bg-2)]/50 transition-all"
+              >
+                <span class="w-4 text-center text-[var(--pkr-ink-3)]">&#x23F3;</span>
+                <span class="flex-1">Hand history</span>
+              </.link>
+            </div>
+          </div>
+
+          <!-- Create form (sticky at bottom) -->
           <div class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]">
             <%= if @active_tab == :cash_games do %>
               <.create_cash_game_form form={@form} />
