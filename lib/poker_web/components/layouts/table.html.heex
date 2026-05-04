@@ -34,6 +34,13 @@
     </script>
   </head>
   <body>
+    <div id="page-loading" class="fixed inset-0 z-[9999] bg-[var(--pkr-bg-0)] flex items-center justify-center flex-col gap-4">
+      <svg class="animate-spin h-7 w-7 text-[var(--pkr-accent)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.568 3 7.291l3-3z"></path>
+      </svg>
+      <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">Loading</span>
+    </div>
     <div class="absolute left-0 top-0 w-full z-10">
       <div class="flex items-center justify-between border-b border-[var(--pkr-line)] bg-black/40 backdrop-blur-lg font-[family-name:var(--pkr-font-ui)]" style="transform: scale(var(--ui-scale, 0)); width: calc(100vw / var(--ui-scale, 1)); transform-origin: 0 0">
         <!-- Left Navigation -->

@@ -89,8 +89,16 @@ const liveSocket = new LiveSocket("/live", Socket, {
 
 // Show progress bar on live navigation and form submits
 topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
-window.addEventListener("phx:page-loading-start", (_info) => topbar.show(300));
-window.addEventListener("phx:page-loading-stop", (_info) => topbar.hide());
+
+const pageLoading = document.getElementById("page-loading");
+window.addEventListener("phx:page-loading-start", ({ detail: { kind } }) => {
+  topbar.show(300);
+  if (kind === "redirect") pageLoading?.classList.remove("hidden");
+});
+window.addEventListener("phx:page-loading-stop", () => {
+  topbar.hide();
+  pageLoading?.classList.add("hidden");
+});
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
