@@ -84,6 +84,11 @@ defmodule PokerWeb.Router do
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
 
+    get "/auth/google/sign-in", OAuthController, :sign_in
+    get "/auth/google/register", OAuthController, :register
+    get "/auth/:provider", OAuthController, :request
+    get "/auth/:provider/callback", OAuthController, :callback
+
     get "/", PageController, :home
   end
 end

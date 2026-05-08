@@ -89,6 +89,12 @@ config :poker, Oban,
   repo: Poker.Repo,
   queues: [tables: 10, tournaments: 10]
 
+# Configure Ueberauth
+config :ueberauth, Ueberauth,
+  providers: [
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

@@ -23,6 +23,13 @@ defmodule Poker.Accounts do
   end
 
   @doc """
+  Gets a user by Google subject id.
+  """
+  def get_user_by_google_id(google_id) when is_binary(google_id) do
+    Repo.get_by(User, google_id: google_id)
+  end
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -74,6 +81,22 @@ defmodule Poker.Accounts do
     %User{}
     |> User.email_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Registers a user from a Google OAuth callback.
+
+  Fails when the email or google_id is already taken (linking is intentionally
+  strict — existing accounts must use their original sign-in method).
+
+  On success the user is also confirmed, which provisions their wallet.
+  """
+  def register_with_google(%{google_id: google_id, email: email} = attrs)
+      when is_binary(google_id) and is_binary(email) do
+    with {:ok, user} <- %User{} |> User.google_register_changeset(attrs) |> Repo.insert(),
+         {:ok, user} <- confirm_user(user) do
+      {:ok, user}
+    end
   end
 
   @doc """

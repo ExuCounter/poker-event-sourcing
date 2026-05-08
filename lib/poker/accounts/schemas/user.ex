@@ -6,11 +6,27 @@ defmodule Poker.Accounts.Schemas.User do
     field :nickname, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
+    field :google_id, :string
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
     field :role, Ecto.Enum, values: [:player, :admin], default: :player
 
     timestamps(type: :utc_datetime)
+  end
+
+  @doc """
+  A user changeset for registering via an OAuth provider (Google).
+
+  Casts email and google_id, validates both for uniqueness, and reuses the
+  default email/nickname validations from `email_changeset/3`.
+  """
+  def google_register_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:google_id])
+    |> validate_required([:google_id])
+    |> unsafe_validate_unique(:google_id, Poker.Repo)
+    |> unique_constraint(:google_id)
+    |> email_changeset(attrs)
   end
 
   @doc """

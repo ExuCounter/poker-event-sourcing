@@ -77,6 +77,8 @@ defmodule Poker.MixProject do
       {:bodyguard, "~> 2.4.3"},
       {:uuid_v7, "~> 0.6.0"},
       {:oban, "~> 2.20.3"},
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_google, "~> 0.12"},
       {:tidewave, "~> 0.5", only: :dev}
     ]
   end
