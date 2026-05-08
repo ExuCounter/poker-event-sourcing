@@ -8,6 +8,7 @@ defmodule Poker.Accounts.Schemas.User do
     field :hashed_password, :string, redact: true
     field :google_id, :string
     field :confirmed_at, :utc_datetime
+    field :onboarded_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
     field :role, Ecto.Enum, values: [:player, :admin], default: :player
 
@@ -83,7 +84,7 @@ defmodule Poker.Accounts.Schemas.User do
     user
     |> cast(attrs, [:nickname])
     |> validate_required([:nickname])
-    |> validate_length(:nickname, min: 3, max: 20)
+    |> validate_length(:nickname, min: 3, max: 16)
     |> validate_format(:nickname, ~r/^[a-zA-Z0-9_]+$/,
       message: "can only contain letters, numbers, and underscores"
     )
@@ -183,5 +184,17 @@ defmodule Poker.Accounts.Schemas.User do
   def confirm_changeset(user) do
     now = DateTime.utc_now(:second)
     change(user, confirmed_at: now)
+  end
+
+  @doc """
+  Captures profile info collected during onboarding and marks the user onboarded.
+
+  Reuses the nickname validations and stamps `onboarded_at`. Add additional cast
+  fields here (e.g. `:location`) when expanding the onboarding form.
+  """
+  def onboarding_changeset(user, attrs) do
+    user
+    |> nickname_changeset(attrs)
+    |> put_change(:onboarded_at, DateTime.utc_now(:second))
   end
 end

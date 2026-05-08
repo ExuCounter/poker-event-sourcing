@@ -230,6 +230,16 @@ defmodule PokerWeb.UserAuth do
     end
   end
 
+  def on_mount(:require_onboarded, _params, _session, socket) do
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    if user && user.onboarded_at do
+      {:cont, socket}
+    else
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/onboarding")}
+    end
+  end
+
   def on_mount(:require_sudo_mode, _params, session, socket) do
     socket = mount_current_scope(socket, session)
 

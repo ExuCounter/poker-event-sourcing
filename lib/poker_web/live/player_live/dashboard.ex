@@ -181,7 +181,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
               ${@balance}
             </span>
           </div>
-          <span class="text-xs text-[var(--pkr-ink-3)]">{@current_scope.user.email}</span>
+          <span class="text-xs text-[var(--pkr-ink-3)]">{@current_scope.user.nickname}</span>
           <.link
             href={~p"/users/settings"}
             class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] transition-all"

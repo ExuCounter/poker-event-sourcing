@@ -18,7 +18,6 @@ defmodule PokerWeb.UserLive.Settings do
           Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
         </.link>
         <div class="flex-1"></div>
-        <span class="text-xs text-[var(--pkr-ink-3)]">{@current_email}</span>
       </div>
 
       <.flash kind={:error} flash={@flash} />
@@ -31,6 +30,34 @@ defmodule PokerWeb.UserLive.Settings do
             <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">ACCOUNT</div>
             <h1 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)]">Settings</h1>
             <p class="text-[var(--pkr-ink-3)] text-[13px] mt-1.5">Manage your email and password</p>
+          </div>
+
+          <!-- Nickname form -->
+          <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
+            <div class="px-5 py-3 border-b border-[var(--pkr-line)]">
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CHANGE NICKNAME</div>
+            </div>
+            <.form for={@nickname_form} id="nickname_form" phx-submit="update_nickname" phx-change="validate_nickname" class="p-5 space-y-4">
+              <div>
+                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">NICKNAME</label>
+                <input
+                  type="text"
+                  name={@nickname_form[:nickname].name}
+                  id={@nickname_form[:nickname].id}
+                  value={Phoenix.HTML.Form.normalize_value("text", @nickname_form[:nickname].value)}
+                  required
+                  class="w-full px-3 py-2 rounded-lg text-[14px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)] transition-colors"
+                />
+                <%= if @nickname_form[:nickname].errors != [] do %>
+                  <p class="mt-1 text-xs text-[var(--pkr-danger)]">
+                    {translate_error(hd(@nickname_form[:nickname].errors))}
+                  </p>
+                <% end %>
+              </div>
+              <button type="submit" phx-disable-with="Saving..." class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+                Save Nickname
+              </button>
+            </.form>
           </div>
 
           <!-- Email form -->
@@ -157,12 +184,14 @@ defmodule PokerWeb.UserLive.Settings do
     user = socket.assigns.current_scope.user
     email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
     password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
+    nickname_changeset = Accounts.change_user_nickname(user, %{}, validate_unique: false)
 
     socket =
       socket
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
+      |> assign(:nickname_form, to_form(nickname_changeset))
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
@@ -225,6 +254,31 @@ defmodule PokerWeb.UserLive.Settings do
 
       changeset ->
         {:noreply, assign(socket, password_form: to_form(changeset, action: :insert))}
+    end
+  end
+
+  def handle_event("validate_nickname", %{"user" => user_params}, socket) do
+    nickname_form =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_nickname(user_params, validate_unique: false)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, nickname_form: nickname_form)}
+  end
+
+  def handle_event("update_nickname", %{"user" => user_params}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Accounts.update_user_nickname(user, user_params) do
+      {:ok, updated_user} ->
+        {:noreply,
+         socket
+         |> assign(:nickname_form, to_form(Accounts.change_user_nickname(updated_user)))
+         |> put_flash(:info, "Nickname updated successfully.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, nickname_form: to_form(changeset, action: :insert))}
     end
   end
 end

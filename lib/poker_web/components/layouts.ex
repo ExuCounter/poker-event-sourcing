@@ -75,7 +75,7 @@ defmodule PokerWeb.Layouts do
                   />
                 </svg>
                 <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {@current_scope.user.email}
+                  {@current_scope.user.nickname}
                 </span>
               </div>
 

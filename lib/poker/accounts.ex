@@ -113,6 +113,38 @@ defmodule Poker.Accounts do
     end
   end
 
+  @doc """
+  Returns a changeset for the onboarding form (live validation).
+  """
+  def change_user_onboarding(user, attrs \\ %{}) do
+    User.onboarding_changeset(user, attrs)
+  end
+
+  @doc """
+  Returns a changeset for the nickname form (live validation).
+  """
+  def change_user_nickname(user, attrs \\ %{}, opts \\ []) do
+    User.nickname_changeset(user, attrs, opts)
+  end
+
+  @doc """
+  Updates the user nickname.
+  """
+  def update_user_nickname(%User{} = user, attrs) do
+    user
+    |> User.nickname_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Persists onboarding form values and stamps `onboarded_at`.
+  """
+  def complete_onboarding(%User{} = user, attrs) do
+    user
+    |> User.onboarding_changeset(attrs)
+    |> Repo.update()
+  end
+
   ## Settings
 
   @doc """
