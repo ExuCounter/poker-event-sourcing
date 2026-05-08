@@ -64,74 +64,93 @@ defmodule PokerWeb.UserLive.Login do
           <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
         </div>
 
-        <!-- Magic link form -->
-        <.form
-          for={@form}
-          id="login_form_magic"
-          action={~p"/users/log-in"}
-          phx-submit="submit_magic"
-          class="space-y-3"
-        >
-          <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
-            <.input
-              field={@form[:email]}
-              type="email"
-              autocomplete="username"
-              required
-              readonly={!!@current_scope}
-              phx-mounted={JS.focus()}
-              placeholder="you@example.com"
-              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
-            />
-          </div>
-          <button type="submit" class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
-            Send Magic Link
-          </button>
-        </.form>
+        <%= if @show_magic do %>
+          <!-- Magic link form (replaces password form after failed login) -->
+          <p class="text-xs text-[var(--pkr-ink-3)] mb-3 leading-relaxed">
+            We'll email you a one-time link to sign in.
+          </p>
+          <.form
+            for={@form}
+            id="login_form_magic"
+            action={~p"/users/log-in"}
+            phx-submit="submit_magic"
+            class="space-y-3"
+          >
+            <div>
+              <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+              <.input
+                field={@form[:email]}
+                type="email"
+                autocomplete="username"
+                required
+                readonly={!!@current_scope}
+                phx-mounted={JS.focus()}
+                placeholder="you@example.com"
+                class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+              />
+            </div>
+            <button type="submit" class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+              Send Magic Link
+            </button>
+          </.form>
 
-        <!-- Divider -->
-        <div class="flex items-center gap-2.5 my-5">
-          <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
-          <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">OR</span>
-          <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
-        </div>
+          <div class="mt-5 text-center">
+            <button
+              type="button"
+              phx-click="toggle_magic"
+              class="text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-accent)] cursor-pointer transition-colors"
+            >
+              Use password instead
+            </button>
+          </div>
+        <% else %>
+          <!-- Password form -->
+          <.form
+            for={@form}
+            id="login_form_password"
+            action={~p"/users/log-in"}
+            phx-submit="submit_password"
+            phx-trigger-action={@trigger_submit}
+            class="space-y-3"
+          >
+            <div>
+              <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+              <.input
+                field={@form[:email]}
+                type="email"
+                autocomplete="username"
+                required
+                readonly={!!@current_scope}
+                phx-mounted={JS.focus()}
+                placeholder="you@example.com"
+                class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">PASSWORD</label>
+              <.input
+                field={@form[:password]}
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+                class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
+              />
+            </div>
+            <button type="submit" name={@form[:remember_me].name} value="true" class="w-full py-3.5 rounded-xl text-[13px] font-medium border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] hover:bg-[var(--pkr-bg-2)] transition-all cursor-pointer">
+              Log in with Password
+            </button>
+          </.form>
 
-        <!-- Password form -->
-        <.form
-          for={@form}
-          id="login_form_password"
-          action={~p"/users/log-in"}
-          phx-submit="submit_password"
-          phx-trigger-action={@trigger_submit}
-          class="space-y-3"
-        >
-          <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
-            <.input
-              field={@form[:email]}
-              type="email"
-              autocomplete="username"
-              required
-              readonly={!!@current_scope}
-              placeholder="you@example.com"
-              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
-            />
+          <div :if={@had_password_failure} class="mt-5 text-center">
+            <button
+              type="button"
+              phx-click="toggle_magic"
+              class="text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-accent)] cursor-pointer transition-colors"
+            >
+              Trouble signing in?
+            </button>
           </div>
-          <div>
-            <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">PASSWORD</label>
-            <.input
-              field={@form[:password]}
-              type="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              class="w-full px-3.5 py-3 rounded-lg text-sm bg-[var(--pkr-bg-1)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] transition-colors"
-            />
-          </div>
-          <button type="submit" name={@form[:remember_me].name} value="true" class="w-full py-3.5 rounded-xl text-[13px] font-medium border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] hover:bg-[var(--pkr-bg-2)] transition-all cursor-pointer">
-            Log in with Password
-          </button>
-        </.form>
+        <% end %>
 
         <!-- Register link -->
         <%= if !@current_scope do %>
@@ -149,18 +168,30 @@ defmodule PokerWeb.UserLive.Login do
 
   @impl true
   def mount(_params, _session, socket) do
+    email_flash = Phoenix.Flash.get(socket.assigns.flash, :email)
+
     email =
-      Phoenix.Flash.get(socket.assigns.flash, :email) ||
+      email_flash ||
         get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
 
     form = to_form(%{"email" => email}, as: "user")
 
-    {:ok, assign(socket, form: form, trigger_submit: false)}
+    {:ok,
+     assign(socket,
+       form: form,
+       trigger_submit: false,
+       show_magic: false,
+       had_password_failure: !!email_flash
+     )}
   end
 
   @impl true
   def handle_event("submit_password", _params, socket) do
     {:noreply, assign(socket, :trigger_submit, true)}
+  end
+
+  def handle_event("toggle_magic", _params, socket) do
+    {:noreply, update(socket, :show_magic, &(!&1))}
   end
 
   def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do

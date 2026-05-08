@@ -93,10 +93,12 @@ defmodule Poker.Accounts do
   """
   def register_with_google(%{google_id: google_id, email: email} = attrs)
       when is_binary(google_id) and is_binary(email) do
-    with {:ok, user} <- %User{} |> User.google_register_changeset(attrs) |> Repo.insert(),
-         {:ok, user} <- confirm_user(user) do
-      {:ok, user}
-    end
+    Repo.transact(fn ->
+      with {:ok, user} <- %User{} |> User.google_register_changeset(attrs) |> Repo.insert(),
+           {:ok, user} <- confirm_user(user) do
+        {:ok, user}
+      end
+    end)
   end
 
   @doc """
