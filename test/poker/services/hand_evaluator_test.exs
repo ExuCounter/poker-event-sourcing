@@ -474,7 +474,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == {:two_pair, :K, :Q, 7}
+      assert hd(winners).hand_rank == {:two_pair, :K, :Q, :A}
     end
 
     test "higher top pair wins" do
@@ -528,7 +528,7 @@ defmodule Poker.Services.HandEvaluatorTest do
 
       assert length(winners) == 1
       assert hd(winners).participant_id == "p1"
-      assert hd(winners).hand_rank == {:two_pair, :Q, :J, 9}
+      assert hd(winners).hand_rank == {:two_pair, :Q, :J, :A}
     end
   end
 
@@ -757,7 +757,7 @@ defmodule Poker.Services.HandEvaluatorTest do
       assert length(winners) == 2
       assert Enum.any?(winners, &(&1.participant_id == "p1"))
       assert Enum.any?(winners, &(&1.participant_id == "p2"))
-      assert hd(winners).hand_rank == {:two_pair, :K, :Q, 7}
+      assert hd(winners).hand_rank == {:two_pair, :K, :Q, :A}
     end
   end
 

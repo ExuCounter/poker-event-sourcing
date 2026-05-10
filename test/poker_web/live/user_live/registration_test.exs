@@ -8,8 +8,8 @@ defmodule PokerWeb.UserLive.RegistrationTest do
     test "renders registration page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/register")
 
-      assert html =~ "Register"
-      assert html =~ "Log in"
+      assert html =~ "CREATE ACCOUNT"
+      assert html =~ "Sign in"
     end
 
     test "redirects if already logged in", %{conn: conn} do
@@ -50,6 +50,7 @@ defmodule PokerWeb.UserLive.RegistrationTest do
       # Verify user was created and confirmation token was generated
       user = Poker.Accounts.get_user_by_email(email)
       assert user
+
       assert Poker.Repo.get_by!(Poker.Accounts.Schemas.UserToken, user_id: user.id).context ==
                "login"
     end
@@ -76,11 +77,11 @@ defmodule PokerWeb.UserLive.RegistrationTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("a", "Log in here")
+        |> element("a", "Sign in")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/log-in")
 
-      assert login_html =~ "Log in"
+      assert login_html =~ "WELCOME BACK"
     end
   end
 end

@@ -113,28 +113,6 @@ defmodule PokerWeb.PlayerLive.Game do
     {:noreply, socket}
   end
 
-  # Errors that should be silently ignored (double-clicks, stale UI state)
-  @silent_errors [
-    :not_your_turn,
-    :not_participants_turn,
-    :no_active_hand,
-    :already_folded,
-    :stale_timeout,
-    :already_sat_out,
-    :not_sitting_out
-  ]
-
-  defp handle_action_result(:ok, socket), do: {:noreply, socket}
-
-  defp handle_action_result({:error, reason}, socket) when reason in @silent_errors,
-    do: {:noreply, socket}
-
-  defp handle_action_result({:error, %{status: status}}, socket) when status in @silent_errors,
-    do: {:noreply, socket}
-
-  defp handle_action_result({:error, reason}, socket),
-    do: {:noreply, put_flash(socket, :error, format_error(reason))}
-
   # Action event handlers
   @impl true
   def handle_event("fold_hand", _params, socket) do
@@ -270,6 +248,28 @@ defmodule PokerWeb.PlayerLive.Game do
         {:noreply, put_flash(socket, :error, format_error(reason))}
     end
   end
+
+  # Errors that should be silently ignored (double-clicks, stale UI state)
+  @silent_errors [
+    :not_your_turn,
+    :not_participants_turn,
+    :no_active_hand,
+    :already_folded,
+    :stale_timeout,
+    :already_sat_out,
+    :not_sitting_out
+  ]
+
+  defp handle_action_result(:ok, socket), do: {:noreply, socket}
+
+  defp handle_action_result({:error, reason}, socket) when reason in @silent_errors,
+    do: {:noreply, socket}
+
+  defp handle_action_result({:error, %{status: status}}, socket) when status in @silent_errors,
+    do: {:noreply, socket}
+
+  defp handle_action_result({:error, reason}, socket),
+    do: {:noreply, put_flash(socket, :error, format_error(reason))}
 
   # Dynamic timing based on event age
   # {min_age_ms, multiplier} - :skip means instant jump

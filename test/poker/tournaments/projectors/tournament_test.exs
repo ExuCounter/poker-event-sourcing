@@ -2,6 +2,7 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
   use Poker.DataCase
 
   alias Poker.Tournaments.Projectors.Tournament, as: Projector
+  alias Poker.Tournaments.EventHandlers.EventBroadcaster
   alias Poker.Tournaments.Projections.Tournament
 
   alias Poker.Tournaments.Events.{
@@ -22,12 +23,30 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
     %{
       handler_name: "tournament_test",
       event_number: :erlang.unique_integer([:positive, :monotonic]),
+      event_id: Ecto.UUID.generate(),
+      stream_version: :erlang.unique_integer([:positive, :monotonic]),
       created_at: DateTime.utc_now()
     }
   end
 
+  # Broadcaster only matches events that have a :tournament_id field, so for
+  # TournamentCreated (which uses :id) we add :tournament_id from the
+  # aggregate id before invoking the handler.
+  defp dispatch(event, meta) do
+    :ok = Projector.handle(event, meta)
+
+    broadcastable_event =
+      case event do
+        %TournamentCreated{id: id} -> Map.put(event, :tournament_id, id)
+        other -> other
+      end
+
+    :ok = EventBroadcaster.handle(broadcastable_event, meta)
+  end
+
   defp create_tournament(opts \\ %{}) do
     tournament_id = opts[:id] || Ecto.UUID.generate()
+    Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
 
     event = %TournamentCreated{
       id: tournament_id,
@@ -40,26 +59,24 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
       max_players: opts[:max_players] || 50
     }
 
-    :ok = Projector.handle(event, metadata())
+    dispatch(event, metadata())
     tournament_id
   end
 
   defp register_player(tournament_id, player_id) do
-    Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
-
     event = %PlayerRegistered{
       tournament_id: tournament_id,
       player_id: player_id
     }
 
-    :ok = Projector.handle(event, metadata())
+    dispatch(event, metadata())
   end
 
   describe "TournamentCreated event" do
     test "inserts tournament with correct initial values" do
       tournament_id = create_tournament()
 
-      assert_receive {:tournament_list, :tournament_created, %{tournament_id: ^tournament_id}}
+      assert_receive {:tournament_list, "TournamentCreated", %{tournament_id: ^tournament_id}}
 
       tournament = Repo.get(Tournament, tournament_id)
 
@@ -79,8 +96,10 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
       player_id = Ecto.UUID.generate()
       register_player(tournament_id, player_id)
 
-      assert_receive {:tournament, :player_registered, %{tournament_id: ^tournament_id, player_id: ^player_id}}
-      assert_receive {:tournament_list, :tournament_updated, %{tournament_id: ^tournament_id}}
+      assert_receive {:tournament, "PlayerRegistered",
+                      %{tournament_id: ^tournament_id, player_id: ^player_id}}
+
+      assert_receive {:tournament_list, "PlayerRegistered", %{tournament_id: ^tournament_id}}
 
       tournament = Repo.get(Tournament, tournament_id)
 
@@ -105,14 +124,13 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
   describe "TournamentStarted event" do
     test "sets status to active, players_remaining to registered_count, and level_started_at from metadata" do
       tournament_id = create_tournament()
-      Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
       register_player(tournament_id, Ecto.UUID.generate())
       register_player(tournament_id, Ecto.UUID.generate())
 
       meta = metadata()
-      :ok = Projector.handle(%TournamentStarted{tournament_id: tournament_id}, meta)
+      dispatch(%TournamentStarted{tournament_id: tournament_id}, meta)
 
-      assert_receive {:tournament, :tournament_started, %{tournament_id: ^tournament_id}}
+      assert_receive {:tournament, "TournamentStarted", %{tournament_id: ^tournament_id}}
 
       tournament = Repo.get(Tournament, tournament_id)
 
@@ -125,20 +143,25 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
   describe "BlindLevelAdvanced event" do
     test "updates current_level and level_started_at" do
       tournament_id = create_tournament()
-      Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
       register_player(tournament_id, Ecto.UUID.generate())
       register_player(tournament_id, Ecto.UUID.generate())
-      :ok = Projector.handle(%TournamentStarted{tournament_id: tournament_id}, metadata())
+      dispatch(%TournamentStarted{tournament_id: tournament_id}, metadata())
 
       meta = metadata()
 
-      :ok =
-        Projector.handle(
-          %BlindLevelAdvanced{tournament_id: tournament_id, level: 2, small_blind: 20, big_blind: 40, duration_seconds: 600},
-          meta
-        )
+      dispatch(
+        %BlindLevelAdvanced{
+          tournament_id: tournament_id,
+          level: 2,
+          small_blind: 20,
+          big_blind: 40,
+          duration_seconds: 600
+        },
+        meta
+      )
 
-      assert_receive {:tournament, :blind_level_advanced, %{tournament_id: ^tournament_id, level: 2}}
+      assert_receive {:tournament, "BlindLevelAdvanced",
+                      %{tournament_id: ^tournament_id, level: 2}}
 
       tournament = Repo.get(Tournament, tournament_id)
 
@@ -150,18 +173,16 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
   describe "TournamentPlayerBusted event" do
     test "decrements players_remaining" do
       tournament_id = create_tournament()
-      Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
       register_player(tournament_id, Ecto.UUID.generate())
       register_player(tournament_id, Ecto.UUID.generate())
-      :ok = Projector.handle(%TournamentStarted{tournament_id: tournament_id}, metadata())
+      dispatch(%TournamentStarted{tournament_id: tournament_id}, metadata())
 
-      :ok =
-        Projector.handle(
-          %TournamentPlayerBusted{tournament_id: tournament_id, player_id: Ecto.UUID.generate()},
-          metadata()
-        )
+      dispatch(
+        %TournamentPlayerBusted{tournament_id: tournament_id, player_id: Ecto.UUID.generate()},
+        metadata()
+      )
 
-      assert_receive {:tournament, :player_busted, %{tournament_id: ^tournament_id}}
+      assert_receive {:tournament, "TournamentPlayerBusted", %{tournament_id: ^tournament_id}}
 
       tournament = Repo.get(Tournament, tournament_id)
 
@@ -174,15 +195,14 @@ defmodule Poker.Tournaments.Projectors.TournamentTest do
       tournament_id = create_tournament()
       register_player(tournament_id, Ecto.UUID.generate())
       register_player(tournament_id, Ecto.UUID.generate())
-      :ok = Projector.handle(%TournamentStarted{tournament_id: tournament_id}, metadata())
+      dispatch(%TournamentStarted{tournament_id: tournament_id}, metadata())
 
-      :ok =
-        Projector.handle(
-          %TournamentFinished{tournament_id: tournament_id, prize_pool: 5000, payouts: []},
-          metadata()
-        )
+      dispatch(
+        %TournamentFinished{tournament_id: tournament_id, prize_pool: 5000, payouts: []},
+        metadata()
+      )
 
-      assert_receive {:tournament_list, :tournament_updated, %{tournament_id: ^tournament_id}}
+      assert_receive {:tournament_list, "TournamentFinished", %{tournament_id: ^tournament_id}}
 
       tournament = Repo.get(Tournament, tournament_id)
 

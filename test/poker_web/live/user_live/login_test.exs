@@ -8,9 +8,10 @@ defmodule PokerWeb.UserLive.LoginTest do
     test "renders login page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "Log in"
-      assert html =~ "Register"
-      assert html =~ "Log in with Magic Link"
+      assert html =~ "WELCOME BACK"
+      assert html =~ "Take your seat."
+      assert html =~ "Log in with Password"
+      assert html =~ "Create an account"
     end
   end
 
@@ -19,6 +20,9 @@ defmodule PokerWeb.UserLive.LoginTest do
       user = user_fixture()
 
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
+
+      # Magic link form is hidden by default; toggle to reveal it
+      render_hook(lv, "toggle_magic", %{})
 
       # Submit form and verify redirect
       {:ok, _lv, _html} =
@@ -33,6 +37,8 @@ defmodule PokerWeb.UserLive.LoginTest do
 
     test "does not disclose if user is registered", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
+
+      render_hook(lv, "toggle_magic", %{})
 
       # Submit form with non-existent email and verify same redirect behavior
       {:ok, _lv, _html} =
@@ -83,11 +89,11 @@ defmodule PokerWeb.UserLive.LoginTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element("a", "Create one now")
+        |> element("a", "Create an account")
         |> render_click()
         |> follow_redirect(conn, ~p"/users/register")
 
-      assert login_html =~ "Register"
+      assert login_html =~ "CREATE ACCOUNT"
     end
   end
 
@@ -100,12 +106,12 @@ defmodule PokerWeb.UserLive.LoginTest do
     test "shows login page with email filled in", %{conn: conn, user: user} do
       {:ok, _lv, html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "Reauthentication Required"
-      refute html =~ "Create one now"
-      assert html =~ "Log in with Magic Link"
+      assert html =~ "REAUTHENTICATE"
+      refute html =~ "Create an account"
+      assert html =~ "Log in with Password"
 
       assert html =~
-               ~s(<input type="email" name="user[email]" id="login_form_magic_email" value="#{user.email}")
+               ~s(value="#{user.email}")
     end
   end
 end

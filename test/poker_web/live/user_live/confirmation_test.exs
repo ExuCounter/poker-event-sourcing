@@ -18,7 +18,7 @@ defmodule PokerWeb.UserLive.ConfirmationTest do
         end)
 
       {:ok, _lv, html} = live(conn, ~p"/users/log-in/#{token}")
-      assert html =~ "Confirm and Stay Logged In"
+      assert html =~ "Confirm &amp; Stay Logged In"
     end
 
     test "renders login page for confirmed user", %{conn: conn, confirmed_user: user} do
@@ -29,7 +29,7 @@ defmodule PokerWeb.UserLive.ConfirmationTest do
 
       {:ok, _lv, html} = live(conn, ~p"/users/log-in/#{token}")
       refute html =~ "Confirm my account"
-      assert html =~ "Log in"
+      assert html =~ "Keep Me Logged In"
     end
 
     test "confirms the given token once", %{conn: conn, unconfirmed_user: user} do

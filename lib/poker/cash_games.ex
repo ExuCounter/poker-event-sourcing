@@ -23,7 +23,8 @@ defmodule Poker.CashGames do
         creator_id: creator_id
       })
 
-    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateCashGame.changeset/1),
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &CreateCashGame.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       {:ok, %{cash_game_id: cash_game_id, table_id: table_id}}
     end
@@ -83,7 +84,8 @@ defmodule Poker.CashGames do
   def close_cash_game(cash_game_id) do
     command_attrs = %{cash_game_id: cash_game_id}
 
-    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CloseCashGame.changeset/1),
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &CloseCashGame.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end

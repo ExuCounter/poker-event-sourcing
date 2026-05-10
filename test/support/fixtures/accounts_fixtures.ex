@@ -43,6 +43,8 @@ defmodule Poker.AccountsFixtures do
       Accounts.login_user_by_magic_link(token)
 
     user
+    |> Ecto.Changeset.change(onboarded_at: DateTime.utc_now(:second))
+    |> Poker.Repo.update!()
   end
 
   def user_scope_fixture do

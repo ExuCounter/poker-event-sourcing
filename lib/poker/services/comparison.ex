@@ -93,11 +93,14 @@ defmodule Poker.Services.Comparison do
       # Three of a kind
       [{3, rank} | rest] ->
         kickers = Enum.filter(sorted_cards, fn {r, _} -> r != rank end)
-        {k1, k2} = case kickers do
-          [{r1, _}, {r2, _} | _] -> {r1, r2}
-          [{r1, _}] -> {r1, r1}
-          [] -> {rank, rank}
-        end
+
+        {k1, k2} =
+          case kickers do
+            [{r1, _}, {r2, _} | _] -> {r1, r2}
+            [{r1, _}] -> {r1, r1}
+            [] -> {rank, rank}
+          end
+
         {{:three_of_a_kind, rank, k1, k2}, hand_tuple}
 
       # Two pair
@@ -110,24 +113,30 @@ defmodule Poker.Services.Comparison do
       # One pair
       [{2, rank} | _] ->
         kickers = Enum.filter(sorted_cards, fn {r, _} -> r != rank end)
-        {k1, k2, k3} = case kickers do
-          [{r1, _}, {r2, _}, {r3, _} | _] -> {r1, r2, r3}
-          [{r1, _}, {r2, _}] -> {r1, r2, r2}
-          [{r1, _}] -> {r1, r1, r1}
-          [] -> {rank, rank, rank}
-        end
+
+        {k1, k2, k3} =
+          case kickers do
+            [{r1, _}, {r2, _}, {r3, _} | _] -> {r1, r2, r3}
+            [{r1, _}, {r2, _}] -> {r1, r2, r2}
+            [{r1, _}] -> {r1, r1, r1}
+            [] -> {rank, rank, rank}
+          end
+
         {{:one_pair, rank, k1, k2, k3}, hand_tuple}
 
       # High card
       _ ->
         ranks = Enum.map(sorted_cards, fn {rank, _} -> rank end)
-        {r1, r2, r3, r4, r5} = case ranks do
-          [a, b, c, d, e | _] -> {a, b, c, d, e}
-          [a, b, c, d] -> {a, b, c, d, d}
-          [a, b, c] -> {a, b, c, c, c}
-          [a, b] -> {a, b, b, b, b}
-          [a] -> {a, a, a, a, a}
-        end
+
+        {r1, r2, r3, r4, r5} =
+          case ranks do
+            [a, b, c, d, e | _] -> {a, b, c, d, e}
+            [a, b, c, d] -> {a, b, c, d, d}
+            [a, b, c] -> {a, b, c, c, c}
+            [a, b] -> {a, b, b, b, b}
+            [a] -> {a, a, a, a, a}
+          end
+
         {{:high_card, r1, r2, r3, r4, r5}, hand_tuple}
     end
   end
@@ -179,8 +188,8 @@ defmodule Poker.Services.Comparison do
       {:straight_flush, a} ->
         8_000 + card_value(a)
 
-      {:four_of_a_kind, _a, b} ->
-        7_000 + card_value(b)
+      {:four_of_a_kind, a, b} ->
+        7_000 + 15 * card_value(a) + card_value(b)
 
       {:full_house, a, b} ->
         6_000 + 15 * card_value(a) + card_value(b)
