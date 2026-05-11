@@ -10,6 +10,10 @@ defmodule Poker.Tournaments.Queries do
     where(query, [tournament], tournament.id == ^id)
   end
 
+  def by_code(query \\ base(), code) do
+    where(query, [tournament], tournament.code == ^code)
+  end
+
   def order_by_newest(query \\ base()) do
     order_by(query, [tournament], desc: tournament.inserted_at)
   end

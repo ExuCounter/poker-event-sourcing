@@ -3,6 +3,7 @@ defmodule Poker.Tournaments.Events.TournamentCreated do
            only: [
              :id,
              :creator_id,
+             :code,
              :status,
              :speed,
              :buy_in,
@@ -13,6 +14,7 @@ defmodule Poker.Tournaments.Events.TournamentCreated do
   defstruct [
     :id,
     :creator_id,
+    :code,
     :status,
     :speed,
     :buy_in,

@@ -6,6 +6,7 @@ defmodule Poker.CashGames.Projections.CashGame do
   schema "cash_games" do
     field :table_id, :binary_id
     field :creator_id, :binary_id
+    field :code, :string
     field :small_blind, :integer
     field :big_blind, :integer
     field :min_buyin, :integer

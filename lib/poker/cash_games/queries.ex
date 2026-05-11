@@ -18,6 +18,10 @@ defmodule Poker.CashGames.Queries do
     where(query, [cash_game], cash_game.table_id == ^table_id)
   end
 
+  def by_code(query \\ base(), code) do
+    where(query, [cash_game], cash_game.code == ^code)
+  end
+
   def with_table_status(query \\ base()) do
     from(cash_game in query,
       join: table_list in TableList,

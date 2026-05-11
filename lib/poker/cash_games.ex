@@ -20,7 +20,8 @@ defmodule Poker.CashGames do
       Map.merge(attrs, %{
         cash_game_id: cash_game_id,
         table_id: table_id,
-        creator_id: creator_id
+        creator_id: creator_id,
+        code: Poker.JoinCodes.next_code()
       })
 
     with {:ok, command} <-
@@ -100,6 +101,13 @@ defmodule Poker.CashGames do
 
   def get_cash_game_by_table(table_id) do
     case Queries.by_table_id(table_id) |> Poker.Repo.one() do
+      nil -> {:error, :cash_game_not_found}
+      cash_game -> {:ok, cash_game}
+    end
+  end
+
+  def get_cash_game_by_code(code) do
+    case Queries.by_code(code) |> Poker.Repo.one() do
       nil -> {:error, :cash_game_not_found}
       cash_game -> {:ok, cash_game}
     end

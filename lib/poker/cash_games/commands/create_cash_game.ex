@@ -5,6 +5,7 @@ defmodule Poker.CashGames.Commands.CreateCashGame do
     field :cash_game_id, :binary_id
     field :table_id, :binary_id
     field :creator_id, :binary_id
+    field :code, :string
     field :small_blind, :integer
     field :big_blind, :integer
     field :min_buyin, :integer
@@ -18,6 +19,7 @@ defmodule Poker.CashGames.Commands.CreateCashGame do
       :cash_game_id,
       :table_id,
       :creator_id,
+      :code,
       :small_blind,
       :big_blind,
       :min_buyin,
@@ -28,6 +30,7 @@ defmodule Poker.CashGames.Commands.CreateCashGame do
       :cash_game_id,
       :table_id,
       :creator_id,
+      :code,
       :small_blind,
       :big_blind,
       :min_buyin,

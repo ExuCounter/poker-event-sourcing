@@ -20,6 +20,7 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     Ecto.Multi.insert(multi, :tournament, %Tournament{
       id: event.id,
       creator_id: event.creator_id,
+      code: event.code,
       status: event.status,
       speed: event.speed,
       buy_in: event.buy_in,

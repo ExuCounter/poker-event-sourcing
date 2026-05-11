@@ -84,7 +84,7 @@ defmodule PokerWeb.UserLive.GuestUpgrade do
     user = socket.assigns.current_scope.user
 
     if Accounts.guest?(user) do
-      {:ok, assign_form(socket, Accounts.change_guest_upgrade(user))}
+      {:ok, assign(socket, form: to_form(%{}, as: "user"))}
     else
       {:ok, redirect(socket, to: ~p"/")}
     end

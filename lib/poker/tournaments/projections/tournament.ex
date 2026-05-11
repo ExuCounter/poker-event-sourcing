@@ -5,6 +5,7 @@ defmodule Poker.Tournaments.Projections.Tournament do
 
   schema "tournaments" do
     field :creator_id, :binary_id
+    field :code, :string
     field :status, Ecto.Enum, values: [:registering, :active, :finished]
     field :speed, Ecto.Enum, values: [:regular, :turbo, :hyper_turbo]
     field :buy_in, :integer

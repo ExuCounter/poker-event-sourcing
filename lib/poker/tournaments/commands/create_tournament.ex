@@ -4,6 +4,7 @@ defmodule Poker.Tournaments.Commands.CreateTournament do
   embedded_schema do
     field :tournament_id, :binary_id
     field :creator_id, :binary_id
+    field :code, :string
     field :speed, Ecto.Enum, values: [:regular, :turbo, :hyper_turbo]
     field :buy_in, :integer
     field :table_type, Ecto.Enum, values: [:two_max, :three_max, :four_max, :six_max]
@@ -14,6 +15,7 @@ defmodule Poker.Tournaments.Commands.CreateTournament do
     |> Ecto.Changeset.cast(attrs, [
       :tournament_id,
       :creator_id,
+      :code,
       :speed,
       :buy_in,
       :table_type
@@ -21,6 +23,7 @@ defmodule Poker.Tournaments.Commands.CreateTournament do
     |> Ecto.Changeset.validate_required([
       :tournament_id,
       :creator_id,
+      :code,
       :speed,
       :buy_in,
       :table_type

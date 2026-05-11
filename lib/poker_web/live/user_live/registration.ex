@@ -37,7 +37,9 @@ defmodule PokerWeb.UserLive.Registration do
           Pull up a chair.
         </h2>
 
-        <.play_now_button divider_label="OR SIGN UP" />
+        <.play_now_button divider_label="OR SIGN UP">
+          <.join_code_form title="" />
+        </.play_now_button>
 
         <!-- Google register -->
         <.link

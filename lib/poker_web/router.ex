@@ -110,6 +110,8 @@ defmodule PokerWeb.Router do
 
     post "/guests/sign-in", GuestSessionController, :create
 
+    post "/join", JoinController, :create
+
     get "/auth/google/sign-in", OAuthController, :sign_in
     get "/auth/google/register", OAuthController, :register
     get "/auth/:provider", OAuthController, :request

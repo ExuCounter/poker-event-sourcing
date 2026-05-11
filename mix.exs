@@ -79,7 +79,8 @@ defmodule Poker.MixProject do
       {:oban, "~> 2.20.3"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
-      {:tidewave, "~> 0.5", only: :dev}
+      {:tidewave, "~> 0.5", only: :dev},
+      {:sqids, "~> 0.2"}
     ]
   end
 

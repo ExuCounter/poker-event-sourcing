@@ -258,12 +258,14 @@ defmodule PokerWeb.PlayerLive.Dashboard do
                 </span>
               </.link>
             </div>
+
+            <div class="mt-4">
+              <.join_code_form title="JOIN WITH CODE" />
+            </div>
           </div>
 
-          <div class="flex-1"></div>
-
-          <div class="px-5 pb-3">
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">
+          <div class="px-5 pb-3 pt-2">
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1">
               REVIEW
             </div>
             <div class="flex flex-col gap-0.5">
@@ -277,7 +279,9 @@ defmodule PokerWeb.PlayerLive.Dashboard do
             </div>
           </div>
 
-          <!-- Create form (sticky at bottom) — registered users only -->
+          <div class="flex-1"></div>
+          
+    <!-- Create form (sticky at bottom) — registered users only -->
           <div
             :if={!Poker.Accounts.guest?(@current_scope.user)}
             class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]"

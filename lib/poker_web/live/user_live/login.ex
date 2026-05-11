@@ -38,7 +38,9 @@ defmodule PokerWeb.UserLive.Login do
           Take your seat.
         </h2>
 
-        <.play_now_button :if={!@current_scope} divider_label="OR SIGN IN" />
+        <.play_now_button :if={!@current_scope} divider_label="OR SIGN IN">
+          <.join_code_form title="" />
+        </.play_now_button>
 
         <!-- Dev mail info -->
         <div :if={local_mail_adapter?()} class="mb-5 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-xs text-[var(--pkr-ink-3)]">

@@ -8,7 +8,8 @@ defmodule Poker.Tournaments do
     command_attrs =
       Map.merge(attrs, %{
         tournament_id: tournament_id,
-        creator_id: creator_id
+        creator_id: creator_id,
+        code: Poker.JoinCodes.next_code()
       })
 
     with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateTournament.changeset/1),
@@ -42,6 +43,13 @@ defmodule Poker.Tournaments do
 
   def get_tournament(tournament_id) do
     case Queries.by_id(tournament_id) |> Poker.Repo.one() do
+      nil -> {:error, :tournament_not_found}
+      tournament -> {:ok, tournament}
+    end
+  end
+
+  def get_tournament_by_code(code) do
+    case Queries.by_code(code) |> Poker.Repo.one() do
       nil -> {:error, :tournament_not_found}
       tournament -> {:ok, tournament}
     end

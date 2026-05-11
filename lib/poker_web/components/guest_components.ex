@@ -17,11 +17,28 @@ defmodule PokerWeb.GuestComponents do
   """
   attr :class, :string, default: ""
   attr :divider_label, :string, default: "OR SIGN IN"
+  slot :inner_block
 
   def play_now_button(assigns) do
     ~H"""
     <div class={@class}>
-      <.form for={%{}} action={~p"/guests/sign-in"} method="post" class="mb-3">
+      <p class="text-[11px] text-[var(--pkr-ink-3)] text-center leading-relaxed mb-3">
+        No account, no email. Guest sessions last 3 days.
+      </p>
+
+      <div :if={@inner_block != []} class="mb-3">
+        {render_slot(@inner_block)}
+      </div>
+
+      <div :if={@inner_block != []} class="flex items-center gap-2.5 mb-3">
+        <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
+        <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">
+          OR
+        </span>
+        <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
+      </div>
+
+      <.form for={%{}} action={~p"/guests/sign-in"} method="post" class="mb-6">
         <button
           type="submit"
           class="w-full py-4 rounded-xl text-[15px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
@@ -29,9 +46,7 @@ defmodule PokerWeb.GuestComponents do
           Play now as a guest
         </button>
       </.form>
-      <p class="text-[11px] text-[var(--pkr-ink-3)] text-center leading-relaxed mb-6">
-        No account, no email. Guest sessions last 3 days.
-      </p>
+
       <div class="flex items-center gap-2.5 mb-5">
         <div class="flex-1 h-px bg-[var(--pkr-line)]"></div>
         <span class="font-[family-name:var(--pkr-font-mono)] text-[11px] text-[var(--pkr-ink-3)]">

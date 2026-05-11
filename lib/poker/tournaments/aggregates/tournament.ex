@@ -23,6 +23,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
   defstruct [
     :id,
     :creator_id,
+    :code,
     :status,
     :speed,
     :buy_in,
@@ -44,6 +45,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     %TournamentCreated{
       id: cmd.tournament_id,
       creator_id: cmd.creator_id,
+      code: cmd.code,
       status: :registering,
       speed: cmd.speed,
       buy_in: cmd.buy_in,
@@ -169,6 +171,7 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     %__MODULE__{
       id: event.id,
       creator_id: event.creator_id,
+      code: event.code,
       status: event.status,
       speed: event.speed,
       buy_in: event.buy_in,
