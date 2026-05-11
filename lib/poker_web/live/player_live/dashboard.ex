@@ -67,8 +67,11 @@ defmodule PokerWeb.PlayerLive.Dashboard do
         {:ok, %{table_id: table_id}} ->
           {:noreply, push_navigate(socket, to: ~p"/cash/#{table_id}/lobby")}
 
-        {:error, reason} ->
-          {:noreply, put_flash(socket, :error, "Failed to create cash game: #{inspect(reason)}")}
+        {:error, :unauthorized} ->
+          {:noreply, put_flash(socket, :error, "You don't have permission to create tables.")}
+
+        {:error, _reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to create cash game.")}
       end
     else
       {:error, message} ->
@@ -91,8 +94,12 @@ defmodule PokerWeb.PlayerLive.Dashboard do
         {:ok, %{tournament_id: tournament_id}} ->
           {:noreply, push_navigate(socket, to: ~p"/tournaments/#{tournament_id}/lobby")}
 
-        {:error, reason} ->
-          {:noreply, put_flash(socket, :error, "Failed to create tournament: #{inspect(reason)}")}
+        {:error, :unauthorized} ->
+          {:noreply,
+           put_flash(socket, :error, "You don't have permission to create tournaments.")}
+
+        {:error, _reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to create tournament.")}
       end
     else
       {:error, message} ->
@@ -159,6 +166,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   def render(assigns) do
     ~H"""
     <div class="min-h-screen flex flex-col font-[family-name:var(--pkr-font-ui)]">
+      <.expiry_banner user={@current_scope.user} />
       <!-- Top bar -->
       <header class="h-14 flex items-center justify-between px-5 border-b border-[var(--pkr-line)]">
         <div class="flex items-center gap-3.5">
@@ -181,8 +189,13 @@ defmodule PokerWeb.PlayerLive.Dashboard do
               ${@balance}
             </span>
           </div>
-          <span class="text-xs text-[var(--pkr-ink-3)]">{@current_scope.user.nickname}</span>
+          <span class="flex items-center gap-1.5 text-xs text-[var(--pkr-ink-3)]">
+            {@current_scope.user.nickname}
+            <.guest_badge :if={Poker.Accounts.guest?(@current_scope.user)} />
+          </span>
+          <.save_account_button user={@current_scope.user} />
           <.link
+            :if={!Poker.Accounts.guest?(@current_scope.user)}
             href={~p"/users/settings"}
             class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-ink-2)] border border-[var(--pkr-line)] hover:bg-[var(--pkr-bg-2)] transition-all"
           >
@@ -191,9 +204,14 @@ defmodule PokerWeb.PlayerLive.Dashboard do
           <.link
             href={~p"/users/log-out"}
             method="delete"
+            data-confirm={
+              if Poker.Accounts.guest?(@current_scope.user),
+                do:
+                  "Ending your guest session deletes this account. Your wallet and history will be lost. Continue?"
+            }
             class="px-3 py-1.5 rounded-md text-xs text-[var(--pkr-danger)] border border-[var(--pkr-danger)]/40 hover:bg-[var(--pkr-danger)]/15 transition-all"
           >
-            Log out
+            {if Poker.Accounts.guest?(@current_scope.user), do: "End session", else: "Log out"}
           </.link>
         </div>
       </header>
@@ -259,8 +277,11 @@ defmodule PokerWeb.PlayerLive.Dashboard do
             </div>
           </div>
 
-          <!-- Create form (sticky at bottom) -->
-          <div class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]">
+          <!-- Create form (sticky at bottom) — registered users only -->
+          <div
+            :if={!Poker.Accounts.guest?(@current_scope.user)}
+            class="sticky bottom-0 p-4 pt-3 border-t border-[var(--pkr-line)] bg-[var(--pkr-bg-0)]"
+          >
             <%= if @active_tab == :cash_games do %>
               <.create_cash_game_form form={@form} />
             <% else %>

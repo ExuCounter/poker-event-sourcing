@@ -12,7 +12,7 @@ defmodule Poker.Wallet.TopUpReservationTest do
       :ok = Wallet.top_up_reservation(player.id, game_id, 500)
 
       {:ok, wallet} = Wallet.get_wallet(player.id)
-      assert wallet.balance == 10_000 - 1000 - 500
+      assert wallet.balance == 25_000 - 1000 - 500
       assert wallet.reserved == 1500
     end
 
@@ -29,7 +29,7 @@ defmodule Poker.Wallet.TopUpReservationTest do
       %{player: player} = ctx |> produce(player: [:active])
 
       game_id = UUIDv7.generate()
-      :ok = Wallet.reserve_funds(player.id, game_id, 9000)
+      :ok = Wallet.reserve_funds(player.id, game_id, 24_000)
       result = Wallet.top_up_reservation(player.id, game_id, 2000)
 
       assert {:error, :insufficient_funds} = result
@@ -46,7 +46,7 @@ defmodule Poker.Wallet.TopUpReservationTest do
       :ok = Wallet.undo_top_up(player.id, game_id, 500)
 
       {:ok, wallet} = Wallet.get_wallet(player.id)
-      assert wallet.balance == 10_000 - 1000
+      assert wallet.balance == 25_000 - 1000
       assert wallet.reserved == 1000
     end
 

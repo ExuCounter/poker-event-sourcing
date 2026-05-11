@@ -87,7 +87,14 @@ config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Implementati
 # Configure Oban
 config :poker, Oban,
   repo: Poker.Repo,
-  queues: [tables: 10, tournaments: 10]
+  queues: [tables: 10, tournaments: 10, accounts: 1],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Daily at 03:15 UTC — purge guest accounts inactive for 3+ days.
+       {"15 3 * * *", Poker.Accounts.Jobs.GuestCleanupWorker}
+     ]}
+  ]
 
 # Configure Ueberauth
 config :ueberauth, Ueberauth,

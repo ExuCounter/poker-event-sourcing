@@ -1,6 +1,7 @@
 defmodule Poker.Accounts do
   import Ecto.Query
   alias Poker.Repo
+  alias Poker.Accounts.Queries
   alias Poker.Accounts.Schemas.{User, UserToken}
   alias Poker.Accounts.UserNotifier
 
@@ -63,6 +64,10 @@ defmodule Poker.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc "Returns true if the user is an ephemeral guest account."
+  def guest?(%User{is_guest: true}), do: true
+  def guest?(%User{}), do: false
+
   ## User registration
 
   @doc """
@@ -111,6 +116,96 @@ defmodule Poker.Accounts do
       |> User.confirm_changeset()
       |> Repo.update()
     end
+  end
+
+  @doc """
+  Creates a guest user: synthetic email, auto-generated nickname, confirmed
+  immediately, wallet seeded with the guest starting balance. Guests are
+  ephemeral (cleaned up by `Poker.Accounts.GuestCleanupWorker` after a few
+  days of inactivity) and can later be upgraded into a real user via
+  `upgrade_guest/2` while preserving their wallet and history.
+  """
+  def register_guest do
+    id = Ecto.UUID.generate()
+    now = DateTime.utc_now(:second)
+
+    attrs = %{
+      email: "guest-#{id}@guests.local",
+      nickname: "guest_#{:rand.uniform(999_999)}",
+      role: :player,
+      confirmed_at: now,
+      last_active_at: now
+    }
+
+    # Wallet seeding (Commanded dispatch with strong consistency) must run
+    # outside a Repo transaction so the projector can checkout its own
+    # connection. The user row is fully populated at insert time so there
+    # is no follow-up update that could leave the account half-built.
+    with {:ok, user} <- attrs |> User.guest_changeset() |> Repo.insert(),
+         :ok <- create_wallet_for_player(user) do
+      {:ok, user}
+    end
+  end
+
+  @doc """
+  Returns a changeset for the guest-upgrade form (live validation). Skips
+  uniqueness and password hashing — those run only at submit time.
+  """
+  def change_guest_upgrade(%User{} = user, attrs \\ %{}) do
+    User.upgrade_changeset(user, attrs, validate_unique: false, hash_password: false)
+  end
+
+  @doc """
+  Upgrades a guest into a registered user by attaching a real email + password.
+  The user UUID, wallet, and game history are preserved.
+  """
+  def upgrade_guest(%User{is_guest: true} = user, attrs) do
+    user
+    |> User.upgrade_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def upgrade_guest(%User{}, _attrs), do: {:error, :not_a_guest}
+
+  @doc """
+  Deletes a guest user record. Used on guest logout (immediate cleanup) and
+  by the daily cleanup worker for inactive guests.
+  """
+  def delete_guest_user(%User{is_guest: true} = user), do: Repo.delete(user)
+  def delete_guest_user(%User{}), do: {:error, :not_a_guest}
+
+  @doc """
+  Bumps `last_active_at` for the user. Throttled to one write per minute so
+  busy LiveView mounts don't pile up updates.
+  """
+  def touch_last_active(%User{} = user) do
+    now = DateTime.utc_now(:second)
+
+    if needs_last_active_bump?(user, now) do
+      Queries.by_id(user.id) |> Repo.update_all(set: [last_active_at: now])
+    end
+
+    :ok
+  end
+
+  defp needs_last_active_bump?(%User{last_active_at: nil}, _now), do: true
+
+  defp needs_last_active_bump?(%User{last_active_at: ts}, now),
+    do: DateTime.diff(now, ts, :minute) >= 1
+
+  @doc """
+  Deletes guest users that haven't been seen for `older_than_days` days.
+  Returns the count of deleted users.
+  """
+  def delete_inactive_guests(older_than_days \\ 3) do
+    cutoff = DateTime.utc_now(:second) |> DateTime.add(-older_than_days, :day)
+
+    {count, _} =
+      Queries.guests()
+      |> Queries.inactive_since(cutoff)
+      |> Repo.delete_all()
+
+    count
   end
 
   @doc """
@@ -371,10 +466,13 @@ defmodule Poker.Accounts do
 
   ## Wallet
 
-  @initial_balance 10_000
+  @user_initial_balance 25_000
+  @guest_initial_balance 10_000
 
-  defp create_wallet_for_player(%User{role: :player, id: player_id}) do
-    case Poker.Wallet.create_wallet(player_id, initial_balance: @initial_balance) do
+  defp create_wallet_for_player(%User{role: :player, is_guest: is_guest, id: player_id}) do
+    balance = if is_guest, do: @guest_initial_balance, else: @user_initial_balance
+
+    case Poker.Wallet.create_wallet(player_id, initial_balance: balance) do
       :ok -> :ok
       {:error, :wallet_already_exists} -> :ok
       error -> error

@@ -86,6 +86,7 @@ defmodule PokerWeb do
       import Phoenix.HTML
       # Core UI components
       import PokerWeb.CoreComponents
+      import PokerWeb.GuestComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

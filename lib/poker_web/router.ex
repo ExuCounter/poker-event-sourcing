@@ -54,16 +54,24 @@ defmodule PokerWeb.Router do
         {PokerWeb.UserAuth, :require_authenticated},
         {PokerWeb.UserAuth, :require_onboarded}
       ] do
-      live "/users/settings", UserLive.Settings, :edit
-      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
       live "/", PlayerLive.Dashboard, :render
       live "/cash", PlayerLive.Dashboard, :cash_games
-      live "/tournaments", PlayerLive.Dashboard, :tournaments
       live "/cash/:id/lobby", PlayerLive.Lobby, :show
+      live "/tournaments", PlayerLive.Dashboard, :tournaments
       live "/tournaments/:id/lobby", PlayerLive.TournamentLobby, :show
       live "/history", PlayerLive.HandHistory, :all
       live "/history/cash", PlayerLive.HandHistory, :cash
       live "/history/tournaments", PlayerLive.HandHistory, :tournaments
+    end
+
+    live_session :registered_only,
+      on_mount: [
+        {PokerWeb.UserAuth, :require_authenticated},
+        {PokerWeb.UserAuth, :require_onboarded},
+        {PokerWeb.UserAuth, :require_registered_user}
+      ] do
+      live "/users/settings", UserLive.Settings, :edit
+      live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
     end
 
     live_session :table,
@@ -78,6 +86,11 @@ defmodule PokerWeb.Router do
     end
 
     post "/users/update-password", UserSessionController, :update_password
+
+    live_session :guest_upgrade,
+      on_mount: [{PokerWeb.UserAuth, :require_authenticated}] do
+      live "/guests/save-account", UserLive.GuestUpgrade, :new
+    end
 
     resources "/tables/participants", ParticipantController, only: [:create]
   end
@@ -94,6 +107,8 @@ defmodule PokerWeb.Router do
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+
+    post "/guests/sign-in", GuestSessionController, :create
 
     get "/auth/google/sign-in", OAuthController, :sign_in
     get "/auth/google/register", OAuthController, :register

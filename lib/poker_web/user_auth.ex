@@ -67,6 +67,8 @@ defmodule PokerWeb.UserAuth do
   def fetch_current_scope_for_user(conn, _opts) do
     with {token, conn} <- ensure_user_token(conn),
          {user, token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+      Accounts.touch_last_active(user)
+
       conn
       |> assign(:current_scope, Scope.for_user(user))
       |> maybe_reissue_user_session_token(user, token_inserted_at)
@@ -240,6 +242,24 @@ defmodule PokerWeb.UserAuth do
     end
   end
 
+  def on_mount(:require_registered_user, _params, _session, socket) do
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    if user && !Accounts.guest?(user) do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(
+          :error,
+          "Save your guest account to access this page."
+        )
+        |> Phoenix.LiveView.redirect(to: ~p"/guests/save-account")
+
+      {:halt, socket}
+    end
+  end
+
   def on_mount(:require_sudo_mode, _params, session, socket) do
     socket = mount_current_scope(socket, session)
 
@@ -262,6 +282,7 @@ defmodule PokerWeb.UserAuth do
           Accounts.get_user_by_session_token(user_token)
         end || {nil, nil}
 
+      if user, do: Accounts.touch_last_active(user)
       Scope.for_user(user)
     end)
   end

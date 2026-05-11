@@ -60,8 +60,21 @@ defmodule PokerWeb.UserSessionController do
   end
 
   def delete(conn, _params) do
+    user = conn.assigns.current_scope && conn.assigns.current_scope.user
+
+    conn =
+      conn
+      |> put_flash(:info, logout_flash(user))
+      |> UserAuth.log_out_user()
+
+    if user && Accounts.guest?(user), do: Accounts.delete_guest_user(user)
+
     conn
-    |> put_flash(:info, "Logged out successfully.")
-    |> UserAuth.log_out_user()
+  end
+
+  defp logout_flash(user) do
+    if user && Accounts.guest?(user),
+      do: "Guest session ended. Your account was deleted.",
+      else: "Logged out successfully."
   end
 end

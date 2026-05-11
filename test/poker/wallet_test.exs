@@ -8,7 +8,7 @@ defmodule Poker.WalletTest do
       %{player: player, wallet: wallet} = ctx |> produce(player: [:active])
 
       assert player.confirmed_at
-      assert wallet.balance == 10_000
+      assert wallet.balance == 25_000
       assert wallet.reserved == 0
       assert wallet.player_id == player.id
     end

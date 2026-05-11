@@ -38,6 +38,8 @@ defmodule PokerWeb.UserLive.Login do
           Take your seat.
         </h2>
 
+        <.play_now_button :if={!@current_scope} divider_label="OR SIGN IN" />
+
         <!-- Dev mail info -->
         <div :if={local_mail_adapter?()} class="mb-5 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-xs text-[var(--pkr-ink-3)]">
           View sent emails in <.link href="/dev/mailbox" class="text-[var(--pkr-accent)] underline">the mailbox</.link>

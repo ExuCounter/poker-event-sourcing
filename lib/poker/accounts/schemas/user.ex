@@ -11,8 +11,36 @@ defmodule Poker.Accounts.Schemas.User do
     field :onboarded_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
     field :role, Ecto.Enum, values: [:player, :admin], default: :player
+    field :is_guest, :boolean, default: false
+    field :last_active_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
+  end
+
+  @doc """
+  Builds a fresh guest user. The caller stamps `confirmed_at` on insert via
+  `confirm_changeset/1` and seeds the wallet — the guest skips email
+  verification entirely.
+  """
+  def guest_changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, [:email, :nickname, :role, :confirmed_at, :last_active_at])
+    |> put_change(:is_guest, true)
+    |> validate_required([:email, :nickname, :role, :confirmed_at, :last_active_at])
+    |> unique_constraint(:email)
+    |> unique_constraint(:nickname)
+  end
+
+  @doc """
+  Promotes a guest into a registered user. Sets a real email + password and
+  flips `is_guest` to false. Wallet, history, and the user UUID stay intact.
+  """
+  def upgrade_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email])
+    |> put_change(:is_guest, false)
+    |> validate_email(opts)
+    |> password_changeset(attrs, opts)
   end
 
   @doc """
