@@ -58,13 +58,20 @@ defmodule PokerWeb.JoinCodeComponents do
       title="Copy code"
       onclick={"navigator.clipboard.writeText('#{@code}'); this.dataset.copied = '1'; setTimeout(() => delete this.dataset.copied, 1500)"}
       class={[
-        "group inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)] hover:bg-[var(--pkr-bg-1)] hover:border-[var(--pkr-accent)]/60 transition-all cursor-pointer",
+        "group relative inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)] hover:bg-[var(--pkr-bg-1)] hover:border-[var(--pkr-accent)]/60 transition-all cursor-pointer",
         @class
       ]}
     >
       <span class="text-[var(--pkr-ink-3)] uppercase tracking-[0.12em] text-[9px]">CODE</span>
       <span class="text-[var(--pkr-ink-1)] tracking-[0.15em]">{@code}</span>
       <span class="text-[var(--pkr-ink-3)] group-hover:text-[var(--pkr-accent)]">⧉</span>
+      <span class="
+        pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2
+        px-2 py-0.5 rounded text-[10px] font-medium
+        bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)]
+        opacity-0 transition-opacity duration-150
+        group-data-[copied]:opacity-100
+      ">Copied!</span>
     </button>
     """
   end

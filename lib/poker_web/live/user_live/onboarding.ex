@@ -63,11 +63,12 @@ defmodule PokerWeb.UserLive.Onboarding do
     {:ok, redirect(socket, to: ~p"/")}
   end
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     user = socket.assigns.current_scope.user
     changeset = Accounts.change_user_onboarding(user, %{"nickname" => user.nickname})
+    return_to = Map.get(session, "user_return_to")
 
-    {:ok, assign_form(socket, changeset)}
+    {:ok, socket |> assign(:return_to, return_to) |> assign_form(changeset)}
   end
 
   @impl true
@@ -87,7 +88,7 @@ defmodule PokerWeb.UserLive.Onboarding do
 
     case Accounts.complete_onboarding(user, params) do
       {:ok, _user} ->
-        {:noreply, redirect(socket, to: ~p"/")}
+        {:noreply, redirect(socket, to: socket.assigns[:return_to] || ~p"/")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
