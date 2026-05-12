@@ -6,7 +6,7 @@ defmodule Poker.CashGames.Queries do
   import Ecto.Query
 
   alias Poker.CashGames.Projections.CashGame
-  alias Poker.Tables.Projections.TableList
+  alias Poker.Tables.Projections.TableLobby
 
   def base, do: CashGame
 
@@ -22,14 +22,14 @@ defmodule Poker.CashGames.Queries do
     where(query, [cash_game], cash_game.code == ^code)
   end
 
-  def with_table_status(query \\ base()) do
+  def with_table_lobby(query \\ base()) do
     from(cash_game in query,
-      join: table_list in TableList,
-      on: table_list.id == cash_game.table_id,
+      left_join: lobby in TableLobby,
+      on: lobby.id == cash_game.table_id,
       select_merge: %{
-        table_status: table_list.status,
-        seated_count: table_list.seated_count,
-        seats_count: table_list.seats_count
+        table_status: lobby.status,
+        seated_count: lobby.seated_count,
+        seats_count: lobby.seats_count
       }
     )
   end

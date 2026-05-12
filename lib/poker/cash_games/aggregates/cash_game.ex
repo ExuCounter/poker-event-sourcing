@@ -4,7 +4,7 @@ defmodule Poker.CashGames.Aggregates.CashGame do
 
   A cash game owns one table and defines the game settings.
   Players join/leave through the CashGames context which coordinates
-  with Wallet (for funds) and Tables (for seating).
+  with Wallet (for funds) and Tables (for lobby).
   """
 
   alias Poker.CashGames.Commands.{

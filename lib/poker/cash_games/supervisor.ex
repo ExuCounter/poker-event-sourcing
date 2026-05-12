@@ -10,7 +10,6 @@ defmodule Poker.CashGames.Supervisor do
   def init(_arg) do
     Supervisor.init(
       [
-        CashGames.EventHandlers.EventBroadcaster,
         CashGames.Projectors.CashGame,
         CashGames.ProcessManager
       ],

@@ -7,7 +7,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Poker.Tables.PubSub.subscribe_to_table_list()
+      Poker.CashGames.PubSub.subscribe_to_cash_games_list()
       Poker.Tournaments.PubSub.subscribe_to_tournament_list()
       Poker.Wallet.PubSub.subscribe_to_wallet(socket.assigns.current_scope.user.id)
     end
@@ -22,7 +22,7 @@ defmodule PokerWeb.PlayerLive.Dashboard do
   end
 
   @impl true
-  def handle_info({:table_list, _event, _data}, socket) do
+  def handle_info({:cash_games_list, _event, _data}, socket) do
     {:noreply, assign(socket, cash_games_list: CashGames.list_cash_games())}
   end
 

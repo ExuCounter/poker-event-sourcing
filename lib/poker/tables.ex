@@ -258,7 +258,7 @@ defmodule Poker.Tables do
   end
 
   def get_tables() do
-    Poker.Tables.Projections.TableList
+    Poker.Tables.Projections.TableLobby
     |> order_by(desc: :inserted_at)
     |> Poker.Repo.all()
   end
@@ -272,7 +272,7 @@ defmodule Poker.Tables do
   end
 
   def list_tables() do
-    Poker.Repo.all(Poker.Tables.Projections.TableList)
+    Poker.Repo.all(Poker.Tables.Projections.TableLobby)
   end
 
   @doc """

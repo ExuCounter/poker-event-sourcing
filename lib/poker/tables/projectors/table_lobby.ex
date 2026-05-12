@@ -23,32 +23,25 @@ defmodule Poker.Tables.Projectors.TableLobby do
   def max_seats(:four_max), do: 4
   def max_seats(:six_max), do: 6
 
-  def table_query(id), do: from(t in TableLobby, where: t.id == ^id)
+  def table_query(id), do: from(table_lobby in TableLobby, where: table_lobby.id == ^id)
 
   project(
     %TableCreated{
       id: id,
       status: status,
       table_type: table_type,
-      small_blind: small_blind,
-      big_blind: big_blind,
-      starting_stack: starting_stack,
-      creator_id: creator_id
+      game_mode: game_mode,
+      source_id: source_id
     },
     _metadata,
     fn multi ->
-      seats_count = max_seats(table_type)
-
       Ecto.Multi.insert(multi, :table, %TableLobby{
         id: id,
-        small_blind: small_blind,
-        big_blind: big_blind,
-        starting_stack: starting_stack,
-        table_type: table_type,
         seated_count: 0,
-        seats_count: seats_count,
+        seats_count: max_seats(table_type),
         status: status,
-        creator_id: creator_id
+        game_mode: game_mode,
+        source_id: source_id
       })
     end
   )
@@ -57,34 +50,41 @@ defmodule Poker.Tables.Projectors.TableLobby do
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: status])
   end)
 
-  project(%ParticipantJoined{id: participant_id, table_id: id, player_id: player_id, seat_number: seat_number}, _metadata, fn multi ->
-    user = Poker.Accounts.get_user!(player_id)
-
-    participant_data = %{
-      participant_id: participant_id,
+  project(
+    %ParticipantJoined{
+      id: participant_id,
+      table_id: id,
       player_id: player_id,
-      email: user.email,
-      nickname: user.nickname,
       seat_number: seat_number
-    }
+    },
+    _metadata,
+    fn multi ->
+      user = Poker.Accounts.get_user!(player_id)
 
-    multi
-    |> Ecto.Multi.run(:get_table, fn _repo, _changes ->
-      case Poker.Repo.get(TableLobby, id) do
-        nil -> {:error, :table_not_found}
-        table -> {:ok, table}
-      end
-    end)
-    |> Ecto.Multi.update(:table, fn %{get_table: table} ->
-      participants = table.participants ++ [participant_data]
+      participant_data = %{
+        participant_id: participant_id,
+        player_id: player_id,
+        email: user.email,
+        nickname: user.nickname,
+        seat_number: seat_number
+      }
 
-      table
-      |> Ecto.Changeset.change(%{
-        participants: participants,
-        seated_count: table.seated_count + 1
-      })
-    end)
-  end)
+      multi
+      |> Ecto.Multi.run(:get_table, fn _repo, _changes ->
+        case Poker.Repo.get(TableLobby, id) do
+          nil -> {:error, :table_not_found}
+          table -> {:ok, table}
+        end
+      end)
+      |> Ecto.Multi.update(:table, fn %{get_table: table} ->
+        table
+        |> Ecto.Changeset.change(%{
+          participants: table.participants ++ [participant_data],
+          seated_count: table.seated_count + 1
+        })
+      end)
+    end
+  )
 
   project(%ParticipantBusted{table_id: id, player_id: player_id}, _metadata, fn multi ->
     multi
@@ -146,51 +146,50 @@ defmodule Poker.Tables.Projectors.TableLobby do
     Ecto.Multi.update_all(multi, :table, table_query(id), set: [status: :live])
   end)
 
-  def after_update(%TableCreated{id: _table_id}, _metadata, _changes), do: :ok
-
-  def after_update(%TableStarted{id: table_id}, _metadata, _changes) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_started)
+  # Broadcast to the per-table lobby topic and the appropriate list topic after each commit.
+  def after_update(%TableCreated{id: table_id, game_mode: game_mode} = event, _metadata, _changes) do
+    Poker.Tables.PubSub.broadcast_lobby(table_id, event_type(event))
+    broadcast_list(game_mode)
+    :ok
   end
 
-  def after_update(
-        %ParticipantJoined{table_id: table_id, id: participant_id},
-        _metadata,
-        _changes
-      ) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_joined, %{
-      participant_id: participant_id
-    })
+  def after_update(event, _metadata, changes) do
+    table_id = table_id_for(event)
+    Poker.Tables.PubSub.broadcast_lobby(table_id, event_type(event))
+
+    game_mode = game_mode_from_changes(changes) || lookup_game_mode(table_id)
+    broadcast_list(game_mode)
+    :ok
   end
 
-  def after_update(
-        %ParticipantBusted{table_id: table_id, participant_id: participant_id},
-        _metadata,
-        _changes
-      ) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_busted, %{
-      participant_id: participant_id
-    })
+  defp table_id_for(%{table_id: table_id}), do: table_id
+  defp table_id_for(%{id: id}), do: id
+
+  defp game_mode_from_changes(%{table: %TableLobby{game_mode: game_mode}}), do: game_mode
+  defp game_mode_from_changes(_), do: nil
+
+  defp lookup_game_mode(table_id) do
+    case Poker.Repo.get(TableLobby, table_id) do
+      %TableLobby{game_mode: game_mode} -> game_mode
+      nil -> nil
+    end
   end
 
-  def after_update(
-        %ParticipantLeft{table_id: table_id, participant_id: participant_id},
-        _metadata,
-        _changes
-      ) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :participant_left, %{
-      participant_id: participant_id
-    })
+  defp broadcast_list(:cash_game) do
+    Poker.CashGames.PubSub.broadcast_cash_games_list(:updated)
   end
 
-  def after_update(%TableFinished{table_id: table_id}, _metadata, _changes) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_finished)
+  defp broadcast_list(:tournament) do
+    Poker.Tournaments.PubSub.broadcast_tournament_list(:updated)
   end
 
-  def after_update(%TablePaused{table_id: table_id}, _metadata, _changes) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_paused)
-  end
+  defp broadcast_list(_), do: :ok
 
-  def after_update(%TableResumed{table_id: table_id}, _metadata, _changes) do
-    Poker.Tables.PubSub.broadcast_lobby(table_id, :table_resumed)
+  defp event_type(event) do
+    event.__struct__
+    |> Module.split()
+    |> List.last()
+    |> Macro.underscore()
+    |> String.to_atom()
   end
 end

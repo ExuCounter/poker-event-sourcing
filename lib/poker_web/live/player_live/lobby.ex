@@ -5,24 +5,25 @@ defmodule PokerWeb.PlayerLive.Lobby do
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
-    case Tables.get_lobby(table_id) do
-      nil ->
+    with lobby when not is_nil(lobby) <- Tables.get_lobby(table_id),
+         {:ok, cash_game} <- Poker.CashGames.get_cash_game_by_table(table_id) do
+      if connected?(socket) do
+        Poker.Tables.PubSub.subscribe_to_lobby(table_id)
+      end
+
+      {:ok,
+       assign(socket,
+         lobby: lobby,
+         cash_game: cash_game,
+         table_id: table_id,
+         user_id: socket.assigns.current_scope.user.id
+       )}
+    else
+      _ ->
         {:ok,
          socket
-         |> put_flash(:error, "Table lobby not found")
+         |> put_flash(:error, "Table not found")
          |> push_navigate(to: ~p"/")}
-
-      lobby ->
-        if connected?(socket) do
-          Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table_id}:lobby")
-        end
-
-        {:ok,
-         assign(socket,
-           lobby: lobby,
-           table_id: table_id,
-           user_id: socket.assigns.current_scope.user.id
-         )}
     end
   end
 
@@ -86,8 +87,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
   end
 
   def handle_info({:table_lobby, _event, _data}, socket) do
-    lobby = Tables.get_lobby(socket.assigns.table_id)
-    {:noreply, assign(socket, lobby: lobby)}
+    {:noreply, assign(socket, lobby: Tables.get_lobby(socket.assigns.table_id))}
   end
 
   defp user_has_joined?(participants, user_id) do
@@ -121,7 +121,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
 
   @impl true
   def render(assigns) do
-    total = seats_total(assigns.lobby.table_type)
+    total = seats_total(assigns.cash_game.table_type)
     positions = seat_positions(total)
     assigns = assign(assigns, total_seats: total, seat_positions: positions)
 
@@ -145,11 +145,12 @@ defmodule PokerWeb.PlayerLive.Lobby do
           </span>
         </.link>
         <div class="flex-1"></div>
+        <.share_code_chip :if={@cash_game.code} code={@cash_game.code} class="mr-2" />
         <span class="px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)]">
-          ${@lobby.small_blind}/${@lobby.big_blind}
+          ${@cash_game.small_blind}/${@cash_game.big_blind}
         </span>
         <span class="ml-2 px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)]">
-          NLHE &middot; {format_table_type(@lobby.table_type)}
+          NLHE &middot; {format_table_type(@cash_game.table_type)}
         </span>
       </div>
 
@@ -236,7 +237,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
               NL Hold'em
             </h2>
             <div class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] mt-1">
-              {format_table_type(@lobby.table_type)} &middot; ${@lobby.small_blind}/${@lobby.big_blind}
+              {format_table_type(@cash_game.table_type)} &middot; ${@cash_game.small_blind}/${@cash_game.big_blind}
             </div>
           </div>
           
@@ -247,8 +248,11 @@ defmodule PokerWeb.PlayerLive.Lobby do
             </div>
             <div class="space-y-0">
               <.stat_row label="Game" value="No-Limit Hold'em" />
-              <.stat_row label="Stakes" value={"$#{@lobby.small_blind} / $#{@lobby.big_blind}"} />
-              <.stat_row label="Buy-in" value={"$#{@lobby.starting_stack}"} />
+              <.stat_row
+                label="Stakes"
+                value={"$#{@cash_game.small_blind} / $#{@cash_game.big_blind}"}
+              />
+              <.stat_row label="Buy-in" value={"$#{@cash_game.min_buyin} – $#{@cash_game.max_buyin}"} />
               <.stat_row label="Seats" value={"#{@lobby.seated_count} / #{@lobby.seats_count}"} />
             </div>
           </div>
@@ -308,7 +312,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
             Watch from rail
           </.link>
 
-          <%= if @lobby.status in [:waiting, :live] && @lobby.seated_count >= 2 && @lobby.creator_id == @user_id do %>
+          <%= if @lobby.status in [:waiting, :live] && @lobby.seated_count >= 2 && @cash_game.creator_id == @user_id do %>
             <button
               phx-click="start_table"
               class="w-full py-3 rounded-xl text-[13px] font-medium text-[var(--pkr-positive)] border border-[var(--pkr-positive)]/40 hover:bg-[var(--pkr-positive)]/10 transition-all cursor-pointer"

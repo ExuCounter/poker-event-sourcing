@@ -115,7 +115,7 @@ defmodule Poker.CashGames do
 
   def list_cash_games do
     Queries.base()
-    |> Queries.with_table_status()
+    |> Queries.with_table_lobby()
     |> Queries.order_by_newest()
     |> Poker.Repo.all()
   end

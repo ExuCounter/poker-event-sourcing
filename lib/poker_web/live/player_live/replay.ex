@@ -27,7 +27,7 @@ defmodule PokerWeb.PlayerLive.Replay do
           socket
         end
 
-      table = Poker.Repo.get(Poker.Tables.Projections.TableList, table_id)
+      table = Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
 
       lobby_path =
         case table do

@@ -5,7 +5,9 @@ defmodule Poker.CashGames.Projectors.CashGame do
     name: __MODULE__,
     consistency: :strong
 
-  alias Poker.CashGames.Events.CashGameCreated
+  import Ecto.Query
+
+  alias Poker.CashGames.Events.{CashGameCreated, CashGameClosed}
   alias Poker.CashGames.Projections.CashGame
 
   project(%CashGameCreated{} = event, _metadata, fn multi ->
@@ -21,4 +23,24 @@ defmodule Poker.CashGames.Projectors.CashGame do
       table_type: event.table_type
     })
   end)
+
+  project(%CashGameClosed{cash_game_id: id}, _metadata, fn multi ->
+    Ecto.Multi.delete_all(
+      multi,
+      :cash_game,
+      from(cash_game in CashGame, where: cash_game.id == ^id)
+    )
+  end)
+
+  def after_update(%CashGameCreated{}, _metadata, _changes) do
+    Poker.CashGames.PubSub.broadcast_cash_games_list(:cash_game_created)
+    :ok
+  end
+
+  def after_update(%CashGameClosed{}, _metadata, _changes) do
+    Poker.CashGames.PubSub.broadcast_cash_games_list(:cash_game_closed)
+    :ok
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 end

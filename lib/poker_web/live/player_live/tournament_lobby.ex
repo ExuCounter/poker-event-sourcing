@@ -14,13 +14,13 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
          |> push_navigate(to: ~p"/")}
 
       {:ok, tournament} ->
-        table = Poker.Tournaments.Queries.table_by_source(tournament_id)
+        seating = Poker.Tournaments.Queries.table_by_source(tournament_id)
 
         if connected?(socket) do
           Poker.Tournaments.PubSub.subscribe_to_tournament(tournament_id)
 
-          if table do
-            Phoenix.PubSub.subscribe(Poker.PubSub, "table:#{table.id}:lobby")
+          if seating do
+            Poker.Tables.PubSub.subscribe_to_lobby(seating.id)
           end
         end
 
@@ -28,8 +28,7 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
          assign(socket,
            tournament: tournament,
            tournament_id: tournament_id,
-           table: table,
-           lobby: table && Poker.Tables.get_lobby(table.id),
+           seating: seating,
            user_id: socket.assigns.current_scope.user.id,
            blind_levels: BlindStructure.levels_for(tournament.speed),
            registered_players: find_registered_players(tournament.player_ids)
@@ -60,14 +59,8 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
   end
 
   def handle_info({:table_lobby, _event, _data}, socket) do
-    table = Poker.Tournaments.Queries.table_by_source(socket.assigns.tournament_id)
-
-    if table do
-      lobby = Poker.Tables.get_lobby(table.id)
-      {:noreply, assign(socket, table: table, lobby: lobby)}
-    else
-      {:noreply, socket}
-    end
+    seating = Poker.Tournaments.Queries.table_by_source(socket.assigns.tournament_id)
+    {:noreply, assign(socket, seating: seating)}
   end
 
   def handle_info({:tournament, :tournament_started, %{tournament_id: tournament_id}}, socket) do
@@ -140,6 +133,7 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
           Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
         </.link>
         <div class="flex-1"></div>
+        <.share_code_chip :if={@tournament.code} code={@tournament.code} class="mr-2" />
         <span class="px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)]">
           Buy-in ${@tournament.buy_in}
         </span>
@@ -285,8 +279,8 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
             <% end %>
           <% end %>
 
-          <%= if @tournament.status == :active && @table do %>
-            <.link navigate={~p"/tables/#{@table.id}/game"} class="block w-full text-center py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all">
+          <%= if @tournament.status == :active && @seating do %>
+            <.link navigate={~p"/tables/#{@seating.id}/game"} class="block w-full text-center py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all">
               <%= if @user_id in (@tournament.player_ids || []) do %>
                 Enter Table
               <% else %>

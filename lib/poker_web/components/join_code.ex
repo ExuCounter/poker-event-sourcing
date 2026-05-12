@@ -43,4 +43,29 @@ defmodule PokerWeb.JoinCodeComponents do
     </.form>
     """
   end
+
+  @doc """
+  Pill rendered on lobby pages showing the game's join code with a
+  click-to-copy affordance. Inline JS keeps it usable without a hook.
+  """
+  attr :code, :string, required: true
+  attr :class, :string, default: ""
+
+  def share_code_chip(assigns) do
+    ~H"""
+    <button
+      type="button"
+      title="Copy code"
+      onclick={"navigator.clipboard.writeText('#{@code}'); this.dataset.copied = '1'; setTimeout(() => delete this.dataset.copied, 1500)"}
+      class={[
+        "group inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)] text-[var(--pkr-ink-2)] font-[family-name:var(--pkr-font-mono)] hover:bg-[var(--pkr-bg-1)] hover:border-[var(--pkr-accent)]/60 transition-all cursor-pointer",
+        @class
+      ]}
+    >
+      <span class="text-[var(--pkr-ink-3)] uppercase tracking-[0.12em] text-[9px]">CODE</span>
+      <span class="text-[var(--pkr-ink-1)] tracking-[0.15em]">{@code}</span>
+      <span class="text-[var(--pkr-ink-3)] group-hover:text-[var(--pkr-accent)]">⧉</span>
+    </button>
+    """
+  end
 end

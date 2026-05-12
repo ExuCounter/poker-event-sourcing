@@ -416,7 +416,7 @@ defmodule PokerWeb.PlayerLive.Game do
   defp lobby_path(_game_context, table_id), do: ~p"/cash/#{table_id}/lobby"
 
   defp build_game_context(table_id) do
-    case Poker.Repo.get(Poker.Tables.Projections.TableList, table_id) do
+    case Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id) do
       %{game_mode: :cash_game} ->
         with {:ok, cash_game} <- Poker.CashGames.get_cash_game_by_table(table_id) do
           {:ok,

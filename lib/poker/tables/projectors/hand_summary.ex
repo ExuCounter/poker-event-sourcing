@@ -22,14 +22,13 @@ defmodule Poker.Tables.Projectors.HandSummary do
   alias Poker.Tables.Projections.{
     HandSummary,
     HandSummaryParticipantResult,
-    TableList,
     TableLobby
   }
 
   # Insert summary row when the hand starts.
-  # TableList is guaranteed to exist (strong consistency, TableCreated precedes HandStarted).
+  # TableLobby is guaranteed to exist (strong consistency, TableCreated precedes HandStarted).
   project(%HandStarted{id: hand_id, table_id: table_id}, fn multi ->
-    table = Poker.Repo.get!(TableList, table_id)
+    table = Poker.Repo.get!(TableLobby, table_id)
 
     Ecto.Multi.insert(multi, :hand_summary, %HandSummary{
       id: Ecto.UUID.generate(),

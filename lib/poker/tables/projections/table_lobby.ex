@@ -16,14 +16,11 @@ defmodule Poker.Tables.Projections.TableLobby do
   end
 
   schema "table_lobby" do
-    field :small_blind, :integer
-    field :big_blind, :integer
-    field :starting_stack, :integer
-    field :table_type, Ecto.Enum, values: [:two_max, :three_max, :four_max, :six_max]
+    field :status, Ecto.Enum, values: [:waiting, :live, :paused, :finished]
     field :seated_count, :integer
     field :seats_count, :integer
-    field :status, Ecto.Enum, values: [:waiting, :live, :paused, :finished]
-    field :creator_id, :binary_id
+    field :source_id, :binary_id
+    field :game_mode, Ecto.Enum, values: [:cash_game, :tournament]
 
     embeds_many :participants, Participant, on_replace: :delete
 

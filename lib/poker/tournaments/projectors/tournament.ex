@@ -5,6 +5,8 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     name: __MODULE__,
     consistency: :strong
 
+  import Ecto.Query
+
   alias Poker.Tournaments.Events.{
     TournamentCreated,
     PlayerRegistered,
@@ -15,6 +17,8 @@ defmodule Poker.Tournaments.Projectors.Tournament do
   }
 
   alias Poker.Tournaments.Projections.Tournament
+
+  @list_events [TournamentCreated, PlayerRegistered, TournamentStarted, TournamentPlayerBusted, TournamentFinished]
 
   project(%TournamentCreated{} = event, _metadata, fn multi ->
     Ecto.Multi.insert(multi, :tournament, %Tournament{
@@ -38,9 +42,7 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     Ecto.Multi.update_all(
       multi,
       :tournament,
-      from(tournament in Tournament,
-        where: tournament.id == ^tournament_id
-      ),
+      from(tournament in Tournament, where: tournament.id == ^tournament_id),
       inc: [registered_count: 1],
       push: [player_ids: player_id]
     )
@@ -54,7 +56,7 @@ defmodule Poker.Tournaments.Projectors.Tournament do
 
       {_, _} =
         repo.update_all(
-          from(t in Tournament, where: t.id == ^tournament_id),
+          from(tournament in Tournament, where: tournament.id == ^tournament_id),
           set: [status: :active, players_remaining: tournament.registered_count, level_started_at: now]
         )
 
@@ -68,9 +70,7 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     Ecto.Multi.update_all(
       multi,
       :tournament,
-      from(tournament in Tournament,
-        where: tournament.id == ^tournament_id
-      ),
+      from(tournament in Tournament, where: tournament.id == ^tournament_id),
       set: [current_level: level, level_started_at: now]
     )
   end)
@@ -79,9 +79,7 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     Ecto.Multi.update_all(
       multi,
       :tournament,
-      from(tournament in Tournament,
-        where: tournament.id == ^tournament_id
-      ),
+      from(tournament in Tournament, where: tournament.id == ^tournament_id),
       inc: [players_remaining: -1]
     )
   end)
@@ -90,10 +88,36 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     Ecto.Multi.update_all(
       multi,
       :tournament,
-      from(tournament in Tournament,
-        where: tournament.id == ^tournament_id
-      ),
+      from(tournament in Tournament, where: tournament.id == ^tournament_id),
       set: [status: :finished, prize_pool: prize_pool]
     )
   end)
+
+  def after_update(%TournamentCreated{id: tournament_id} = event, _metadata, _changes) do
+    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, event_type(event))
+    Poker.Tournaments.PubSub.broadcast_tournament_list(:updated)
+    :ok
+  end
+
+  def after_update(%event_module{tournament_id: tournament_id} = event, _metadata, _changes)
+      when event_module in @list_events do
+    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, event_type(event))
+    Poker.Tournaments.PubSub.broadcast_tournament_list(:updated)
+    :ok
+  end
+
+  def after_update(%{tournament_id: tournament_id} = event, _metadata, _changes) do
+    Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, event_type(event))
+    :ok
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
+
+  defp event_type(event) do
+    event.__struct__
+    |> Module.split()
+    |> List.last()
+    |> Macro.underscore()
+    |> String.to_atom()
+  end
 end

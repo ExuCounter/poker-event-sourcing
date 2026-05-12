@@ -20,12 +20,14 @@ defmodule PokerWeb.Api.Tables do
   end
 
   def join_participant(%{user: user} = _scope, %{table_id: table_id, seat_number: seat_number}) do
-    Poker.Tables.join_participant(table_id, user.id, %{nickname: user.nickname, seat_number: seat_number})
+    Poker.Tables.join_participant(table_id, user.id, %{
+      nickname: user.nickname,
+      seat_number: seat_number
+    })
   end
 
   # Auto-assign seat for tournaments (no seat_number provided)
   def join_participant(%{user: user} = _scope, %{table_id: table_id}) do
-    # Get lobby to find available seats
     lobby = Poker.Tables.get_lobby(table_id)
     occupied_seats = Enum.map(lobby.participants, & &1.seat_number)
     all_seats = 1..lobby.seats_count
@@ -36,7 +38,10 @@ defmodule PokerWeb.Api.Tables do
         {:error, %{message: "No seats available"}}
 
       seat_number ->
-        Poker.Tables.join_participant(table_id, user.id, %{nickname: user.nickname, seat_number: seat_number})
+        Poker.Tables.join_participant(table_id, user.id, %{
+          nickname: user.nickname,
+          seat_number: seat_number
+        })
     end
   end
 

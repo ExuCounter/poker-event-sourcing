@@ -2,7 +2,7 @@ defmodule Poker.Tournaments.Queries do
   import Ecto.Query
 
   alias Poker.Tournaments.Projections.Tournament
-  alias Poker.Tables.Projections.TableList
+  alias Poker.Tables.Projections.TableLobby
 
   def base, do: Tournament
 
@@ -19,15 +19,15 @@ defmodule Poker.Tournaments.Queries do
   end
 
   def table_by_source(source_id) do
-    from(table_list in TableList,
-      where: table_list.source_id == ^source_id
+    from(lobby in TableLobby,
+      where: lobby.source_id == ^source_id
     )
     |> Poker.Repo.one()
   end
 
   def table_by_id(table_id) do
-    from(table_list in TableList,
-      where: table_list.id == ^table_id
+    from(lobby in TableLobby,
+      where: lobby.id == ^table_id
     )
     |> Poker.Repo.one()
   end
