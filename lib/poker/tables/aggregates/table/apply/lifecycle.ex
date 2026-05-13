@@ -11,7 +11,15 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
   """
 
   alias Poker.Tables.Aggregates.Table
-  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated}
+
+  alias Poker.Tables.Events.{
+    TableCreated,
+    TableStarted,
+    TableFinished,
+    TablePaused,
+    TableResumed,
+    TableBlindsUpdated
+  }
 
   @doc "Initializes table state from creation event."
   def apply(%Table{} = _table, %TableCreated{} = created) do
@@ -59,6 +67,9 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Lifecycle do
 
   # Updates blind levels (tournament blind advancement).
   def apply(%Table{settings: settings} = table, %TableBlindsUpdated{} = event) do
-    %Table{table | settings: %{settings | small_blind: event.small_blind, big_blind: event.big_blind}}
+    %Table{
+      table
+      | settings: %{settings | small_blind: event.small_blind, big_blind: event.big_blind}
+    }
   end
 end

@@ -87,7 +87,14 @@ defmodule Poker.Tables.Aggregates.Table do
   # COMMAND HANDLERS
 
   def execute(table, %cmd{} = command)
-      when cmd in [CreateTable, StartTable, FinishTable, PauseTable, ResumeTable, UpdateTableBlinds] do
+      when cmd in [
+             CreateTable,
+             StartTable,
+             FinishTable,
+             PauseTable,
+             ResumeTable,
+             UpdateTableBlinds
+           ] do
     Handlers.Lifecycle.handle(table, command)
   end
 
@@ -119,7 +126,14 @@ defmodule Poker.Tables.Aggregates.Table do
   # STATE MUTATORS - Delegate to Apply modules
 
   def apply(table, %evt{} = event)
-      when evt in [TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated] do
+      when evt in [
+             TableCreated,
+             TableStarted,
+             TableFinished,
+             TablePaused,
+             TableResumed,
+             TableBlindsUpdated
+           ] do
     Apply.Lifecycle.apply(table, event)
   end
 

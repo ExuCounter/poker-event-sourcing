@@ -67,7 +67,10 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     {:error, :registration_closed}
   end
 
-  def execute(%__MODULE__{registered_players: players, max_players: max} = tournament, %RegisterPlayer{} = cmd) do
+  def execute(
+        %__MODULE__{registered_players: players, max_players: max} = tournament,
+        %RegisterPlayer{} = cmd
+      ) do
     cond do
       Enum.any?(players, &(&1 == cmd.player_id)) ->
         {:error, :already_registered}
@@ -91,7 +94,10 @@ defmodule Poker.Tournaments.Aggregates.Tournament do
     end
   end
 
-  def execute(%__MODULE__{id: id, status: :active, current_level: current, speed: speed}, %AdvanceBlindLevel{level: level}) do
+  def execute(
+        %__MODULE__{id: id, status: :active, current_level: current, speed: speed},
+        %AdvanceBlindLevel{level: level}
+      ) do
     cond do
       level != current + 1 ->
         {:error, :invalid_blind_level}

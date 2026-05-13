@@ -63,15 +63,22 @@ defmodule PokerWeb.CoreComponents do
       <div class={[
         "flex items-center gap-3 w-80 sm:w-96 px-4 py-3 rounded-xl border backdrop-blur-lg shadow-lg font-[family-name:var(--pkr-font-ui)] text-sm",
         @kind == :info && "bg-[var(--pkr-bg-1)] border-[var(--pkr-accent)]/40 text-[var(--pkr-ink-1)]",
-        @kind == :error && "bg-[var(--pkr-bg-1)] border-[var(--pkr-danger)]/40 text-[var(--pkr-ink-1)]"
+        @kind == :error &&
+          "bg-[var(--pkr-bg-1)] border-[var(--pkr-danger)]/40 text-[var(--pkr-ink-1)]"
       ]}>
         <span :if={@kind == :info} class="text-[var(--pkr-accent)] text-base shrink-0">&#x2713;</span>
-        <span :if={@kind == :error} class="text-[var(--pkr-danger)] text-base shrink-0">&#x26A0;</span>
+        <span :if={@kind == :error} class="text-[var(--pkr-danger)] text-base shrink-0">
+          &#x26A0;
+        </span>
         <div class="flex-1 min-w-0">
           <p :if={@title} class="font-semibold text-[13px]">{@title}</p>
           <p class="text-[13px] text-[var(--pkr-ink-2)] leading-snug">{msg}</p>
         </div>
-        <button type="button" class="shrink-0 text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-1)] cursor-pointer transition-colors" aria-label={gettext("close")}>
+        <button
+          type="button"
+          class="shrink-0 text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-1)] cursor-pointer transition-colors"
+          aria-label={gettext("close")}
+        >
           <span class="text-lg leading-none">&times;</span>
         </button>
       </div>

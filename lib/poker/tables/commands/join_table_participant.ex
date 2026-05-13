@@ -12,7 +12,14 @@ defmodule Poker.Tables.Commands.JoinTableParticipant do
 
   def changeset(attrs) do
     %__MODULE__{}
-    |> Ecto.Changeset.cast(attrs, [:participant_id, :player_id, :table_id, :starting_stack, :nickname, :seat_number])
+    |> Ecto.Changeset.cast(attrs, [
+      :participant_id,
+      :player_id,
+      :table_id,
+      :starting_stack,
+      :nickname,
+      :seat_number
+    ])
     |> Ecto.Changeset.validate_required([:participant_id, :player_id, :table_id, :seat_number])
     |> Ecto.Changeset.validate_inclusion(:seat_number, 1..6)
   end

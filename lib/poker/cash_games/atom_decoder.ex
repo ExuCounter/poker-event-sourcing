@@ -18,15 +18,13 @@ defmodule Poker.CashGames.AtomDecoder do
     ]
   }
 
-  @string_to_atom_map (
-                        @whitelists
-                        |> Enum.flat_map(fn {field, atoms} ->
-                          Enum.map(atoms, fn atom ->
-                            {{field, Atom.to_string(atom)}, atom}
-                          end)
+  @string_to_atom_map @whitelists
+                      |> Enum.flat_map(fn {field, atoms} ->
+                        Enum.map(atoms, fn atom ->
+                          {{field, Atom.to_string(atom)}, atom}
                         end)
-                        |> Map.new()
-                      )
+                      end)
+                      |> Map.new()
 
   @valid_atoms_by_field @whitelists
                         |> Enum.map(fn {field, atoms} -> {field, MapSet.new(atoms)} end)

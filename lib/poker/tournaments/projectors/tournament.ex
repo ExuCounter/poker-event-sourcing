@@ -18,7 +18,13 @@ defmodule Poker.Tournaments.Projectors.Tournament do
 
   alias Poker.Tournaments.Projections.Tournament
 
-  @list_events [TournamentCreated, PlayerRegistered, TournamentStarted, TournamentPlayerBusted, TournamentFinished]
+  @list_events [
+    TournamentCreated,
+    PlayerRegistered,
+    TournamentStarted,
+    TournamentPlayerBusted,
+    TournamentFinished
+  ]
 
   project(%TournamentCreated{} = event, _metadata, fn multi ->
     Ecto.Multi.insert(multi, :tournament, %Tournament{
@@ -38,15 +44,19 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     })
   end)
 
-  project(%PlayerRegistered{tournament_id: tournament_id, player_id: player_id}, _metadata, fn multi ->
-    Ecto.Multi.update_all(
-      multi,
-      :tournament,
-      from(tournament in Tournament, where: tournament.id == ^tournament_id),
-      inc: [registered_count: 1],
-      push: [player_ids: player_id]
-    )
-  end)
+  project(
+    %PlayerRegistered{tournament_id: tournament_id, player_id: player_id},
+    _metadata,
+    fn multi ->
+      Ecto.Multi.update_all(
+        multi,
+        :tournament,
+        from(tournament in Tournament, where: tournament.id == ^tournament_id),
+        inc: [registered_count: 1],
+        push: [player_ids: player_id]
+      )
+    end
+  )
 
   project(%TournamentStarted{tournament_id: tournament_id}, metadata, fn multi ->
     now = metadata.created_at
@@ -57,7 +67,11 @@ defmodule Poker.Tournaments.Projectors.Tournament do
       {_, _} =
         repo.update_all(
           from(tournament in Tournament, where: tournament.id == ^tournament_id),
-          set: [status: :active, players_remaining: tournament.registered_count, level_started_at: now]
+          set: [
+            status: :active,
+            players_remaining: tournament.registered_count,
+            level_started_at: now
+          ]
         )
 
       {:ok, nil}
@@ -84,14 +98,18 @@ defmodule Poker.Tournaments.Projectors.Tournament do
     )
   end)
 
-  project(%TournamentFinished{tournament_id: tournament_id, prize_pool: prize_pool}, _metadata, fn multi ->
-    Ecto.Multi.update_all(
-      multi,
-      :tournament,
-      from(tournament in Tournament, where: tournament.id == ^tournament_id),
-      set: [status: :finished, prize_pool: prize_pool]
-    )
-  end)
+  project(
+    %TournamentFinished{tournament_id: tournament_id, prize_pool: prize_pool},
+    _metadata,
+    fn multi ->
+      Ecto.Multi.update_all(
+        multi,
+        :tournament,
+        from(tournament in Tournament, where: tournament.id == ^tournament_id),
+        set: [status: :finished, prize_pool: prize_pool]
+      )
+    end
+  )
 
   def after_update(%TournamentCreated{id: tournament_id} = event, _metadata, _changes) do
     Poker.Tournaments.PubSub.broadcast_tournament(tournament_id, event_type(event))

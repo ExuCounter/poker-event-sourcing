@@ -71,7 +71,9 @@ defmodule PokerWeb.JoinCodeComponents do
         bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)]
         opacity-0 transition-opacity duration-150
         group-data-[copied]:opacity-100
-      ">Copied!</span>
+      ">
+        Copied!
+      </span>
     </button>
     """
   end

@@ -12,7 +12,9 @@ defmodule Poker.Tables.Projectors.HandHistoryTest do
   describe "HandStarted event" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -40,7 +42,9 @@ defmodule Poker.Tables.Projectors.HandHistoryTest do
   describe "HandFinished event" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -63,7 +67,9 @@ defmodule Poker.Tables.Projectors.HandHistoryTest do
   describe "second hand" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 

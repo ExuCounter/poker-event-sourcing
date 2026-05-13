@@ -15,7 +15,15 @@ defmodule Poker.Tournaments.ProcessManager do
   }
 
   alias Poker.Tables.Events.TableCreated
-  alias Poker.Tables.Commands.{CreateTable, CreateTableSettings, JoinTableParticipant, StartTable, UpdateTableBlinds}
+
+  alias Poker.Tables.Commands.{
+    CreateTable,
+    CreateTableSettings,
+    JoinTableParticipant,
+    StartTable,
+    UpdateTableBlinds
+  }
+
   alias Poker.Tournaments.Commands.{FinishTournament, RecordTournamentTable}
   alias Poker.Tournaments.Jobs.BlindAdvanceJob
   alias Poker.Tournaments.BlindStructure
@@ -55,6 +63,7 @@ defmodule Poker.Tournaments.ProcessManager do
 
   def handle(%__MODULE__{}, %TournamentCreated{}), do: []
   def handle(%__MODULE__{}, %PlayerRegistered{}), do: []
+
   def handle(%__MODULE__{id: tournament_id}, %TableCreated{id: table_id}) do
     [%RecordTournamentTable{tournament_id: tournament_id, table_id: table_id}]
   end
@@ -98,11 +107,17 @@ defmodule Poker.Tournaments.ProcessManager do
 
   def handle(%__MODULE__{table_ids: table_ids}, %BlindLevelAdvanced{} = event) do
     Enum.map(table_ids, fn table_id ->
-      %UpdateTableBlinds{table_id: table_id, small_blind: event.small_blind, big_blind: event.big_blind}
+      %UpdateTableBlinds{
+        table_id: table_id,
+        small_blind: event.small_blind,
+        big_blind: event.big_blind
+      }
     end)
   end
 
-  def handle(%__MODULE__{players_remaining: remaining}, %TournamentPlayerBusted{tournament_id: tournament_id}) do
+  def handle(%__MODULE__{players_remaining: remaining}, %TournamentPlayerBusted{
+        tournament_id: tournament_id
+      }) do
     if remaining - 1 == 1 do
       [%FinishTournament{tournament_id: tournament_id}]
     else

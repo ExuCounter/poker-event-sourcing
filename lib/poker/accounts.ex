@@ -395,7 +395,11 @@ defmodule Poker.Accounts do
       {%User{confirmed_at: nil} = user, _token} ->
         with {:ok, user} <- confirm_user(user) do
           tokens_to_expire = Repo.all_by(UserToken, user_id: user.id)
-          Repo.delete_all(from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id)))
+
+          Repo.delete_all(
+            from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id))
+          )
+
           {:ok, {user, tokens_to_expire}}
         end
 

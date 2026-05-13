@@ -12,7 +12,9 @@ defmodule Poker.Tables.Projectors.HandSummaryTest do
   describe "hand lifecycle - all_folded" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -40,7 +42,9 @@ defmodule Poker.Tables.Projectors.HandSummaryTest do
       end)
 
       hand_id = ctx.table.hand.id
-      results = Repo.all(from result in HandSummaryParticipantResult, where: result.hand_id == ^hand_id)
+
+      results =
+        Repo.all(from result in HandSummaryParticipantResult, where: result.hand_id == ^hand_id)
 
       assert length(results) == 2
       assert Enum.all?(results, fn result -> result.amount_won == 0 end)

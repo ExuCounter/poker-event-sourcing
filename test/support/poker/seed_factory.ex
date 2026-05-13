@@ -44,8 +44,11 @@ defmodule Poker.SeedFactorySchema do
   end
 
   defp resolve_acting_player(table, position) do
-    acting_participant = Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
-    acting_hand = Enum.find(table.participant_hands, &(&1.participant_id == acting_participant.id))
+    acting_participant =
+      Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
+
+    acting_hand =
+      Enum.find(table.participant_hands, &(&1.participant_id == acting_participant.id))
 
     if acting_hand.position != position do
       raise "Expected #{inspect(position)} to act, but #{inspect(acting_hand.position)} is acting"
@@ -342,7 +345,10 @@ defmodule Poker.SeedFactorySchema do
       args.table.participants
       |> Enum.each(fn _participant ->
         table = aggregate_state(:table, args.table.id)
-        acting_participant = Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
+
+        acting_participant =
+          Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
+
         :ok = Poker.Tables.call_hand(args.table.id, acting_participant.player_id)
       end)
 
@@ -360,7 +366,10 @@ defmodule Poker.SeedFactorySchema do
       args.table.participants
       |> Enum.each(fn _ ->
         table = aggregate_state(:table, args.table.id)
-        acting_participant = Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
+
+        acting_participant =
+          Enum.find(table.participants, &(&1.id == table.round.participant_to_act_id))
+
         :ok = Poker.Tables.all_in_hand(args.table.id, acting_participant.player_id)
       end)
 

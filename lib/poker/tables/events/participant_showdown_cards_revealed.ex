@@ -14,7 +14,8 @@ defmodule Poker.Tables.Events.ParticipantShowdownCardsRevealed do
   ]
 end
 
-defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.ParticipantShowdownCardsRevealed do
+defimpl Commanded.Serialization.JsonDecoder,
+  for: Poker.Tables.Events.ParticipantShowdownCardsRevealed do
   alias Poker.Tables.AtomDecoder
 
   def decode(%Poker.Tables.Events.ParticipantShowdownCardsRevealed{} = event) do

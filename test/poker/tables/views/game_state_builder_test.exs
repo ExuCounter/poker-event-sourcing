@@ -6,7 +6,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - basic view structure" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -42,7 +44,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - card visibility in live mode" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -71,7 +75,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - valid actions for player to act" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -119,7 +125,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - pot and betting" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -155,7 +163,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - current turn tracking" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -170,7 +180,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - timeout info" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -193,7 +205,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - community cards" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -220,12 +234,15 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - folded player" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max}
+      )
       |> exec(:fill_tournament)
     end
 
     test "folded player sees empty hole cards", ctx do
       folded_participant_id = ctx.table.round.participant_to_act_id
+
       folded_participant =
         Enum.find(ctx.table.participants, &(&1.id == folded_participant_id))
 
@@ -244,7 +261,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - participant info" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -280,7 +299,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "build/3 - calculate_actions option" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -288,7 +309,10 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
       acting_participant =
         Enum.find(ctx.table.participants, &(&1.id == ctx.table.round.participant_to_act_id))
 
-      view = GameStateBuilder.build(ctx.table.id, acting_participant.player_id, calculate_actions: false)
+      view =
+        GameStateBuilder.build(ctx.table.id, acting_participant.player_id,
+          calculate_actions: false
+        )
 
       assert view.valid_actions.fold == false
       assert view.valid_actions.check == false
@@ -300,7 +324,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "replay_events/2 - basic replay" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -310,13 +336,14 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
 
       assert replayed_aggregate == commanded_aggregate
     end
-
   end
 
   describe "replay_events/2 - replay with hand history checkpoint" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -370,7 +397,9 @@ defmodule Poker.Tables.Views.GameStateBuilderTest do
   describe "replay_events/2 - multi-player game consistency" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max}
+      )
       |> exec(:fill_tournament)
     end
 

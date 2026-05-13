@@ -16,8 +16,24 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Lifecycle do
   - Resuming requires a paused table with available participants
   """
 
-  alias Poker.Tables.Commands.{CreateTable, StartTable, FinishTable, PauseTable, ResumeTable, UpdateTableBlinds}
-  alias Poker.Tables.Events.{TableCreated, TableStarted, TableFinished, TablePaused, TableResumed, TableBlindsUpdated}
+  alias Poker.Tables.Commands.{
+    CreateTable,
+    StartTable,
+    FinishTable,
+    PauseTable,
+    ResumeTable,
+    UpdateTableBlinds
+  }
+
+  alias Poker.Tables.Events.{
+    TableCreated,
+    TableStarted,
+    TableFinished,
+    TablePaused,
+    TableResumed,
+    TableBlindsUpdated
+  }
+
   alias Poker.Tables.Aggregates.Table.Helpers
 
   # =============================================================================

@@ -168,7 +168,9 @@ defmodule Poker.Tables.Views.BuildViewTest do
     end
 
     test "returns 0 when hand is finished" do
-      table = make_table(hand: %{id: Ecto.UUID.generate(), status: :finished}, pots: [%{amount: 200}])
+      table =
+        make_table(hand: %{id: Ecto.UUID.generate(), status: :finished}, pots: [%{amount: 200}])
+
       v = view(table, player_id())
 
       assert v.total_pot == 0
@@ -188,7 +190,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
 
   describe "build_view - community_cards" do
     test "returns community cards when hand active" do
-      cards = [%{rank: :A, suit: :spades}, %{rank: :K, suit: :hearts}, %{rank: :Q, suit: :diamonds}]
+      cards = [
+        %{rank: :A, suit: :spades},
+        %{rank: :K, suit: :hearts},
+        %{rank: :Q, suit: :diamonds}
+      ]
+
       table = make_table(community_cards: cards)
       v = view(table, player_id())
 
@@ -203,10 +210,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
     end
 
     test "returns [] when hand finished" do
-      table = make_table(
-        hand: %{id: Ecto.UUID.generate(), status: :finished},
-        community_cards: [%{rank: :A, suit: :spades}]
-      )
+      table =
+        make_table(
+          hand: %{id: Ecto.UUID.generate(), status: :finished},
+          community_cards: [%{rank: :A, suit: :spades}]
+        )
+
       v = view(table, player_id())
 
       assert v.community_cards == []
@@ -227,10 +236,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
   describe "build_view - current_turn" do
     test "returns participant_id when someone is acting" do
       p = make_participant()
-      table = make_table(
-        participants: [p],
-        round: make_round(p.id)
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          round: make_round(p.id)
+        )
+
       v = view(table, player_id())
 
       assert v.current_turn == %{participant_id: p.id}
@@ -266,10 +278,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "returns started_at and timeout_seconds from round" do
       now = DateTime.utc_now()
       p = make_participant()
-      table = make_table(
-        participants: [p],
-        round: make_round(p.id, started_at: now, timeout_seconds: 60)
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          round: make_round(p.id, started_at: now, timeout_seconds: 60)
+        )
+
       v = view(table, player_id())
 
       assert v.timeout_info == %{started_at: now, timeout_seconds: 60}
@@ -291,10 +306,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
 
     test "returns nil when round has no started_at" do
       p = make_participant()
-      table = make_table(
-        participants: [p],
-        round: make_round(p.id, started_at: nil, timeout_seconds: nil)
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          round: make_round(p.id, started_at: nil, timeout_seconds: nil)
+        )
+
       v = view(table, player_id())
 
       assert v.timeout_info == nil
@@ -309,7 +327,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "current player sees own hole cards" do
       pid = player_id()
       p = make_participant(player_id: pid)
-      ph = make_participant_hand(p.id, hole_cards: [%{rank: :A, suit: :spades}, %{rank: :K, suit: :hearts}])
+
+      ph =
+        make_participant_hand(p.id,
+          hole_cards: [%{rank: :A, suit: :spades}, %{rank: :K, suit: :hearts}]
+        )
+
       table = make_table(participants: [p], participant_hands: [ph])
 
       v = view(table, pid)
@@ -379,11 +402,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
       my_pid = player_id()
       me = make_participant(player_id: my_pid)
       my_hand = make_participant_hand(me.id)
-      table = make_table(
-        participants: [me],
-        participant_hands: [my_hand],
-        hand: %{id: Ecto.UUID.generate(), status: :finished}
-      )
+
+      table =
+        make_table(
+          participants: [me],
+          participant_hands: [my_hand],
+          hand: %{id: Ecto.UUID.generate(), status: :finished}
+        )
 
       v = view(table, my_pid)
 
@@ -486,11 +511,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "position is nil when hand finished" do
       p = make_participant()
       ph = make_participant_hand(p.id, position: :dealer)
-      table = make_table(
-        participants: [p],
-        participant_hands: [ph],
-        hand: %{id: Ecto.UUID.generate(), status: :finished}
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [ph],
+          hand: %{id: Ecto.UUID.generate(), status: :finished}
+        )
 
       v = view(table, player_id())
       participant = hd(v.participants)
@@ -501,11 +528,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "bet_this_round is 0 when hand finished" do
       p = make_participant()
       ph = make_participant_hand(p.id, bet_this_round: 50)
-      table = make_table(
-        participants: [p],
-        participant_hands: [ph],
-        hand: %{id: Ecto.UUID.generate(), status: :finished}
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [ph],
+          hand: %{id: Ecto.UUID.generate(), status: :finished}
+        )
 
       v = view(table, player_id())
       participant = hd(v.participants)
@@ -516,11 +545,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "hand_status is nil when hand finished" do
       p = make_participant()
       ph = make_participant_hand(p.id, status: :active)
-      table = make_table(
-        participants: [p],
-        participant_hands: [ph],
-        hand: %{id: Ecto.UUID.generate(), status: :finished}
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [ph],
+          hand: %{id: Ecto.UUID.generate(), status: :finished}
+        )
 
       v = view(table, player_id())
       participant = hd(v.participants)
@@ -552,11 +583,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       opp = make_participant(seat_number: 2, chips: 980)
       opp_hand = make_participant_hand(opp.id, bet_this_round: 20, position: :big_blind)
 
-      table = make_table(
-        participants: [p, opp],
-        participant_hands: [ph, opp_hand],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p, opp],
+          participant_hands: [ph, opp_hand],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -573,11 +605,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       opp = make_participant(seat_number: 2, chips: 980)
       opp_hand = make_participant_hand(opp.id, bet_this_round: 20, position: :dealer)
 
-      table = make_table(
-        participants: [p, opp],
-        participant_hands: [ph, opp_hand],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p, opp],
+          participant_hands: [ph, opp_hand],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -591,11 +624,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       p = make_participant(player_id: pid)
       other = make_participant(seat_number: 2)
 
-      table = make_table(
-        participants: [p, other],
-        participant_hands: [make_participant_hand(p.id), make_participant_hand(other.id)],
-        round: make_round(other.id)
-      )
+      table =
+        make_table(
+          participants: [p, other],
+          participant_hands: [make_participant_hand(p.id), make_participant_hand(other.id)],
+          round: make_round(other.id)
+        )
 
       v = view(table, pid)
 
@@ -606,12 +640,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
       pid = player_id()
       p = make_participant(player_id: pid)
 
-      table = make_table(
-        participants: [p],
-        participant_hands: [make_participant_hand(p.id)],
-        hand: %{id: Ecto.UUID.generate(), status: :finished},
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [make_participant_hand(p.id)],
+          hand: %{id: Ecto.UUID.generate(), status: :finished},
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -622,12 +657,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
       pid = player_id()
       p = make_participant(player_id: pid)
 
-      table = make_table(
-        status: :paused,
-        participants: [p],
-        participant_hands: [make_participant_hand(p.id)],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          status: :paused,
+          participants: [p],
+          participant_hands: [make_participant_hand(p.id)],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -638,11 +674,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       pid = player_id()
       p = make_participant(player_id: pid)
 
-      table = make_table(
-        participants: [p],
-        participant_hands: [make_participant_hand(p.id)],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [make_participant_hand(p.id)],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid, calculate_actions: false)
 
@@ -663,11 +700,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       opp = make_participant(seat_number: 2, chips: 980)
       opp_hand = make_participant_hand(opp.id, bet_this_round: 20, position: :big_blind)
 
-      table = make_table(
-        participants: [p, opp],
-        participant_hands: [ph, opp_hand],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p, opp],
+          participant_hands: [ph, opp_hand],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -683,11 +721,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
       opp = make_participant(seat_number: 2, chips: 980)
       opp_hand = make_participant_hand(opp.id, bet_this_round: 20, position: :big_blind)
 
-      table = make_table(
-        participants: [p, opp],
-        participant_hands: [ph, opp_hand],
-        round: make_round(p.id)
-      )
+      table =
+        make_table(
+          participants: [p, opp],
+          participant_hands: [ph, opp_hand],
+          round: make_round(p.id)
+        )
 
       v = view(table, pid)
 
@@ -821,8 +860,18 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "returns hand rank when player has hole cards and community cards" do
       pid = player_id()
       p = make_participant(player_id: pid)
-      ph = make_participant_hand(p.id, hole_cards: [%{rank: :A, suit: :spades}, %{rank: :A, suit: :hearts}])
-      community = [%{rank: :K, suit: :clubs}, %{rank: :Q, suit: :diamonds}, %{rank: :J, suit: :spades}]
+
+      ph =
+        make_participant_hand(p.id,
+          hole_cards: [%{rank: :A, suit: :spades}, %{rank: :A, suit: :hearts}]
+        )
+
+      community = [
+        %{rank: :K, suit: :clubs},
+        %{rank: :Q, suit: :diamonds},
+        %{rank: :J, suit: :spades}
+      ]
+
       table = make_table(participants: [p], participant_hands: [ph], community_cards: community)
 
       v = view(table, pid)
@@ -834,7 +883,12 @@ defmodule Poker.Tables.Views.BuildViewTest do
     test "returns hand rank with only hole cards (pair)" do
       pid = player_id()
       p = make_participant(player_id: pid)
-      ph = make_participant_hand(p.id, hole_cards: [%{rank: :A, suit: :spades}, %{rank: :A, suit: :hearts}])
+
+      ph =
+        make_participant_hand(p.id,
+          hole_cards: [%{rank: :A, suit: :spades}, %{rank: :A, suit: :hearts}]
+        )
+
       table = make_table(participants: [p], participant_hands: [ph], community_cards: [])
 
       v = view(table, pid)
@@ -856,11 +910,13 @@ defmodule Poker.Tables.Views.BuildViewTest do
       pid = player_id()
       p = make_participant(player_id: pid)
       ph = make_participant_hand(p.id)
-      table = make_table(
-        participants: [p],
-        participant_hands: [ph],
-        hand: %{id: Ecto.UUID.generate(), status: :finished}
-      )
+
+      table =
+        make_table(
+          participants: [p],
+          participant_hands: [ph],
+          hand: %{id: Ecto.UUID.generate(), status: :finished}
+        )
 
       v = view(table, pid)
 

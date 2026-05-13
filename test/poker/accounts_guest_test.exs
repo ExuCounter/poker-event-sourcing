@@ -86,7 +86,9 @@ defmodule Poker.AccountsGuestTest do
       {:ok, user} = Accounts.register_guest()
 
       thirty_seconds_ago = DateTime.utc_now(:second) |> DateTime.add(-30, :second)
-      {:ok, user} = user |> Ecto.Changeset.change(last_active_at: thirty_seconds_ago) |> Repo.update()
+
+      {:ok, user} =
+        user |> Ecto.Changeset.change(last_active_at: thirty_seconds_ago) |> Repo.update()
 
       :ok = Accounts.touch_last_active(user)
 

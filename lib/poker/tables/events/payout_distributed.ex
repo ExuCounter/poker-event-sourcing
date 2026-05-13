@@ -19,9 +19,10 @@ defimpl Commanded.Serialization.JsonDecoder, for: Poker.Tables.Events.PayoutDist
   alias Poker.Tables.AtomDecoder
 
   def decode(%Poker.Tables.Events.PayoutDistributed{} = event) do
-    %{event |
-      pot_type: AtomDecoder.decode(:pot_type, event.pot_type),
-      hand_rank: AtomDecoder.decode(:hand_rank, event.hand_rank)
+    %{
+      event
+      | pot_type: AtomDecoder.decode(:pot_type, event.pot_type),
+        hand_rank: AtomDecoder.decode(:hand_rank, event.hand_rank)
     }
   end
 end

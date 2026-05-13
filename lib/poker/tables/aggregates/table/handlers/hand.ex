@@ -216,7 +216,9 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Hand do
       |> Enum.sort_by(fn {_participant, position} -> Map.fetch!(@dealing_order, position) end)
 
     {events, _remaining_deck} =
-      Enum.reduce(participants_with_positions, {[], table.remaining_deck}, fn {participant, position}, {events, deck} ->
+      Enum.reduce(participants_with_positions, {[], table.remaining_deck}, fn {participant,
+                                                                               position},
+                                                                              {events, deck} ->
         {hole_cards, remaining_deck} = Poker.Services.Deck.pick_cards(deck, 2)
 
         new_events = [

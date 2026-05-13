@@ -106,8 +106,8 @@ defmodule PokerWeb.PlayerLive.HandHistory do
           </.link>
         </div>
       </header>
-
-      <!-- Main content -->
+      
+    <!-- Main content -->
       <main class="flex-1 p-6 overflow-auto max-w-5xl w-full mx-auto">
         <.flash kind={:error} flash={@flash} />
         <.flash kind={:info} flash={@flash} />
@@ -123,8 +123,8 @@ defmodule PokerWeb.PlayerLive.HandHistory do
             All hands you were dealt into, most recent first.
           </p>
         </header>
-
-        <!-- Filter tabs -->
+        
+    <!-- Filter tabs -->
         <div class="flex items-center gap-1 mb-4">
           <.link
             patch={~p"/history"}
@@ -157,8 +157,8 @@ defmodule PokerWeb.PlayerLive.HandHistory do
             Tournaments
           </.link>
         </div>
-
-        <!-- Hands table -->
+        
+    <!-- Hands table -->
         <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
           <div class="grid grid-cols-[1.4fr_0.6fr_0.7fr_0.7fr_1.2fr_0.6fr] px-4 py-2.5 border-b border-[var(--pkr-line)] font-[family-name:var(--pkr-font-mono)] text-[10px] tracking-[0.1em] text-[var(--pkr-ink-3)] uppercase">
             <span>DATE</span>
@@ -221,8 +221,8 @@ defmodule PokerWeb.PlayerLive.HandHistory do
             <% end %>
           <% end %>
         </div>
-
-        <!-- Load more -->
+        
+    <!-- Load more -->
         <%= if @next_cursor do %>
           <div class="mt-4 flex justify-center">
             <button

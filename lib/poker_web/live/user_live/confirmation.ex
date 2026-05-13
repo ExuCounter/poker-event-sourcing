@@ -9,14 +9,23 @@ defmodule PokerWeb.UserLive.Confirmation do
     <div class="min-h-screen flex font-[family-name:var(--pkr-font-ui)]">
       <!-- Left poster -->
       <div class="hidden lg:flex flex-1 relative overflow-hidden bg-[var(--pkr-bg-1)]">
-        <div class="absolute inset-0 opacity-60" style="background: radial-gradient(ellipse at 30% 50%, var(--pkr-accent), transparent 65%)"></div>
+        <div
+          class="absolute inset-0 opacity-60"
+          style="background: radial-gradient(ellipse at 30% 50%, var(--pkr-accent), transparent 65%)"
+        >
+        </div>
         <div class="absolute top-8 left-8">
           <div class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
-            Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
+            Poker
+            <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">
+              by Volodymyr Potiichuk
+            </span>
           </div>
         </div>
         <div class="absolute left-14 bottom-14 right-14 flex flex-col gap-3.5">
-          <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">EST. 2026</div>
+          <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)]">
+            EST. 2026
+          </div>
           <h1 class="font-[family-name:var(--pkr-font-display)] text-[56px] leading-[0.96] max-w-[480px] text-[var(--pkr-ink-1)]">
             A poker room <em class="text-[var(--pkr-accent)]">built for the hand,</em> not the hype.
           </h1>
@@ -25,21 +34,21 @@ defmodule PokerWeb.UserLive.Confirmation do
           </p>
         </div>
       </div>
-
-      <!-- Right form -->
+      
+    <!-- Right form -->
       <div class="w-full lg:w-[460px] border-l border-[var(--pkr-line)] flex flex-col justify-center px-10 lg:px-14 py-16">
         <.flash kind={:error} flash={@flash} />
         <.flash kind={:info} flash={@flash} />
 
         <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-2">
-          <%= if @user.confirmed_at, do: "WELCOME BACK", else: "WELCOME" %>
+          {if @user.confirmed_at, do: "WELCOME BACK", else: "WELCOME"}
         </div>
         <h2 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)] mb-2">
-          <%= if @user.confirmed_at, do: "Take your seat.", else: "You're in." %>
+          {if @user.confirmed_at, do: "Take your seat.", else: "You're in."}
         </h2>
         <p class="text-[var(--pkr-ink-3)] text-[13px] mb-8">{@user.email}</p>
-
-        <!-- Unconfirmed User Form -->
+        
+    <!-- Unconfirmed User Form -->
         <.form
           :if={!@user.confirmed_at}
           for={@form}
@@ -70,8 +79,8 @@ defmodule PokerWeb.UserLive.Confirmation do
             Confirm &amp; Log In Only This Time
           </button>
         </.form>
-
-        <!-- Confirmed User Form -->
+        
+    <!-- Confirmed User Form -->
         <.form
           :if={@user.confirmed_at}
           for={@form}
@@ -112,9 +121,12 @@ defmodule PokerWeb.UserLive.Confirmation do
             </button>
           <% end %>
         </.form>
-
-        <!-- Tip for unconfirmed users -->
-        <div :if={!@user.confirmed_at} class="mt-6 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)]">
+        
+    <!-- Tip for unconfirmed users -->
+        <div
+          :if={!@user.confirmed_at}
+          class="mt-6 px-3.5 py-3 rounded-lg border border-[var(--pkr-line)] bg-[var(--pkr-bg-2)]"
+        >
           <p class="text-xs text-[var(--pkr-ink-3)] leading-relaxed">
             If you prefer passwords, you can enable them in your account settings after logging in.
           </p>

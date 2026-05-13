@@ -12,7 +12,9 @@ defmodule Poker.Tables.Jobs.TimeoutJobTest do
   describe "timeout job" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max}
+      )
       |> exec(:fill_tournament)
     end
 

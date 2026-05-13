@@ -11,11 +11,20 @@ defmodule PokerWeb.UserLive.Settings do
     <div class="min-h-screen flex flex-col font-[family-name:var(--pkr-font-ui)]">
       <!-- Top bar -->
       <div class="h-14 flex items-center px-5 border-b border-[var(--pkr-line)]">
-        <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] transition-all mr-4">
+        <.link
+          navigate={~p"/"}
+          class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] transition-all mr-4"
+        >
           &larr; Back
         </.link>
-        <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
-          Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
+        <.link
+          navigate={~p"/"}
+          class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1"
+        >
+          Poker
+          <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">
+            by Volodymyr Potiichuk
+          </span>
         </.link>
         <div class="flex-1"></div>
       </div>
@@ -27,19 +36,33 @@ defmodule PokerWeb.UserLive.Settings do
         <div class="w-full max-w-lg space-y-8">
           <!-- Header -->
           <div>
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">ACCOUNT</div>
-            <h1 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)]">Settings</h1>
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">
+              ACCOUNT
+            </div>
+            <h1 class="font-[family-name:var(--pkr-font-display)] text-[36px] leading-none text-[var(--pkr-ink-1)]">
+              Settings
+            </h1>
             <p class="text-[var(--pkr-ink-3)] text-[13px] mt-1.5">Manage your email and password</p>
           </div>
-
-          <!-- Nickname form -->
+          
+    <!-- Nickname form -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
             <div class="px-5 py-3 border-b border-[var(--pkr-line)]">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CHANGE NICKNAME</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                CHANGE NICKNAME
+              </div>
             </div>
-            <.form for={@nickname_form} id="nickname_form" phx-submit="update_nickname" phx-change="validate_nickname" class="p-5 space-y-4">
+            <.form
+              for={@nickname_form}
+              id="nickname_form"
+              phx-submit="update_nickname"
+              phx-change="validate_nickname"
+              class="p-5 space-y-4"
+            >
               <div>
-                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">NICKNAME</label>
+                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">
+                  NICKNAME
+                </label>
                 <input
                   type="text"
                   name={@nickname_form[:nickname].name}
@@ -54,20 +77,34 @@ defmodule PokerWeb.UserLive.Settings do
                   </p>
                 <% end %>
               </div>
-              <button type="submit" phx-disable-with="Saving..." class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+              <button
+                type="submit"
+                phx-disable-with="Saving..."
+                class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+              >
                 Save Nickname
               </button>
             </.form>
           </div>
-
-          <!-- Email form -->
+          
+    <!-- Email form -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
             <div class="px-5 py-3 border-b border-[var(--pkr-line)]">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CHANGE EMAIL</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                CHANGE EMAIL
+              </div>
             </div>
-            <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email" class="p-5 space-y-4">
+            <.form
+              for={@email_form}
+              id="email_form"
+              phx-submit="update_email"
+              phx-change="validate_email"
+              class="p-5 space-y-4"
+            >
               <div>
-                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">EMAIL</label>
+                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">
+                  EMAIL
+                </label>
                 <input
                   type="email"
                   name={@email_form[:email].name}
@@ -83,16 +120,22 @@ defmodule PokerWeb.UserLive.Settings do
                   </p>
                 <% end %>
               </div>
-              <button type="submit" phx-disable-with="Changing..." class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+              <button
+                type="submit"
+                phx-disable-with="Changing..."
+                class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+              >
                 Change Email
               </button>
             </.form>
           </div>
-
-          <!-- Password form -->
+          
+    <!-- Password form -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
             <div class="px-5 py-3 border-b border-[var(--pkr-line)]">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">CHANGE PASSWORD</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                CHANGE PASSWORD
+              </div>
             </div>
             <.form
               for={@password_form}
@@ -112,12 +155,16 @@ defmodule PokerWeb.UserLive.Settings do
                 value={@current_email}
               />
               <div>
-                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">NEW PASSWORD</label>
+                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">
+                  NEW PASSWORD
+                </label>
                 <input
                   type="password"
                   name={@password_form[:password].name}
                   id={@password_form[:password].id}
-                  value={Phoenix.HTML.Form.normalize_value("password", @password_form[:password].value)}
+                  value={
+                    Phoenix.HTML.Form.normalize_value("password", @password_form[:password].value)
+                  }
                   autocomplete="new-password"
                   required
                   class="w-full px-3 py-2 rounded-lg text-[14px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)] transition-colors"
@@ -129,12 +176,19 @@ defmodule PokerWeb.UserLive.Settings do
                 <% end %>
               </div>
               <div>
-                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">CONFIRM PASSWORD</label>
+                <label class="block text-[11px] text-[var(--pkr-ink-3)] font-[family-name:var(--pkr-font-mono)] mb-1.5 uppercase tracking-wide">
+                  CONFIRM PASSWORD
+                </label>
                 <input
                   type="password"
                   name={@password_form[:password_confirmation].name}
                   id={@password_form[:password_confirmation].id}
-                  value={Phoenix.HTML.Form.normalize_value("password", @password_form[:password_confirmation].value)}
+                  value={
+                    Phoenix.HTML.Form.normalize_value(
+                      "password",
+                      @password_form[:password_confirmation].value
+                    )
+                  }
                   autocomplete="new-password"
                   class="w-full px-3 py-2 rounded-lg text-[14px] bg-[var(--pkr-bg-2)] border border-[var(--pkr-line)] text-[var(--pkr-ink-1)] outline-none focus:border-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)] transition-colors"
                 />
@@ -144,13 +198,17 @@ defmodule PokerWeb.UserLive.Settings do
                   </p>
                 <% end %>
               </div>
-              <button type="submit" phx-disable-with="Saving..." class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+              <button
+                type="submit"
+                phx-disable-with="Saving..."
+                class="px-4 py-2.5 rounded-lg text-[13px] font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+              >
                 Save Password
               </button>
             </.form>
           </div>
-
-          <!-- Log out -->
+          
+    <!-- Log out -->
           <div class="pt-2">
             <.link
               href={~p"/users/log-out"}

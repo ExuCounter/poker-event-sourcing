@@ -14,7 +14,9 @@ defmodule Poker.Tables.ProcessManagerTest do
   describe "process manager - hand lifecycle" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -52,7 +54,9 @@ defmodule Poker.Tables.ProcessManagerTest do
   describe "process manager - round progression" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :two_max}
+      )
       |> exec(:fill_tournament)
     end
 
@@ -97,7 +101,9 @@ defmodule Poker.Tables.ProcessManagerTest do
   describe "process manager - sitting out auto-fold" do
     setup ctx do
       ctx
-      |> exec(:create_tournament, settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max})
+      |> exec(:create_tournament,
+        settings: %{speed: :hyper_turbo, buy_in: 100, table_type: :three_max}
+      )
       |> exec(:fill_tournament)
     end
 

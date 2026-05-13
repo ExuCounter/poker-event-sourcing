@@ -126,11 +126,20 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
     <div class="min-h-screen flex flex-col font-[family-name:var(--pkr-font-ui)]">
       <!-- Top bar -->
       <div class="h-14 flex items-center px-5 border-b border-[var(--pkr-line)]">
-        <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] transition-all mr-4">
+        <.link
+          navigate={~p"/"}
+          class="font-[family-name:var(--pkr-font-mono)] text-xs text-[var(--pkr-ink-3)] hover:text-[var(--pkr-ink-2)] transition-all mr-4"
+        >
           &larr; Lobby
         </.link>
-        <.link navigate={~p"/"} class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1">
-          Poker <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">by Volodymyr Potiichuk</span>
+        <.link
+          navigate={~p"/"}
+          class="font-[family-name:var(--pkr-font-display)] text-[22px] italic flex items-baseline gap-1"
+        >
+          Poker
+          <span class="text-[var(--pkr-ink-3)] text-[12px] not-italic font-[family-name:var(--pkr-font-mono)]">
+            by Volodymyr Potiichuk
+          </span>
         </.link>
         <div class="flex-1"></div>
         <.share_code_chip :if={@tournament.code} code={@tournament.code} class="mr-2" />
@@ -167,29 +176,41 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
               <% end %>
             </p>
           </div>
-
-          <!-- Stats grid -->
+          
+    <!-- Stats grid -->
           <div class="grid grid-cols-3 gap-3 mb-6">
             <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] p-3.5">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">Buy-in</div>
-              <div class="font-[family-name:var(--pkr-font-display)] text-[24px] text-[var(--pkr-ink-1)] mt-1">${@tournament.buy_in}</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                Buy-in
+              </div>
+              <div class="font-[family-name:var(--pkr-font-display)] text-[24px] text-[var(--pkr-ink-1)] mt-1">
+                ${@tournament.buy_in}
+              </div>
             </div>
             <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] p-3.5">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">Prize Pool</div>
-              <div class="font-[family-name:var(--pkr-font-display)] text-[24px] text-[var(--pkr-accent)] mt-1">${@prize_pool}</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                Prize Pool
+              </div>
+              <div class="font-[family-name:var(--pkr-font-display)] text-[24px] text-[var(--pkr-accent)] mt-1">
+                ${@prize_pool}
+              </div>
             </div>
             <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] p-3.5">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">Players</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[9px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                Players
+              </div>
               <div class="font-[family-name:var(--pkr-font-mono)] text-[24px] font-semibold text-[var(--pkr-ink-1)] mt-1">
                 {@tournament.registered_count}<span class="text-[var(--pkr-ink-3)]">/{@tournament.max_players}</span>
               </div>
             </div>
           </div>
-
-          <!-- Blind structure -->
+          
+    <!-- Blind structure -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] overflow-hidden">
             <div class="px-4 py-3 border-b border-[var(--pkr-line)]">
-              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">BLIND STRUCTURE</div>
+              <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)]">
+                BLIND STRUCTURE
+              </div>
             </div>
             <div class="grid grid-cols-[0.5fr_1fr_1fr_1fr] px-4 py-2 border-b border-[var(--pkr-line)] font-[family-name:var(--pkr-font-mono)] text-[10px] tracking-[0.1em] text-[var(--pkr-ink-3)] uppercase">
               <span>LVL</span>
@@ -206,18 +227,26 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
                     <span class="text-[var(--pkr-accent)] text-[10px] ml-1">&#9679;</span>
                   <% end %>
                 </span>
-                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">{level.small_blind}</span>
-                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">{level.big_blind}</span>
-                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-3)]">{div(level.duration_seconds, 60)} min</span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">
+                  {level.small_blind}
+                </span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)]">
+                  {level.big_blind}
+                </span>
+                <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-3)]">
+                  {div(level.duration_seconds, 60)} min
+                </span>
               </div>
             <% end %>
           </div>
         </div>
-
-        <!-- Right rail -->
+        
+    <!-- Right rail -->
         <aside class="w-[360px] border-l border-[var(--pkr-line)] p-5 flex flex-col gap-3.5 overflow-auto">
           <div>
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">TOURNAMENT</div>
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--pkr-ink-3)] mb-1.5">
+              TOURNAMENT
+            </div>
             <h2 class="font-[family-name:var(--pkr-font-display)] text-[28px] leading-none text-[var(--pkr-ink-1)]">
               Sit &amp; Go
             </h2>
@@ -225,10 +254,12 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
               {format_speed(@tournament.speed)} &middot; {level_duration(@tournament.speed)} levels
             </div>
           </div>
-
-          <!-- Info -->
+          
+    <!-- Info -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] p-3.5">
-            <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)] mb-2.5">INFO</div>
+            <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)] mb-2.5">
+              INFO
+            </div>
             <div class="space-y-0">
               <.stat_row label="Game" value="No-Limit Hold'em" />
               <.stat_row label="Buy-in" value={"$#{@tournament.buy_in}"} />
@@ -237,14 +268,16 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
               <.stat_row label="Table" value={format_table_type(@tournament.table_type)} />
             </div>
           </div>
-
-          <!-- Registered players -->
+          
+    <!-- Registered players -->
           <div class="rounded-xl border border-[var(--pkr-line)] bg-[var(--pkr-bg-1)] p-3.5">
             <div class="font-[family-name:var(--pkr-font-mono)] text-[10px] uppercase tracking-[0.1em] text-[var(--pkr-ink-3)] mb-2.5">
               PLAYERS ({@tournament.registered_count}/{@tournament.max_players})
             </div>
             <%= if Enum.empty?(@registered_players) do %>
-              <div class="text-sm text-[var(--pkr-ink-3)] text-center py-4">No players registered yet</div>
+              <div class="text-sm text-[var(--pkr-ink-3)] text-center py-4">
+                No players registered yet
+              </div>
             <% else %>
               <div class="space-y-1.5">
                 <%= for player <- @registered_players do %>
@@ -256,7 +289,9 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
                       {player.email}
                     </span>
                     <%= if player.id == @user_id do %>
-                      <span class="text-[10px] text-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]">YOU</span>
+                      <span class="text-[10px] text-[var(--pkr-accent)] font-[family-name:var(--pkr-font-mono)]">
+                        YOU
+                      </span>
                     <% end %>
                   </div>
                 <% end %>
@@ -265,22 +300,28 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
           </div>
 
           <div class="flex-1"></div>
-
-          <!-- Actions -->
+          
+    <!-- Actions -->
           <%= if @tournament.status == :registering do %>
             <%= if @user_id in (@tournament.player_ids || []) do %>
               <div class="w-full py-3 rounded-xl text-sm text-center text-[var(--pkr-accent)] border border-[var(--pkr-accent)]/30 bg-[var(--pkr-accent)]/5 font-[family-name:var(--pkr-font-mono)]">
                 Registered &middot; waiting for players
               </div>
             <% else %>
-              <button phx-click="register" class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer">
+              <button
+                phx-click="register"
+                class="w-full py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all cursor-pointer"
+              >
                 Register &middot; Buy-in ${@tournament.buy_in}
               </button>
             <% end %>
           <% end %>
 
           <%= if @tournament.status == :active && @seating do %>
-            <.link navigate={~p"/tables/#{@seating.id}/game"} class="block w-full text-center py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all">
+            <.link
+              navigate={~p"/tables/#{@seating.id}/game"}
+              class="block w-full text-center py-3.5 rounded-xl text-sm font-medium bg-[var(--pkr-accent)] text-[var(--pkr-bg-0)] hover:brightness-110 transition-all"
+            >
               <%= if @user_id in (@tournament.player_ids || []) do %>
                 Enter Table
               <% else %>
@@ -298,7 +339,9 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
     ~H"""
     <div class="flex justify-between items-baseline text-[12px] py-1.5 border-b border-dashed border-[var(--pkr-line)] last:border-0">
       <span class="text-[var(--pkr-ink-3)]">{@label}</span>
-      <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)] font-medium">{@value}</span>
+      <span class="font-[family-name:var(--pkr-font-mono)] text-[var(--pkr-ink-1)] font-medium">
+        {@value}
+      </span>
     </div>
     """
   end

@@ -73,7 +73,8 @@ defmodule Poker.Wallet do
       amount: amount
     }
 
-    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &TopUpReservation.changeset/1),
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &TopUpReservation.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end

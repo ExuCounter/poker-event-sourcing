@@ -87,7 +87,9 @@ defmodule Poker.Wallet.Aggregates.Wallet do
 
   def execute(%__MODULE__{reservations: reservations}, %TopUpReservation{} = cmd) do
     case Map.get(reservations, cmd.game_id) do
-      nil -> {:error, :reservation_not_found}
+      nil ->
+        {:error, :reservation_not_found}
+
       _existing ->
         %ReservationToppedUp{
           player_id: cmd.player_id,
@@ -99,7 +101,9 @@ defmodule Poker.Wallet.Aggregates.Wallet do
 
   def execute(%__MODULE__{reservations: reservations}, %UndoTopUp{} = cmd) do
     case Map.get(reservations, cmd.game_id) do
-      nil -> {:error, :reservation_not_found}
+      nil ->
+        {:error, :reservation_not_found}
+
       _existing ->
         %TopUpUndone{
           player_id: cmd.player_id,
@@ -138,7 +142,10 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     %__MODULE__{wallet | balance: balance + amount}
   end
 
-  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %FundsReserved{} = event) do
+  def apply(
+        %__MODULE__{balance: balance, reservations: reservations} = wallet,
+        %FundsReserved{} = event
+      ) do
     %__MODULE__{
       wallet
       | balance: balance - event.amount,
@@ -146,7 +153,10 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     }
   end
 
-  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %ReservationToppedUp{} = event) do
+  def apply(
+        %__MODULE__{balance: balance, reservations: reservations} = wallet,
+        %ReservationToppedUp{} = event
+      ) do
     %__MODULE__{
       wallet
       | balance: balance - event.amount,
@@ -154,7 +164,10 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     }
   end
 
-  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %TopUpUndone{} = event) do
+  def apply(
+        %__MODULE__{balance: balance, reservations: reservations} = wallet,
+        %TopUpUndone{} = event
+      ) do
     %__MODULE__{
       wallet
       | balance: balance + event.amount,
@@ -162,7 +175,10 @@ defmodule Poker.Wallet.Aggregates.Wallet do
     }
   end
 
-  def apply(%__MODULE__{balance: balance, reservations: reservations} = wallet, %FundsReleased{} = event) do
+  def apply(
+        %__MODULE__{balance: balance, reservations: reservations} = wallet,
+        %FundsReleased{} = event
+      ) do
     %__MODULE__{
       wallet
       | balance: balance + event.final_amount,

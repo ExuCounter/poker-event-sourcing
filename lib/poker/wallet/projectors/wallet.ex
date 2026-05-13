@@ -61,7 +61,11 @@ defmodule Poker.Wallet.Projectors.Wallet do
   end)
 
   project(
-    %FundsReleased{player_id: player_id, original_amount: original_amount, final_amount: final_amount},
+    %FundsReleased{
+      player_id: player_id,
+      original_amount: original_amount,
+      final_amount: final_amount
+    },
     _metadata,
     fn multi ->
       Ecto.Multi.update_all(

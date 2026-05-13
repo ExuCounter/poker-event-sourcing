@@ -154,15 +154,13 @@ defmodule Poker.Tables.AtomDecoder do
   # Pre-compute string-to-atom map at compile time for O(1) lookup
   # This transforms @whitelists into a flat map like:
   # %{{:status, "active"} => :active, {:status, "waiting"} => :waiting, ...}
-  @string_to_atom_map (
-                        @whitelists
-                        |> Enum.flat_map(fn {field, atoms} ->
-                          Enum.map(atoms, fn atom ->
-                            {{field, Atom.to_string(atom)}, atom}
-                          end)
+  @string_to_atom_map @whitelists
+                      |> Enum.flat_map(fn {field, atoms} ->
+                        Enum.map(atoms, fn atom ->
+                          {{field, Atom.to_string(atom)}, atom}
                         end)
-                        |> Map.new()
-                      )
+                      end)
+                      |> Map.new()
 
   # Also create a set of valid atoms per field for validation
   @valid_atoms_by_field @whitelists

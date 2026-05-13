@@ -12,7 +12,8 @@ defmodule Poker.Tournaments do
         code: Poker.JoinCodes.next_code()
       })
 
-    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &CreateTournament.changeset/1),
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &CreateTournament.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       {:ok, %{tournament_id: tournament_id}}
     end
@@ -35,7 +36,8 @@ defmodule Poker.Tournaments do
   defp dispatch_register(tournament_id, player_id) do
     command_attrs = %{tournament_id: tournament_id, player_id: player_id}
 
-    with {:ok, command} <- Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
+    with {:ok, command} <-
+           Poker.Repo.validate_changeset(command_attrs, &RegisterPlayer.changeset/1),
          :ok <- Poker.App.dispatch(command, consistency: :strong) do
       :ok
     end

@@ -94,7 +94,10 @@ defmodule Poker.Tables.Aggregates.Table.Apply.Participants do
 
   # Removes participant from table (cash game leave).
   # Also clears dealer_button_id if the leaving participant was the dealer.
-  def apply(%Table{participants: participants, dealer_button_id: dealer_button_id} = table, %ParticipantLeft{participant_id: participant_id}) do
+  def apply(
+        %Table{participants: participants, dealer_button_id: dealer_button_id} = table,
+        %ParticipantLeft{participant_id: participant_id}
+      ) do
     updated_participants = Enum.reject(participants, &(&1.id == participant_id))
 
     updated_dealer_button_id =

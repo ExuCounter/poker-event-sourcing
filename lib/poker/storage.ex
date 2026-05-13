@@ -37,7 +37,6 @@ defmodule Poker.Storage do
       table_participants,
       table_participant_hands,
       table_rounds,
-      table_list,
       table_lobby,
       tournaments,
       wallets,

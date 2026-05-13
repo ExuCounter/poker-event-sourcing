@@ -31,8 +31,11 @@ defmodule PokerWeb.PlayerLive.Replay do
 
       lobby_path =
         case table do
-          %{game_mode: :tournament, source_id: tid} when is_binary(tid) -> ~p"/tournaments/#{tid}/lobby"
-          _ -> ~p"/cash/#{table_id}/lobby"
+          %{game_mode: :tournament, source_id: tid} when is_binary(tid) ->
+            ~p"/tournaments/#{tid}/lobby"
+
+          _ ->
+            ~p"/cash/#{table_id}/lobby"
         end
 
       {:ok,

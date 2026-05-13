@@ -346,8 +346,7 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
     cond do
       # Cannot bet more chips than you have
       raise_amount > participant.chips ->
-        {:error,
-         %{status: :invalid_action, message: "Cannot raise more than your total chips"}}
+        {:error, %{status: :invalid_action, message: "Cannot raise more than your total chips"}}
 
       # If using all remaining chips, convert to all-in (valid regardless of minimum)
       raise_amount == participant.chips ->
@@ -453,7 +452,9 @@ defmodule Poker.Tables.Aggregates.Table.Handlers.Participants do
 
   defp validate_seat_not_occupied(participants, seat_number) do
     if Enum.any?(participants, &(&1.seat_number == seat_number)),
-      do: {:error, %{status: :unprocessable_entity, message: "Seat #{seat_number} is already occupied"}},
+      do:
+        {:error,
+         %{status: :unprocessable_entity, message: "Seat #{seat_number} is already occupied"}},
       else: :ok
   end
 
