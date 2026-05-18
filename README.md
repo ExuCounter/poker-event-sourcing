@@ -1,18 +1,50 @@
 # Poker
 
-To start your Phoenix server:
+A real-time multiplayer poker application built with Elixir and Phoenix LiveView, using Event Sourcing for core game logic.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+## Stack
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+- **Elixir / Phoenix LiveView** — real-time UI
+- **Event Sourcing** (Commanded) — poker table logic
+- **PostgreSQL** — projections
+- **Grafana Cloud** — observability (traces via Tempo, logs via Loki)
+- **Grafana Alloy** — telemetry collector (OTLP receiver, log shipper)
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+## Prerequisites
 
-## Learn more
+Install runtime versions via [asdf](https://asdf-vm.com/) or [mise](https://mise.jdx.dev/) — versions are defined in `.tool-versions`:
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+```bash
+# asdf
+asdf install
+
+# mise
+mise install
+```
+
+- [direnv](https://direnv.net/) (optional, for `.envrc` auto-loading)
+
+## Setup
+
+```bash
+cp .envrc.example .envrc
+# fill in GCLOUD_RW_API_KEY, GRAFANA_* values
+```
+
+```bash
+mix setup
+```
+
+## Running
+
+**App:**
+```bash
+mix phx.server
+```
+
+**Monitoring (Alloy → Grafana Cloud):**
+```bash
+docker compose -f docker-compose.monitoring.yml up -d
+```
+
+App will be available at [localhost:4000](http://localhost:4000).

@@ -1,6 +1,8 @@
 defmodule Poker.Router do
   use Commanded.Commands.Router
 
+  middleware(OpentelemetryCommanded.Middleware)
+
   alias Poker.Tables.Commands.{
     CreateTable,
     CreateTableSettings,

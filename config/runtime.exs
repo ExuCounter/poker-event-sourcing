@@ -25,6 +25,16 @@ config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 
 if config_env() == :prod do
+  config :opentelemetry,
+    span_processor: :batch,
+    exporter: :otlp
+
+  config :opentelemetry_exporter,
+    otlp_protocol: :http_protobuf,
+    otlp_endpoint: System.get_env("GRAFANA_OTLP_ENDPOINT")
+end
+
+if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

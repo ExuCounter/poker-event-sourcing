@@ -1,0 +1,74 @@
+livedebugging {
+  enabled = true
+}
+
+// ── Logs: poker app ───────────────────────────────────────────────────────────
+
+local.file_match "poker_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/log/poker/*.log",
+      job      = "poker",
+      app      = "poker",
+      env      = sys.env("APP_ENV"),
+    },
+  ]
+}
+
+loki.source.file "poker" {
+  targets    = local.file_match.poker_logs.targets
+  forward_to = [loki.write.cloud.receiver]
+}
+
+loki.write "cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_LOKI_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_LOKI_USERNAME")
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}
+
+// ── Traces: Phoenix app → Grafana Cloud Tempo ─────────────────────────────────
+
+otelcol.receiver.otlp "poker" {
+  http {
+    endpoint = "0.0.0.0:4320"
+  }
+
+  output {
+    traces = [otelcol.processor.filter.drop_noise.input]
+  }
+}
+
+otelcol.processor.filter "drop_noise" {
+  error_mode = "ignore"
+
+  traces {
+    span = [
+      `IsMatch(attributes["url.path"], "\\.(mp3|mp4|wav|css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf)$")`,
+      `attributes["http.response.status_code"] == 101`,
+      `IsMatch(attributes["url.path"], "^/phoenix/live_reload")`,
+      `IsRootSpan() == true and IsMatch(name, "^poker\\.repo\\.query")`,
+    ]
+  }
+
+  output {
+    traces = [otelcol.exporter.otlphttp.cloud.input]
+  }
+}
+
+otelcol.exporter.otlphttp "cloud" {
+  client {
+    endpoint = sys.env("GRAFANA_OTLP_ENDPOINT")
+
+    auth = otelcol.auth.basic.cloud.handler
+  }
+}
+
+otelcol.auth.basic "cloud" {
+  username = sys.env("GRAFANA_OTLP_USERNAME")
+  password = sys.env("GCLOUD_RW_API_KEY")
+}

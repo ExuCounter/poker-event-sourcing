@@ -1,0 +1,23 @@
+services:
+  alloy:
+    image: grafana/alloy:latest
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=experimental
+    volumes:
+      - ./docker/monitoring/alloy/config.alloy:/etc/alloy/config.alloy
+      - ./log:/var/log/poker:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+    ports:
+      - "4320:4320" # OTLP HTTP receiver (Phoenix app sends here)
+      - "12345:12345" # Alloy UI
+    environment:
+      - GCLOUD_RW_API_KEY=${GCLOUD_RW_API_KEY}
+      - APP_ENV=${APP_ENV}
+      - GRAFANA_LOKI_URL=${GRAFANA_LOKI_URL}
+      - GRAFANA_LOKI_USERNAME=${GRAFANA_LOKI_USERNAME}
+      - GRAFANA_OTLP_ENDPOINT=${GRAFANA_OTLP_ENDPOINT}
+      - GRAFANA_OTLP_USERNAME=${GRAFANA_OTLP_USERNAME}

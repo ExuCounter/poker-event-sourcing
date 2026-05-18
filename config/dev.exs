@@ -102,3 +102,20 @@ config :poker, Poker.Services.Deck, dispatcher: Poker.Services.Deck.Mock
 
 config :poker, Poker.Services.HandEvaluator,
   dispatcher: Poker.Services.HandEvaluator.Implementation
+
+config :opentelemetry,
+  span_processor: :batch,
+  exporter: :otlp
+
+config :opentelemetry_exporter,
+  otlp_protocol: :http_protobuf,
+  otlp_endpoint: "http://localhost:4320"
+
+config :logger, :default_handler,
+  config: [
+    file: ~c"log/dev.log",
+    filesync_repeat_interval: 5000,
+    file_check: 5000,
+    max_no_bytes: 10_000_000,
+    max_no_files: 5
+  ]

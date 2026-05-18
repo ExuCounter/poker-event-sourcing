@@ -23,6 +23,14 @@ defmodule Poker.Application do
       Poker.Tournaments.Supervisor
     ]
 
+    OpentelemetryLoggerMetadata.setup()
+    OpentelemetryCommanded.setup()
+
+    OpentelemetryEcto.setup([:poker, :repo])
+    OpentelemetryOban.setup(job: [], plugin: :disabled)
+    OpentelemetryBandit.setup()
+    OpentelemetryPhoenix.setup(adapter: :bandit)
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Poker.Supervisor]

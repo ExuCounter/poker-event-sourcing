@@ -62,3 +62,5 @@ config :poker, Poker.App,
     adapter: Commanded.EventStore.Adapters.InMemory,
     serializer: Commanded.Serialization.JsonSerializer
   ]
+
+config :opentelemetry, traces_exporter: :none

@@ -80,7 +80,16 @@ defmodule Poker.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
       {:tidewave, "~> 0.5", only: :dev},
-      {:sqids, "~> 0.2"}
+      {:sqids, "~> 0.2"},
+      {:opentelemetry_api, "~> 1.4"},
+      {:opentelemetry, "~> 1.4"},
+      {:opentelemetry_exporter, "~> 1.8"},
+      {:opentelemetry_logger_metadata, "~> 0.2.0"},
+      {:opentelemetry_phoenix, "~> 2.0.0-rc.2"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      {:opentelemetry_oban, "~> 1.0"},
+      {:opentelemetry_commanded, "~> 0.2.1"},
+      {:opentelemetry_bandit, "~> 0.2.0-rc.1"}
     ]
   end
 
