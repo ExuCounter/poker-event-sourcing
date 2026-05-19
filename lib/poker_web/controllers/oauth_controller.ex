@@ -6,6 +6,8 @@ defmodule PokerWeb.OAuthController do
   alias Poker.Accounts
   alias PokerWeb.UserAuth
 
+  require Logger
+
   def sign_in(conn, _params) do
     conn
     |> put_session(:oauth_intent, "sign_in")
@@ -20,7 +22,8 @@ defmodule PokerWeb.OAuthController do
 
   def request(conn, _params), do: conn
 
-  def callback(%{assigns: %{ueberauth_failure: _failure}} = conn, _params) do
+  def callback(%{assigns: %{ueberauth_failure: failure}} = conn, _params) do
+    Logger.error("OAuth failure: #{inspect(failure, pretty: true)}")
     redirect_with_error(conn)
   end
 
@@ -34,7 +37,7 @@ defmodule PokerWeb.OAuthController do
         |> UserAuth.log_in_user(user)
 
       :error ->
-        redirect_with_error(conn)
+        redirect_with_error(conn, "Google account with provided email is not registered yet.")
     end
   end
 
@@ -54,7 +57,7 @@ defmodule PokerWeb.OAuthController do
 
   defp authenticate(_intent, _auth), do: :error
 
-  defp redirect_with_error(conn) do
+  defp redirect_with_error(conn, error_message \\ "Something went wrong") do
     intent = get_session(conn, :oauth_intent)
 
     redirect_to =
@@ -65,7 +68,7 @@ defmodule PokerWeb.OAuthController do
 
     conn
     |> delete_session(:oauth_intent)
-    |> put_flash(:error, "Something went wrong.")
+    |> put_flash(:error, error_message)
     |> redirect(to: redirect_to)
   end
 end

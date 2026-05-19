@@ -77,8 +77,10 @@ config :poker, dev_routes: true
 
 config :logger, level: :info
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :default_formatter, format: "[$level] $message\n", truncate: :infinity
+config :logger, :default_formatter,
+  format: "[$level] $message $metadata\n",
+  metadata: [:trace_id, :span_id, :request_id],
+  truncate: :infinity
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
@@ -120,6 +122,6 @@ config :logger, :default_handler,
     max_no_files: 5
   ]
 
-config :logger,
-  backends: [:console],
-  console: [format: "[$level] $message\n"]
+# config :logger,
+#   backends: [:console],
+#   console: [format: "[$level] $message\n"]

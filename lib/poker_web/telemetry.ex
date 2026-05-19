@@ -23,11 +23,6 @@ defmodule PokerWeb.Telemetry do
         unit: {:native, :millisecond},
         reporter_options: [buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000]]
       ),
-      distribution("phoenix.router_dispatch.stop.duration",
-        tags: [:route],
-        unit: {:native, :millisecond},
-        reporter_options: [buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000]]
-      ),
       distribution("phoenix.router_dispatch.exception.duration",
         tags: [:route],
         unit: {:native, :millisecond},
@@ -46,6 +41,11 @@ defmodule PokerWeb.Telemetry do
         tags: [:event],
         unit: {:native, :millisecond},
         reporter_options: [buckets: [10, 50, 100, 250, 500, 1000]]
+      ),
+      distribution("phoenix.router_dispatch.stop.duration",
+        tags: [:route],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000]]
       ),
 
       # Database Metrics
