@@ -89,7 +89,8 @@ defmodule Poker.MixProject do
       {:opentelemetry_ecto, "~> 1.2"},
       {:opentelemetry_oban, "~> 1.0"},
       {:opentelemetry_commanded, "~> 0.2.1"},
-      {:opentelemetry_bandit, "~> 0.2.0-rc.1"}
+      {:opentelemetry_bandit, "~> 0.2.0-rc.1"},
+      {:telemetry_metrics_prometheus_core, "~> 1.0"}
     ]
   end
 

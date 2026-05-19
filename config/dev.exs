@@ -119,3 +119,7 @@ config :logger, :default_handler,
     max_no_bytes: 10_000_000,
     max_no_files: 5
   ]
+
+config :logger,
+  backends: [:console],
+  console: [format: "[$level] $message\n"]

@@ -31,6 +31,30 @@ loki.write "cloud" {
   }
 }
 
+// ── Metrics: scrape Phoenix /metrics → Grafana Cloud Mimir ────────────────────
+
+prometheus.scrape "poker" {
+  targets = [
+    {"__address__" = sys.env("APP_HOST"), job = "poker", app = "poker", env = sys.env("APP_ENV")},
+  ]
+
+  scrape_interval = "15s"
+  metrics_path    = "/metrics"
+
+  forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+prometheus.remote_write "cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_PROMETHEUS_USERNAME")
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}
+
 // ── Traces: Phoenix app → Grafana Cloud Tempo ─────────────────────────────────
 
 otelcol.receiver.otlp "poker" {

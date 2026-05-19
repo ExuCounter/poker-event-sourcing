@@ -17,6 +17,10 @@ defmodule PokerWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/", PokerWeb do
+    get "/metrics", MetricsController, :index
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", PokerWeb do
   #   pipe_through :api
