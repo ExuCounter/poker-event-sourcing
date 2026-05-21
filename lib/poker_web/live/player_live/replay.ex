@@ -20,13 +20,6 @@ defmodule PokerWeb.PlayerLive.Replay do
 
       replay = HandReplay.initialize(table_id, player_id, hand_id)
 
-      socket =
-        if replay.total_steps == 0 do
-          put_flash(socket, :info, "No hand to replay")
-        else
-          socket
-        end
-
       table = Poker.Repo.get(Poker.Tables.Projections.TableLobby, table_id)
 
       lobby_path =
@@ -38,14 +31,21 @@ defmodule PokerWeb.PlayerLive.Replay do
             ~p"/cash/#{table_id}/lobby"
         end
 
-      {:ok,
-       assign(socket,
-         table_id: table_id,
-         lobby_path: lobby_path,
-         replay: replay,
-         current_user_id: player_id,
-         playing: false
-       )}
+      if replay.total_steps == 0 do
+        {:ok,
+         socket
+         |> put_flash(:info, "No hand to replay yet")
+         |> push_navigate(to: lobby_path)}
+      else
+        {:ok,
+         assign(socket,
+           table_id: table_id,
+           lobby_path: lobby_path,
+           replay: replay,
+           current_user_id: player_id,
+           playing: false
+         )}
+      end
     end
   end
 

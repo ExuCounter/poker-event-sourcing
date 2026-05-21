@@ -4,6 +4,7 @@ defmodule PokerWeb.PlayerLive.Game do
   alias PokerWeb.Api.Tables
   alias PokerWeb.Api.CashGames
   alias PokerWeb.JsonEncoder
+  alias Poker.Tables.Queries.HandEvents
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
@@ -43,6 +44,8 @@ defmodule PokerWeb.PlayerLive.Game do
 
       lobby_path = lobby_path(game_context, table_id)
 
+      has_previous_hand = match?({:ok, _}, HandEvents.get_previous_hand_events(table_id))
+
       {:ok,
        assign(socket,
          table_id: table_id,
@@ -54,7 +57,8 @@ defmodule PokerWeb.PlayerLive.Game do
          buy_in_amount: buy_in_amount,
          raise_amount: nil,
          current_animated_event_id: nil,
-         queue: []
+         queue: [],
+         has_previous_hand: has_previous_hand
        )}
     end
   end
@@ -110,7 +114,10 @@ defmodule PokerWeb.PlayerLive.Game do
 
     socket = process_next_event(socket)
 
-    {:noreply, socket}
+    has_previous_hand =
+      match?({:ok, _}, HandEvents.get_previous_hand_events(socket.assigns.table_id))
+
+    {:noreply, assign(socket, has_previous_hand: has_previous_hand)}
   end
 
   # Action event handlers
