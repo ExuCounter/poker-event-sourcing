@@ -53,7 +53,8 @@ An ES context follows this structure:
 6. [ ] Define projection schema in `/projections`
 7. [ ] Add projector handlers in `/projectors`
 8. [ ] Expose via the context's top-level module (e.g. `Poker.Tables`)
-9. [ ] Add thin wrapper in `PokerWeb.Api.<Context>` if needed for web access
+9. [ ] Add `authorize/3` clause(s) in `<Context>.Policy` (return `:ok` if no real check needed)
+10. [ ] Add thin wrapper in `PokerWeb.Api.<Context>` with `Bodyguard.permit` for each action
 
 ---
 
@@ -258,23 +259,56 @@ Use `consistency: :strong` when the caller needs to read its own writes immediat
 
 ## Web API Layer
 
-`PokerWeb.Api.<Context>` is a thin adapter between controllers/LiveViews and the context module. It resolves the current user from `scope` and delegates:
+`PokerWeb.Api.<Context>` is a thin adapter between controllers/LiveViews and the context module. It resolves the current user from `scope`, **always calls `Bodyguard.permit/4` before executing**, and delegates to the context:
 
 ```elixir
 defmodule PokerWeb.Api.Tables do
-  # No auth required
-  def list_tables, do: Poker.Tables.list_tables()
-
-  # Requires authenticated user
-  def create_table(%{user: user} = _scope, settings) do
-    Poker.Tables.create_table(user.id, settings)
+  def list_tables(scope) do
+    with :ok <- Bodyguard.permit(Poker.Tables.Policy, :list_tables, scope) do
+      Poker.Tables.list_tables()
+    end
   end
 
-  def join_participant(%{user: user} = _scope, %{table_id: table_id}) do
-    Poker.Tables.join_participant(table_id, user.id)
+  def create_table(scope, settings) do
+    with :ok <- Bodyguard.permit(Poker.Tables.Policy, :create_table, scope, settings) do
+      Poker.Tables.create_table(scope.user.id, settings)
+    end
+  end
+
+  def join_participant(scope, %{table_id: table_id} = args) do
+    with :ok <- Bodyguard.permit(Poker.Tables.Policy, :join_participant, scope, args) do
+      Poker.Tables.join_participant(table_id, scope.user.id)
+    end
   end
 end
 ```
+
+Every action — including read-only ones — **must** have a corresponding `authorize/3` clause in the policy. If an action needs no real check, declare it explicitly rather than omitting it:
+
+```elixir
+defmodule Poker.Tables.Policy do
+  @behaviour Bodyguard.Policy
+
+  # No restriction — any caller may list tables
+  def authorize(:list_tables, _scope, _params), do: :ok
+
+  # Only authenticated users may create a table
+  def authorize(:create_table, %{user: user}, _params) do
+    not is_nil(user)
+  end
+
+  # Any authenticated user may join a table
+  def authorize(:join_participant, %{user: user}, _params) do
+    not is_nil(user)
+  end
+end
+```
+
+**Rules:**
+- **Never** skip `Bodyguard.permit` in the Api layer — even for public/unrestricted actions
+- **Never** add a catch-all `authorize(_, _, _)` clause — an unhandled action must raise `FunctionClauseError` so missing rules are caught immediately
+- Return `true`/`false` for simple checks; use `{:error, :reason_atom}` only when callers need to distinguish denial reasons
+- Auth logic stays in the Policy module — not inline in LiveView `handle_event` or controller actions
 
 ---
 
