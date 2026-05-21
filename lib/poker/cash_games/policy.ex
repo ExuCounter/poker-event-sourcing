@@ -7,6 +7,9 @@ defmodule Poker.CashGames.Policy do
 
   alias Poker.Accounts
 
+  def authorize(action, _scope, _params) when action in [:list_cash_games, :get_cash_game],
+    do: :ok
+
   # Guests can join existing cash games but can't create them.
   def authorize(:create_cash_game, %{user: user}, _params), do: not Accounts.guest?(user)
 

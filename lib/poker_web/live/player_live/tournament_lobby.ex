@@ -6,7 +6,7 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
 
   @impl true
   def mount(%{"id" => tournament_id}, _session, socket) do
-    case Tournaments.get_tournament(tournament_id) do
+    case Tournaments.get_tournament(socket.assigns.current_scope, tournament_id) do
       {:error, _} ->
         {:ok,
          socket
@@ -40,7 +40,8 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
   def handle_event("register", _params, socket) do
     case Tournaments.register_player(socket.assigns.current_scope, socket.assigns.tournament_id) do
       :ok ->
-        {:ok, tournament} = Tournaments.get_tournament(socket.assigns.tournament_id)
+        {:ok, tournament} =
+          Tournaments.get_tournament(socket.assigns.current_scope, socket.assigns.tournament_id)
 
         {:noreply,
          assign(socket,
@@ -69,7 +70,7 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
     if table do
       {:noreply, push_navigate(socket, to: ~p"/tables/#{table.id}/game")}
     else
-      {:ok, tournament} = Tournaments.get_tournament(tournament_id)
+      {:ok, tournament} = Tournaments.get_tournament(socket.assigns.current_scope, tournament_id)
 
       {:noreply,
        assign(socket,
@@ -80,7 +81,8 @@ defmodule PokerWeb.PlayerLive.TournamentLobby do
   end
 
   def handle_info({:tournament, _event, _data}, socket) do
-    {:ok, tournament} = Tournaments.get_tournament(socket.assigns.tournament_id)
+    {:ok, tournament} =
+      Tournaments.get_tournament(socket.assigns.current_scope, socket.assigns.tournament_id)
 
     {:noreply,
      assign(socket,

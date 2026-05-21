@@ -7,7 +7,7 @@ defmodule PokerWeb.PlayerLive.Replay do
 
   @impl true
   def mount(%{"id" => table_id} = params, _session, socket) do
-    lobby = Tables.get_lobby(table_id)
+    lobby = Tables.get_lobby(socket.assigns.current_scope, table_id)
 
     if is_nil(lobby) do
       {:ok,

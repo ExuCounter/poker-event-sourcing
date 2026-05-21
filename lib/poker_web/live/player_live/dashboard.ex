@@ -14,8 +14,8 @@ defmodule PokerWeb.PlayerLive.Dashboard do
 
     {:ok,
      assign(socket,
-       cash_games_list: CashGames.list_cash_games(),
-       tournaments_list: Tournaments.list_tournaments(),
+       cash_games_list: CashGames.list_cash_games(socket.assigns.current_scope),
+       tournaments_list: Tournaments.list_tournaments(socket.assigns.current_scope),
        form: to_form(%{}),
        balance: get_balance(socket.assigns.current_scope.user.id)
      )}
@@ -23,12 +23,14 @@ defmodule PokerWeb.PlayerLive.Dashboard do
 
   @impl true
   def handle_info({:cash_games_list, _event, _data}, socket) do
-    {:noreply, assign(socket, cash_games_list: CashGames.list_cash_games())}
+    {:noreply,
+     assign(socket, cash_games_list: CashGames.list_cash_games(socket.assigns.current_scope))}
   end
 
   @impl true
   def handle_info({:tournament_list, _event, _data}, socket) do
-    {:noreply, assign(socket, tournaments_list: Tournaments.list_tournaments())}
+    {:noreply,
+     assign(socket, tournaments_list: Tournaments.list_tournaments(socket.assigns.current_scope))}
   end
 
   @impl true

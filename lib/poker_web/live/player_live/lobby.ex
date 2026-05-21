@@ -5,7 +5,7 @@ defmodule PokerWeb.PlayerLive.Lobby do
 
   @impl true
   def mount(%{"id" => table_id}, _session, socket) do
-    with lobby when not is_nil(lobby) <- Tables.get_lobby(table_id),
+    with lobby when not is_nil(lobby) <- Tables.get_lobby(socket.assigns.current_scope, table_id),
          {:ok, cash_game} <- Poker.CashGames.get_cash_game_by_table(table_id) do
       if connected?(socket) do
         Poker.Tables.PubSub.subscribe_to_lobby(table_id)
@@ -87,7 +87,10 @@ defmodule PokerWeb.PlayerLive.Lobby do
   end
 
   def handle_info({:table_lobby, _event, _data}, socket) do
-    {:noreply, assign(socket, lobby: Tables.get_lobby(socket.assigns.table_id))}
+    {:noreply,
+     assign(socket,
+       lobby: Tables.get_lobby(socket.assigns.current_scope, socket.assigns.table_id)
+     )}
   end
 
   defp user_has_joined?(participants, user_id) do

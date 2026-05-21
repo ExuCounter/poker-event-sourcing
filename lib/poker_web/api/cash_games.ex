@@ -1,10 +1,14 @@
 defmodule PokerWeb.Api.CashGames do
-  def list_cash_games() do
-    Poker.CashGames.list_cash_games()
+  def list_cash_games(scope) do
+    with :ok <- Bodyguard.permit(Poker.CashGames.Policy, :list_cash_games, scope) do
+      Poker.CashGames.list_cash_games()
+    end
   end
 
-  def get_cash_game(cash_game_id) do
-    Poker.CashGames.get_cash_game(cash_game_id)
+  def get_cash_game(scope, cash_game_id) do
+    with :ok <- Bodyguard.permit(Poker.CashGames.Policy, :get_cash_game, scope, cash_game_id) do
+      Poker.CashGames.get_cash_game(cash_game_id)
+    end
   end
 
   def create_cash_game(%{user: user} = scope, settings) do

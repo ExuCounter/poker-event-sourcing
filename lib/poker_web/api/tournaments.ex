@@ -1,10 +1,14 @@
 defmodule PokerWeb.Api.Tournaments do
-  def list_tournaments do
-    Poker.Tournaments.list_tournaments()
+  def list_tournaments(scope) do
+    with :ok <- Bodyguard.permit(Poker.Tournaments.Policy, :list_tournaments, scope) do
+      Poker.Tournaments.list_tournaments()
+    end
   end
 
-  def get_tournament(tournament_id) do
-    Poker.Tournaments.get_tournament(tournament_id)
+  def get_tournament(scope, tournament_id) do
+    with :ok <- Bodyguard.permit(Poker.Tournaments.Policy, :get_tournament, scope, tournament_id) do
+      Poker.Tournaments.get_tournament(tournament_id)
+    end
   end
 
   def create_tournament(%{user: user} = scope, settings) do

@@ -79,6 +79,16 @@ defmodule Poker.Tables do
     )
   end
 
+  def join_participant(table_id, player_id, %{seat_number: nil} = attrs) do
+    lobby = get_lobby(table_id)
+    occupied_seats = Enum.map(lobby.participants, & &1.seat_number)
+
+    case Enum.find(1..lobby.seats_count, fn seat -> seat not in occupied_seats end) do
+      nil -> {:error, %{message: "No seats available"}}
+      seat_number -> join_participant(table_id, player_id, %{attrs | seat_number: seat_number})
+    end
+  end
+
   def join_participant(table_id, player_id, attrs \\ %{}) do
     participant_id = UUIDv7.generate()
     starting_stack = Map.get(attrs, :starting_stack)

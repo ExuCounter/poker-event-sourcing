@@ -7,6 +7,9 @@ defmodule Poker.Tournaments.Policy do
 
   alias Poker.Accounts
 
+  def authorize(action, _scope, _params) when action in [:list_tournaments, :get_tournament],
+    do: :ok
+
   # Creating tournaments is reserved for registered users.
   def authorize(:create_tournament, %{user: user}, _params), do: not Accounts.guest?(user)
 
