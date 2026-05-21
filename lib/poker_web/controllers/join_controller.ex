@@ -12,6 +12,10 @@ defmodule PokerWeb.JoinController do
     end
   end
 
+  def create(conn, _params) do
+    redirect_with_error(conn, "Code not found. Check it and try again.")
+  end
+
   defp redirect_to_game(%{assigns: %{current_scope: %{user: %{}}}} = conn, path) do
     redirect(conn, to: path)
   end
@@ -29,8 +33,14 @@ defmodule PokerWeb.JoinController do
   end
 
   defp redirect_with_error(conn, message) do
+    path =
+      case get_req_header(conn, "referer") |> List.first() do
+        nil -> ~p"/users/log-in"
+        url -> URI.parse(url).path || ~p"/users/log-in"
+      end
+
     conn
     |> put_flash(:error, message)
-    |> redirect(to: get_req_header(conn, "referer") |> List.first() || ~p"/users/log-in")
+    |> redirect(to: path)
   end
 end

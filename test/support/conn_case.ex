@@ -31,6 +31,8 @@ defmodule PokerWeb.ConnCase do
 
       import Mox
 
+      use SeedFactory.Test, schema: Poker.SeedFactorySchema
+
       setup :verify_on_exit!
     end
   end
