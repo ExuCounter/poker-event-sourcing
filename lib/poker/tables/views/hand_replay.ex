@@ -51,7 +51,8 @@ defmodule Poker.Tables.Views.HandReplay do
     steppable_events = ReplayEvents.build_step_events(events)
 
     # Build initial state (table at HandStarted event with context)
-    initial_state = build_initial_state(table_id, player_id, events)
+    initial_state =
+      if events == [], do: nil, else: build_initial_state(table_id, player_id, events)
 
     %{
       table_id: table_id,
